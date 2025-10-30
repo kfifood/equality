@@ -1,0 +1,59 @@
+<div class="modal-header" style="background-color:white; color:#4361EE;">
+    <h5 class="modal-title">
+        <i class="bi bi-pencil me-2"></i>Edit Timbangan
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+<form id="editForm" action="{{ route('timbangan.update', $timbangan->id) }}" method="POST">
+    @csrf
+    @method('PUT')
+    <div class="modal-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="kode_asset" class="form-label">Kode Asset <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="kode_asset" name="kode_asset" 
+                           value="{{ old('kode_asset', $timbangan->kode_asset) }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="nomor_seri_unik" class="form-label">Nomor Seri Unik <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="nomor_seri_unik" name="nomor_seri_unik" 
+                           value="{{ old('nomor_seri_unik', $timbangan->nomor_seri_unik) }}" required>
+                    <div class="form-text">Nomor pembeda untuk timbangan dengan kode asset sama</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="tanggal_datang" class="form-label">Tanggal Datang <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="tanggal_datang" name="tanggal_datang" 
+                           value="{{ old('tanggal_datang', $timbangan->tanggal_datang ? $timbangan->tanggal_datang->format('Y-m-d') : '') }}" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="merk_tipe_no_seri" class="form-label">Merk, Tipe & No Seri <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="merk_tipe_no_seri" name="merk_tipe_no_seri" 
+                   value="{{ old('merk_tipe_no_seri', $timbangan->merk_tipe_no_seri) }}" required>
+        </div>
+
+        <div class="alert alert-info">
+            <small>
+                <i class="bi bi-info-circle me-1"></i>
+                Lokasi dan kondisi timbangan tidak dapat diubah dari sini. 
+                Gunakan menu <strong>Penggunaan</strong> atau <strong>Perbaikan</strong> untuk mengubah status.
+            </small>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-save me-1"></i>Update
+        </button>
+    </div>
+</form>
