@@ -49,7 +49,6 @@ class PenggunaanController extends Controller
         $timbanganList = Timbangan::where('kondisi_saat_ini', 'Baik')
                                 ->whereNull('status_line')
                                 ->orderBy('kode_asset')
-                                ->orderBy('nomor_seri_unik')
                                 ->get();
                                 
         $lineList = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
@@ -64,7 +63,6 @@ class PenggunaanController extends Controller
         $timbangan = Timbangan::where('kondisi_saat_ini', 'Baik')
                             ->whereNull('status_line')
                             ->orderBy('kode_asset')
-                            ->orderBy('nomor_seri_unik')
                             ->get();
                             
         $lines = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
@@ -120,9 +118,7 @@ class PenggunaanController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Penggunaan timbangan ' . $timbangan->kode_asset . 
-                        ($timbangan->nomor_seri_unik ? ' - ' . $timbangan->nomor_seri_unik : '') . 
-                        ' berhasil dicatat. Timbangan sekarang di ' . $request->line_tujuan
+            'message' => 'Penggunaan timbangan ' . $timbangan->kode_asset . ' berhasil dicatat. Timbangan sekarang di ' . $request->line_tujuan
         ]);
     }
 }

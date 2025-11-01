@@ -1,6 +1,6 @@
 <div class="modal-header" style="background-color:white; color:#4361EE;">
     <h5 class="modal-title">
-        <i class="bi bi-arrow-right-circle me-2"></i>Catat Penggunaan Timbangan
+        <i class="bi bi-arrow-right-circle me-2"></i>Catat Penggunaan Alat
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
@@ -10,18 +10,13 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Pilih Timbangan <span class="text-danger">*</span></label>
+                    <label class="form-label">Pilih Alat <span class="text-danger">*</span></label>
                     <select name="timbangan_id" class="form-select" required>
-                        <option value="">Pilih Timbangan</option>
+                        <option value="">Pilih Alat</option>
                         @foreach($timbangan as $item)
                             <option value="{{ $item->id }}" 
                                 {{ $selectedTimbangan && $selectedTimbangan->id == $item->id ? 'selected' : '' }}>
-                                {{ $item->kode_asset }} 
-                                @if($item->nomor_seri_unik)
-                                    - {{ $item->nomor_seri_unik }}
-                                @endif
-                                - {{ $item->merk_tipe_no_seri }}
-                                (Lab)
+                                {{ $item->kode_asset }} - {{ $item->merk_tipe_no_seri }} (Lab)
                             </option>
                         @endforeach
                     </select>

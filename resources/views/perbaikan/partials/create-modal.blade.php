@@ -1,6 +1,6 @@
 <div class="modal-header" style="background-color:white; color:#4361EE;">
     <h5 class="modal-title">
-        <i class="bi bi-tools me-2"></i>Catat Perbaikan Timbangan
+        <i class="bi bi-tools me-2"></i>Catat Perbaikan Alat
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
@@ -16,12 +16,7 @@
                         @foreach($timbangan as $item)
                             <option value="{{ $item->id }}" 
                                 {{ $selectedTimbangan && $selectedTimbangan->id == $item->id ? 'selected' : '' }}>
-                                {{ $item->kode_asset }} 
-                                @if($item->nomor_seri_unik)
-                                    - {{ $item->nomor_seri_unik }}
-                                @endif
-                                - {{ $item->merk_tipe_no_seri }}
-                                ({{ $item->status_line }})
+                                {{ $item->kode_asset }} - {{ $item->merk_tipe_no_seri }} ({{ $item->status_line }})
                             </option>
                         @endforeach
                     </select>
@@ -80,10 +75,9 @@
     <small>
         <i class="bi bi-info-circle me-1"></i>
         <strong>Informasi:</strong><br>
-        • Hanya timbangan dengan kondisi <strong>Baik</strong> dan berada di <strong>Lab</strong> yang bisa digunakan<br>
-        • Setelah dicatat, timbangan akan berpindah status ke line tujuan<br>
-        • Timbangan dengan nomor seri berbeda dapat memiliki kode asset yang sama<br>
-        • <strong>Timbangan yang baru selesai perbaikan akan tersedia di Lab</strong>
+        • Hanya timbangan dengan kondisi <strong>Rusak</strong> atau <strong>Dalam Perbaikan</strong> yang masih di <strong>Line</strong> yang bisa dicatat perbaikan<br>
+        • Setelah dicatat, timbangan akan dikembalikan ke <strong>Lab</strong><br>
+        • Timbangan yang selesai perbaikan akan tersedia di <strong>Lab</strong> dengan kondisi <strong>Baik</strong>
     </small>
 </div>
     </div>

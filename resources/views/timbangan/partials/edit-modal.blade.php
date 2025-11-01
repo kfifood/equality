@@ -1,6 +1,6 @@
 <div class="modal-header" style="background-color:white; color:#4361EE;">
     <h5 class="modal-title">
-        <i class="bi bi-pencil me-2"></i>Edit Timbangan
+        <i class="bi bi-pencil me-2"></i>Edit Peralatan
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
@@ -9,19 +9,11 @@
     @method('PUT')
     <div class="modal-body">
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-12">
                 <div class="mb-3">
                     <label for="kode_asset" class="form-label">Kode Asset <span class="text-danger">*</span></label>
                     <input type="text" class="form-control" id="kode_asset" name="kode_asset" 
                            value="{{ old('kode_asset', $timbangan->kode_asset) }}" required>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="nomor_seri_unik" class="form-label">Nomor Seri Unik <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="nomor_seri_unik" name="nomor_seri_unik" 
-                           value="{{ old('nomor_seri_unik', $timbangan->nomor_seri_unik) }}" required>
-                    <div class="form-text">Nomor pembeda untuk timbangan dengan kode asset sama</div>
                 </div>
             </div>
         </div>

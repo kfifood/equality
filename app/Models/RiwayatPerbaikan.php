@@ -40,11 +40,7 @@ class RiwayatPerbaikan extends Model
     // Accessor untuk kode asset lengkap
     public function getKodeAssetLengkapAttribute()
     {
-        if ($this->timbangan) {
-            return $this->timbangan->kode_asset . 
-                   ($this->timbangan->nomor_seri_unik ? ' - ' . $this->timbangan->nomor_seri_unik : '');
-        }
-        return '-';
+        return $this->timbangan ? $this->timbangan->kode_asset : '-';
     }
 
     // Accessor untuk merk lengkap
@@ -86,7 +82,7 @@ class RiwayatPerbaikan extends Model
         return null;
     }
 
-   // Method untuk cek apakah perbaikan sudah selesai
+    // Method untuk cek apakah perbaikan sudah selesai
     public function isSelesai()
     {
         return $this->status_perbaikan === 'Selesai';

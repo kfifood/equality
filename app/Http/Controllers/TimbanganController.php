@@ -36,13 +36,11 @@ class TimbanganController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('kode_asset', 'like', '%' . $search . '%')
-                  ->orWhere('nomor_seri_unik', 'like', '%' . $search . '%')
                   ->orWhere('merk_tipe_no_seri', 'like', '%' . $search . '%');
             });
         }
 
         $timbangan = $query->orderBy('kode_asset', 'asc')
-                          ->orderBy('nomor_seri_unik', 'asc')
                           ->orderBy('created_at', 'desc')
                           ->paginate(10);
         
@@ -52,6 +50,7 @@ class TimbanganController extends Controller
 
         return view('timbangan.index', compact('timbangan', 'lineList'));
     }
+
     // Method untuk create modal
     public function create()
     {
@@ -61,20 +60,18 @@ class TimbanganController extends Controller
         ]);
     }
 
-     public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
-            'kode_asset' => 'required',
-            'nomor_seri_unik' => 'required|unique:timbangan,nomor_seri_unik,NULL,id,kode_asset,' . $request->kode_asset,
+            'kode_asset' => 'required|unique:timbangan,kode_asset',
             'merk_tipe_no_seri' => 'required|string',
             'tanggal_datang' => 'required|date'
         ], [
-            'nomor_seri_unik.unique' => 'Kombinasi Kode Asset dan Nomor Seri sudah ada.'
+            'kode_asset.unique' => 'Kode Asset sudah ada.'
         ]);
 
         Timbangan::create([
             'kode_asset' => $request->kode_asset,
-            'nomor_seri_unik' => $request->nomor_seri_unik,
             'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
             'tanggal_datang' => $request->tanggal_datang,
             'kondisi_saat_ini' => 'Baik'
@@ -85,7 +82,8 @@ class TimbanganController extends Controller
             'message' => 'Timbangan berhasil ditambahkan.'
         ]);
     }
-   // Method untuk edit modal
+
+    // Method untuk edit modal
     public function edit($id)
     {
         $timbangan = Timbangan::findOrFail($id);
@@ -99,18 +97,16 @@ class TimbanganController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'kode_asset' => 'required',
-            'nomor_seri_unik' => 'required|unique:timbangan,nomor_seri_unik,' . $id . ',id,kode_asset,' . $request->kode_asset,
+            'kode_asset' => 'required|unique:timbangan,kode_asset,' . $id,
             'merk_tipe_no_seri' => 'required|string',
             'tanggal_datang' => 'required|date'
         ], [
-            'nomor_seri_unik.unique' => 'Kombinasi Kode Asset dan Nomor Seri sudah ada.'
+            'kode_asset.unique' => 'Kode Asset sudah ada.'
         ]);
 
         $timbangan = Timbangan::findOrFail($id);
         $timbangan->update([
             'kode_asset' => $request->kode_asset,
-            'nomor_seri_unik' => $request->nomor_seri_unik,
             'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
             'tanggal_datang' => $request->tanggal_datang
         ]);
@@ -132,78 +128,79 @@ class TimbanganController extends Controller
         ]);
     }
 
-public function riwayat($id)
-{
-    \Log::info('=== RIIWAYAT METHOD CALLED ===');
-    \Log::info('ID: ' . $id);
-    
-    try {
-        // Enable detailed error reporting
-        ini_set('display_errors', 1);
-        error_reporting(E_ALL);
+    public function riwayat($id)
+    {
+        \Log::info('=== RIIWAYAT METHOD CALLED ===');
+        \Log::info('ID: ' . $id);
         
-        // Validasi ID
-        if (!is_numeric($id) || $id <= 0) {
-            \Log::error('Invalid ID: ' . $id);
-            return response()->json([
-                'success' => false,
-                'message' => 'ID timbangan tidak valid: ' . $id
-            ], 400);
-        }
-
-        // Cari timbangan dengan exception handling
-        $timbangan = Timbangan::find($id);
-        
-        if (!$timbangan) {
-            \Log::error('Timbangan not found: ' . $id);
-            return response()->json([
-                'success' => false,
-                'message' => 'Timbangan tidak ditemukan dengan ID: ' . $id
-            ], 404);
-        }
-
-        \Log::info('Timbangan found: ' . $timbangan->kode_asset);
-
-        // Debug relations
-        \Log::info('Loading riwayatPerbaikan...');
-        $riwayatPerbaikan = $timbangan->riwayatPerbaikan()->orderBy('created_at', 'desc')->get();
-        \Log::info('Riwayat Perbaikan count: ' . $riwayatPerbaikan->count());
-        
-        \Log::info('Loading riwayatPenggunaan...');
-        $riwayatPenggunaan = $timbangan->riwayatPenggunaan()->orderBy('created_at', 'desc')->get();
-        \Log::info('Riwayat Penggunaan count: ' . $riwayatPenggunaan->count());
-
-        // Render view dengan try-catch
         try {
-            $html = view('timbangan.partials.riwayat-modal', compact('timbangan'))->render();
-            \Log::info('View rendered successfully, length: ' . strlen($html));
+            // Enable detailed error reporting
+            ini_set('display_errors', 1);
+            error_reporting(E_ALL);
             
-            return response()->json([
-                'success' => true,
-                'html' => $html
-            ]);
+            // Validasi ID
+            if (!is_numeric($id) || $id <= 0) {
+                \Log::error('Invalid ID: ' . $id);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ID timbangan tidak valid: ' . $id
+                ], 400);
+            }
+
+            // Cari timbangan dengan exception handling
+            $timbangan = Timbangan::find($id);
             
+            if (!$timbangan) {
+                \Log::error('Timbangan not found: ' . $id);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Timbangan tidak ditemukan dengan ID: ' . $id
+                ], 404);
+            }
+
+            \Log::info('Timbangan found: ' . $timbangan->kode_asset);
+
+            // Debug relations
+            \Log::info('Loading riwayatPerbaikan...');
+            $riwayatPerbaikan = $timbangan->riwayatPerbaikan()->orderBy('created_at', 'desc')->get();
+            \Log::info('Riwayat Perbaikan count: ' . $riwayatPerbaikan->count());
+            
+            \Log::info('Loading riwayatPenggunaan...');
+            $riwayatPenggunaan = $timbangan->riwayatPenggunaan()->orderBy('created_at', 'desc')->get();
+            \Log::info('Riwayat Penggunaan count: ' . $riwayatPenggunaan->count());
+
+            // Render view dengan try-catch
+            try {
+                $html = view('timbangan.partials.riwayat-modal', compact('timbangan'))->render();
+                \Log::info('View rendered successfully, length: ' . strlen($html));
+                
+                return response()->json([
+                    'success' => true,
+                    'html' => $html
+                ]);
+                
+            } catch (\Exception $e) {
+                \Log::error('View rendering error: ' . $e->getMessage());
+                \Log::error('View file: ' . $e->getFile() . ':' . $e->getLine());
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error rendering view: ' . $e->getMessage()
+                ], 500);
+            }
+
         } catch (\Exception $e) {
-            \Log::error('View rendering error: ' . $e->getMessage());
-            \Log::error('View file: ' . $e->getFile() . ':' . $e->getLine());
+            \Log::error('Exception in riwayat method: ' . $e->getMessage());
+            \Log::error('File: ' . $e->getFile() . ' Line: ' . $e->getLine());
+            \Log::error('Trace: ' . $e->getTraceAsString());
             
             return response()->json([
                 'success' => false,
-                'message' => 'Error rendering view: ' . $e->getMessage()
+                'message' => 'Server Error: ' . $e->getMessage()
             ], 500);
         }
-
-    } catch (\Exception $e) {
-        \Log::error('Exception in riwayat method: ' . $e->getMessage());
-        \Log::error('File: ' . $e->getFile() . ' Line: ' . $e->getLine());
-        \Log::error('Trace: ' . $e->getTraceAsString());
-        
-        return response()->json([
-            'success' => false,
-            'message' => 'Server Error: ' . $e->getMessage()
-        ], 500);
     }
-}
+
     public function import(Request $request)
     {
         $request->validate([
@@ -237,33 +234,32 @@ public function riwayat($id)
         return response()->download($filePath, 'template-import-timbangan.xlsx');
     }
 
-
     // Tambahkan method ini di TimbanganController
-public function updateKondisi($id, Request $request)
-{
-    $request->validate([
-        'kondisi_saat_ini' => 'required|in:Baik,Rusak,Dalam Perbaikan'
-    ]);
+    public function updateKondisi($id, Request $request)
+    {
+        $request->validate([
+            'kondisi_saat_ini' => 'required|in:Baik,Rusak,Dalam Perbaikan'
+        ]);
 
-    $timbangan = Timbangan::findOrFail($id);
-    $kondisiSebelumnya = $timbangan->kondisi_saat_ini;
-    
-    $timbangan->update([
-        'kondisi_saat_ini' => $request->kondisi_saat_ini
-    ]);
+        $timbangan = Timbangan::findOrFail($id);
+        $kondisiSebelumnya = $timbangan->kondisi_saat_ini;
+        
+        $timbangan->update([
+            'kondisi_saat_ini' => $request->kondisi_saat_ini
+        ]);
 
-    // Sinkronisasi ke riwayat penggunaan yang aktif
-    if ($kondisiSebelumnya !== $request->kondisi_saat_ini) {
-        app(PenggunaanController::class)->updateKondisi($id, $request->kondisi_saat_ini);
+        // Sinkronisasi ke riwayat penggunaan yang aktif
+        if ($kondisiSebelumnya !== $request->kondisi_saat_ini) {
+            app(PenggunaanController::class)->updateKondisi($id, $request->kondisi_saat_ini);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kondisi timbangan berhasil diperbarui.'
+        ]);
     }
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Kondisi timbangan berhasil diperbarui.'
-    ]);
-}
-
- // Method baru untuk menandai timbangan rusak
+    // Method baru untuk menandai timbangan rusak
     public function tandaiRusak($id)
     {
         $timbangan = Timbangan::findOrFail($id);

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Data Timbangan')
+@section('title', 'Data Peralatan')
 @section('content')
 <div class="container-fluid py-4">
     <div class="row">
@@ -8,7 +8,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center"
                     style="background-color:white; color:#4361EE;">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-speedometer me-2"></i>Data Timbangan
+                        <i class="bi bi-speedometer me-2"></i>Data Peralatan 
                     </h5>
                     <div>
                         <!--<button class="btn btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal"
@@ -93,19 +93,18 @@
                     <!-- Data Table -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped" id="timbanganTable">
-                            <thead class="table-tmb" style="color:#4361EE;">
-                                <tr>
-                                    <th width="50">No</th>
-                                    <th>Kode Asset</th>
-                                    <th>Nomor Seri</th>
-                                    <th>Merk & Seri</th>
-                                    <th>Tanggal Datang</th>
-                                    <th>Line</th>
-                                    <th>Lokasi</th>
-                                    <th>Kondisi</th>
-                                    <th width="120" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
+                            <!-- Di bagian thead -->
+<thead class="table-tmb" style="color:#4361EE;">
+    <tr>
+        <th width="50">No</th>
+        <th>Kode Asset</th>
+        <th>Merk & Seri</th>
+        <th>Tanggal Datang</th>
+        <th>Lokasi Line</th>
+        <th>Kondisi</th>
+        <th width="120" class="text-center">Aksi</th>
+    </tr>
+</thead>
                             <tbody>
                                 @foreach($timbangan as $index => $item)
                                 <tr>
@@ -122,9 +121,6 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary">{{ $item->nomor_seri_unik }}</span>
-                                    </td>
-                                    <td>
                                         <span class="text-truncate" style="max-width: 200px;"
                                             title="{{ $item->merk_tipe_no_seri }}">
                                             {{ $item->merk_tipe_no_seri }}
@@ -133,14 +129,6 @@
                                     <td>
                                         {{ $item->tanggal_datang ? \Carbon\Carbon::parse($item->tanggal_datang)->format('d/m/Y') : '-' }}
                                     </td>
-                                    <td>
-                                        @if($item->status_line)
-                                        <span class="badge bg-info">{{ $item->status_line }}</span>
-                                        @else
-                                        <span class="badge bg-secondary">Lab</span>
-                                        @endif
-                                    </td>
-                                    <!-- Di bagian tabel timbangan, kolom lokasi dan kondisi -->
                                     <td>
                                         @if($item->status_line)
                                         <span class="badge bg-info">{{ $item->status_line }}</span>

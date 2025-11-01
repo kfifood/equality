@@ -1,7 +1,7 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <i class="bi bi-speedometer"></i>
-        <span class="sidebar-brand-text">K-LAB</span>
+        <span class="sidebar-brand-text">K-SQUID</span>
     </div>
     <ul class="sidebar-nav">
         <li class="nav-item">
@@ -18,21 +18,25 @@
 <li class="nav-item">
     <a href="{{ route('timbangan.index') }}" class="nav-link {{ Request::is('timbangan*') ? 'active' : '' }}">
         <i class="bi bi-speedometer nav-icon"></i>
-        <span class="nav-text">Data Timbangan</span>
+        <span class="nav-text">Data Peralatan</span>
     </a>
 </li>
-        <li class="nav-item">
-            <a href="{{ route('users.index') }}" class="nav-link {{ 
-                Request::is('users*') || 
-                Request::is('master/users*') ? 'active' : '' }}">
-                <i class="bi bi-people nav-icon"></i>
-                <span class="nav-text">Manajemen User</span>
-            </a>
-        </li>
+        @auth
+            @if(auth()->user()->role === 'superadmin')
+                <li class="nav-item">
+                    <a href="{{ route('users.index') }}" class="nav-link {{ 
+                        Request::is('users*') || 
+                        Request::is('master/users*') ? 'active' : '' }}">
+                        <i class="bi bi-people nav-icon"></i>
+                        <span class="nav-text">Manajemen User</span>
+                    </a>
+                </li>
+            @endif
+        @endauth
         <li class="nav-item">
     <a href="{{ route('line.index') }}" class="nav-link {{ Request::is('line*') ? 'active' : '' }}">
         <i class="bi bi-diagram-3 nav-icon"></i>
-        <span class="nav-text">Master Line</span>
+        <span class="nav-text">Data Line</span>
     </a>
 </li>
 
@@ -43,13 +47,13 @@
         <li class="nav-item">
     <a href="{{ route('penggunaan.index') }}" class="nav-link {{ Request::is('penggunaan*') ? 'active' : '' }}">
         <i class="bi bi-arrow-right-circle nav-icon"></i>
-        <span class="nav-text">Penggunaan Timbangan</span>
+        <span class="nav-text">Penggunaan Alat</span>
     </a>
 </li>
         <li class="nav-item">
     <a href="{{ route('perbaikan.index') }}" class="nav-link {{ Request::is('perbaikan*') ? 'active' : '' }}">
         <i class="bi bi-tools nav-icon"></i>
-        <span class="nav-text">Perbaikan Timbangan</span>
+        <span class="nav-text">Perbaikan Alat</span>
     </a>
 </li>
 

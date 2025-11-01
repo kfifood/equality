@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Penggunaan Timbangan')
+@section('title', 'Penggunaan Alat')
 @section('content')
 <div class="container-fluid py-4">
     <div class="row">
@@ -8,7 +8,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center" style="background-color:white; color:#4361EE;">
                 <div>    
                 <h5 class="card-title mb-0">
-                        <i class="bi bi-arrow-right-circle me-2"></i>Riwayat Penggunaan Timbangan
+                        <i class="bi bi-arrow-right-circle me-2"></i>Riwayat Penggunaan Alat
                     </h5>
                     <small class="text-muted">Termasuk timbangan yang baru selesai perbaikan</small>
 </div>
@@ -67,13 +67,19 @@
                                             <option value="Dalam Perbaikan" {{ request('kondisi') == 'Dalam Perbaikan' ? 'selected' : '' }}>Dalam Perbaikan</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary">Filter</button>
-                                            <a href="{{ route('penggunaan.index') }}" class="btn btn-secondary">Reset</a>
-                                        </div>
-                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+    <div class="d-flex gap-2 w-100">
+        <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
+            <i class="bi bi-funnel"></i>
+        </button>
+        <a href="{{ route('penggunaan.index') }}" 
+           class="btn btn-secondary d-flex align-items-center justify-content-center" 
+           title="Reset">
+            <i class="bi bi-arrow-clockwise"></i>
+        </a>
+    </div>
+</div>
+
                                 </div>
                             </form>
                         </div>
@@ -86,13 +92,12 @@
             <tr>
                 <th width="50">No</th>
                 <th>Kode Asset</th>
-                <th>Nomor Seri</th>
                 <th>Merk & Tipe</th>
                 <th>Line Tujuan</th>
                 <th>PIC</th>
                 <th>Tanggal Pemakaian</th>
                 <th>Status</th>
-                <th>Kondisi Timbangan</th>
+                <th>Kondisi Alat</th>
                 <th>Keterangan</th>
             </tr>
         </thead>
@@ -110,9 +115,7 @@
                         </div>
                     </div>
                 </td>
-                <td>
-                    <span class="badge bg-secondary">{{ $item->timbangan->nomor_seri_unik }}</span>
-                </td>
+                <!-- Hapus baris untuk nomor_seri_unik -->
                 <td>
                     <span class="text-truncate" style="max-width: 200px;" 
                           title="{{ $item->timbangan->merk_tipe_no_seri }}">

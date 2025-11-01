@@ -40,7 +40,6 @@ class PerbaikanController extends Controller
         $timbanganList = Timbangan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
                                 ->whereNotNull('status_line') // Masih di line, belum dikembalikan ke lab
                                 ->orderBy('kode_asset')
-                                ->orderBy('nomor_seri_unik')
                                 ->get();
 
         return view('perbaikan.index', compact('perbaikan', 'timbanganList'));
@@ -53,7 +52,6 @@ class PerbaikanController extends Controller
         $timbangan = Timbangan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
                             ->whereNotNull('status_line')
                             ->orderBy('kode_asset')
-                            ->orderBy('nomor_seri_unik')
                             ->get();
                             
         $lines = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
@@ -111,13 +109,11 @@ class PerbaikanController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Perbaikan timbangan ' . $timbangan->kode_asset . 
-                        ($timbangan->nomor_seri_unik ? ' - ' . $timbangan->nomor_seri_unik : '') . 
-                        ' berhasil dicatat. Timbangan dikembalikan ke Lab.'
+            'message' => 'Perbaikan timbangan ' . $timbangan->kode_asset . ' berhasil dicatat. Timbangan dikembalikan ke Lab.'
         ]);
     }
 
-      public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $id)
     {
         $request->validate([
             'status_perbaikan' => 'required|in:Masuk Lab,Dalam Perbaikan,Selesai,Dikirim Eksternal',

@@ -46,9 +46,6 @@
                                                 <option value="{{ $timbangan->id }}" 
                                                     {{ request('timbangan_id') == $timbangan->id ? 'selected' : '' }}>
                                                     {{ $timbangan->kode_asset }}
-                                                    @if($timbangan->nomor_seri_unik)
-                                                         - {{ $timbangan->nomor_seri_unik }}
-                                                    @endif
                                                 </option>
                                             @endforeach
                                         </select>
@@ -63,13 +60,19 @@
                                         <input type="text" name="line" class="form-control" 
                                                value="{{ request('line') }}" placeholder="Cari line...">
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary">Filter</button>
-                                            <a href="{{ route('riwayat.index') }}" class="btn btn-secondary">Reset</a>
-                                        </div>
-                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+    <div class="d-flex gap-2 w-100">
+        <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
+            <i class="bi bi-funnel"></i>
+        </button>
+        <a href="{{ route('riwayat.index') }}" 
+           class="btn btn-secondary d-flex align-items-center justify-content-center" 
+           title="Reset">
+            <i class="bi bi-arrow-clockwise"></i>
+        </a>
+    </div>
+</div>
+
                                 </div>
                             </form>
                         </div>
@@ -102,7 +105,6 @@
                                             <tr>
                                                 <th width="50">No</th>
                                                 <th>Kode Asset</th>
-                                                <th>Nomor Seri</th>
                                                 <th>Line Tujuan</th>
                                                 <th>PIC</th>
                                                 <th>Tanggal Pemakaian</th>
@@ -129,9 +131,7 @@
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <span class="badge bg-secondary">{{ $item->timbangan->nomor_seri_unik }}</span>
-                                                </td>
+                                                <!-- Hapus baris untuk nomor_seri_unik -->
                                                 <td>
                                                     <span class="badge bg-info">{{ $item->line_tujuan }}</span>
                                                 </td>
@@ -179,7 +179,6 @@
                                             <tr>
                                                 <th width="50">No</th>
                                                 <th>Kode Asset</th>
-                                                <th>Nomor Seri</th>
                                                 <th>Line Sebelumnya</th>
                                                 <th>Keluhan</th>
                                                 <th>Status Perbaikan</th>
@@ -206,9 +205,7 @@
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td>
-                                                    <span class="badge bg-secondary">{{ $item->timbangan->nomor_seri_unik }}</span>
-                                                </td>
+                                                <!-- Hapus baris untuk nomor_seri_unik -->
                                                 <td>
                                                     <span class="badge bg-info">{{ $item->line_sebelumnya }}</span>
                                                 </td>

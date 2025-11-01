@@ -51,7 +51,7 @@ class RiwayatController extends Controller
         $riwayatPenggunaan = $queryPenggunaan->orderBy('created_at', 'desc')->paginate(15, ['*'], 'penggunaan_page');
         $riwayatPerbaikan = $queryPerbaikan->orderBy('created_at', 'desc')->paginate(15, ['*'], 'perbaikan_page');
 
-        $timbanganList = Timbangan::orderBy('kode_asset')->orderBy('nomor_seri_unik')->get();
+        $timbanganList = Timbangan::orderBy('kode_asset')->get();
 
         return view('riwayat.index', compact(
             'riwayatPenggunaan', 
@@ -134,7 +134,7 @@ class RiwayatController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        $timbanganList = Timbangan::orderBy('kode_asset')->orderBy('nomor_seri_unik')->get();
+        $timbanganList = Timbangan::orderBy('kode_asset')->get();
 
         return view('riwayat.timeline', compact('riwayat', 'timbanganList'));
     }

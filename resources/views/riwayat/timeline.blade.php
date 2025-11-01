@@ -37,9 +37,6 @@
                                                 <option value="{{ $timbangan->id }}" 
                                                     {{ request('timbangan_id') == $timbangan->id ? 'selected' : '' }}>
                                                     {{ $timbangan->kode_asset }}
-                                                    @if($timbangan->nomor_seri_unik)
-                                                         - {{ $timbangan->nomor_seri_unik }}
-                                                    @endif
                                                 </option>
                                             @endforeach
                                         </select>
@@ -49,13 +46,19 @@
                                         <input type="text" name="kode_asset" class="form-control" 
                                                value="{{ request('kode_asset') }}" placeholder="Cari kode asset...">
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="d-grid gap-2">
-                                            <button type="submit" class="btn btn-primary">Filter</button>
-                                            <a href="{{ route('riwayat.timeline') }}" class="btn btn-secondary">Reset</a>
-                                        </div>
-                                    </div>
+                                    <div class="col-md-2 d-flex align-items-end">
+    <div class="d-flex gap-2 w-100">
+        <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
+            <i class="bi bi-funnel"></i>
+        </button>
+        <a href="{{ route('riwayat.timeline') }}" 
+           class="btn btn-secondary d-flex align-items-center justify-content-center" 
+           title="Reset">
+            <i class="bi bi-arrow-clockwise"></i>
+        </a>
+    </div>
+</div>
+
                                 </div>
                             </form>
                         </div>
@@ -80,9 +83,6 @@
                                                 <a href="javascript:void(0)" onclick="showTimbanganRiwayat({{ $item->timbangan_id }})" 
                                                    class="text-decoration-none">
                                                     {{ $item->timbangan->kode_asset }}
-                                                    @if($item->timbangan->nomor_seri_unik)
-                                                        <span class="badge bg-secondary ms-1">{{ $item->timbangan->nomor_seri_unik }}</span>
-                                                    @endif
                                                 </a>
                                                 <span class="badge bg-{{ $item->jenis == 'penggunaan' ? 'success' : 'warning' }} ms-2">
                                                     <i class="bi bi-{{ $item->jenis == 'penggunaan' ? 'arrow-right-circle' : 'tools' }} me-1"></i>

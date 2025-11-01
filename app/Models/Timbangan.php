@@ -13,7 +13,6 @@ class Timbangan extends Model
     
     protected $fillable = [
         'kode_asset',
-        'nomor_seri_unik', // TAMBAHKAN INI
         'merk_tipe_no_seri',
         'tanggal_datang',
         'status_line',
@@ -29,9 +28,6 @@ class Timbangan extends Model
     // Accessor untuk menampilkan kode asset lengkap
     public function getKodeAssetLengkapAttribute()
     {
-        if ($this->nomor_seri_unik) {
-            return $this->kode_asset . ' - ' . $this->nomor_seri_unik;
-        }
         return $this->kode_asset;
     }
 
