@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Laporan Timbangan')
+@section('title', 'Laporan Alat')
 @section('content')
 <div class="container-fluid py-4">
     <div class="row">
@@ -7,7 +7,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center py-3">
                     <h5 class="card-title mb-0 text-primary">
-                        <i class="bi bi-file-earmark-text me-2"></i>Laporan Timbangan
+                        <i class="bi bi-file-earmark-text me-2"></i>Laporan Alat
                     </h5>
                     <div>
                         <a href="{{ route('laporan.statistik') }}" class="btn btn-outline-primary btn-sm me-2">
@@ -69,9 +69,9 @@
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between">
                                         <div>
-                                            <h6 class="card-title text-muted">Total Timbangan</h6>
+                                            <h6 class="card-title text-muted">Total Alat</h6>
                                             <h2 class="mb-0 text-primary">{{ $statistik['total'] }}</h2>
-                                            <small class="text-muted">Semua timbangan</small>
+                                            <small class="text-muted">Semua Alat</small>
                                         </div>
                                         <div class="align-self-center">
                                             <i class="bi bi-speedometer fa-2x text-primary opacity-75"></i>
