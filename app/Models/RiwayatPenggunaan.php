@@ -93,39 +93,52 @@ class RiwayatPenggunaan extends Model
         return $this->tanggal_pemakaian ? $this->tanggal_pemakaian->format('d/m/Y') : '-';
     }
 
-    // Accessor untuk status penggunaan - LOGIKA DIPERBAIKI
-    public function getStatusPenggunaanAttribute()
-    {
-        // Jika timbangan masih di line yang sama dengan riwayat
-        if ($this->timbangan && $this->timbangan->status_line === $this->line_tujuan) {
-            return 'Masih Digunakan';
-        }
-        
-        // Jika timbangan dalam perbaikan, statusnya "Dikembalikan"
-        if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Dalam Perbaikan') {
-            return 'Dikembalikan';
-        }
-        
-        // Jika timbangan rusak, statusnya "Dikembalikan" 
-        if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Rusak') {
-            return 'Dikembalikan';
-        }
-        
-        // Default: Selesai (kondisi baik tapi sudah tidak di line tujuan)
+    // Accessor untuk status penggunaan - UPDATE LOGIC
+public function getStatusPenggunaanAttribute()
+{
+    // Jika timbangan masih di line yang sama dengan riwayat
+    if ($this->timbangan && $this->timbangan->status_line === $this->line_tujuan) {
+        return 'Masih Digunakan';
+    }
+    
+    // Jika timbangan dalam perbaikan, statusnya "Dikembalikan"
+    if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Dalam Perbaikan') {
+        return 'Dikembalikan';
+    }
+    
+    // Jika timbangan rusak, statusnya "Dikembalikan" 
+    if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Rusak') {
+        return 'Dikembalikan';
+    }
+    
+    // PERUBAHAN: Jika timbangan baik tapi tidak di line ini, berarti "Selesai" (dipindahkan)
+    if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Baik') {
         return 'Selesai';
     }
+    
+    // Default: Selesai
+    return 'Selesai';
+}
 
     // Method untuk cek apakah penggunaan masih aktif
-    public function isAktif()
-    {
-        return $this->timbangan && $this->timbangan->status_line === $this->line_tujuan;
-    }
+public function isAktif()
+{
+    return $this->timbangan && $this->timbangan->status_line === $this->line_tujuan;
+}
 
-    // Method untuk cek apakah timbangan dikembalikan karena rusak/perbaikan
-    public function isDikembalikan()
-    {
-        return $this->timbangan && 
-               ($this->timbangan->kondisi_saat_ini === 'Dalam Perbaikan' || 
-                $this->timbangan->kondisi_saat_ini === 'Rusak');
-    }
+// Method untuk cek apakah timbangan dikembalikan karena rusak/perbaikan
+public function isDikembalikan()
+{
+    return $this->timbangan && 
+           ($this->timbangan->kondisi_saat_ini === 'Dalam Perbaikan' || 
+            $this->timbangan->kondisi_saat_ini === 'Rusak');
+}
+
+// Method baru: cek apakah selesai karena dipindahkan
+public function isSelesaiDipindahkan()
+{
+    return $this->timbangan && 
+           $this->timbangan->kondisi_saat_ini === 'Baik' &&
+           $this->timbangan->status_line !== $this->line_tujuan;
+}
 }

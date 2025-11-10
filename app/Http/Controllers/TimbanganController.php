@@ -14,108 +14,126 @@ use App\Exports\TimbanganExport;
 class TimbanganController extends Controller
 {
     public function index(Request $request)
-    {
-        $query = Timbangan::query();
+{
+    $query = Timbangan::query();
 
-        // Filter berdasarkan kondisi
-        if ($request->has('kondisi') && $request->kondisi != '') {
-            $query->where('kondisi_saat_ini', $request->kondisi);
-        }
-
-        // Filter berdasarkan status line
-        if ($request->has('status_line') && $request->status_line != '') {
-            if ($request->status_line == 'Lab') {
-                $query->whereNull('status_line');
-            } else {
-                $query->where('status_line', $request->status_line);
-            }
-        }
-
-        // Search
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('kode_asset', 'like', '%' . $search . '%')
-                  ->orWhere('merk_tipe_no_seri', 'like', '%' . $search . '%');
-            });
-        }
-
-        $timbangan = $query->orderBy('kode_asset', 'asc')
-                          ->orderBy('created_at', 'desc')
-                          ->paginate(10);
-        
-        $lineList = MasterLine::where('status_aktif', true)
-            ->orderBy('nama_line')
-            ->pluck('nama_line');
-
-        return view('timbangan.index', compact('timbangan', 'lineList'));
+    // Filter berdasarkan kondisi
+    if ($request->has('kondisi') && $request->kondisi != '') {
+        $query->where('kondisi_saat_ini', $request->kondisi);
     }
+    // Filter berdasarkan lokasi asli
+if ($request->has('lokasi_asli') && $request->lokasi_asli != '') {
+    $query->where('lokasi_asli', $request->lokasi_asli);
+}
+    // Filter berdasarkan status line
+    if ($request->has('status_line') && $request->status_line != '') {
+        if ($request->status_line == 'Lab') {
+            $query->whereNull('status_line');
+        } else {
+            $query->where('status_line', $request->status_line);
+        }
+    }
+
+    // Search
+    if ($request->has('search') && $request->search != '') {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('kode_asset', 'like', '%' . $search . '%')
+              ->orWhere('merk_tipe_no_seri', 'like', '%' . $search . '%')
+              ->orWhere('lokasi_asli', 'like', '%' . $search . '%'); // TAMBAH INI
+        });
+    }
+
+    $timbangan = $query->orderBy('kode_asset', 'asc')
+                      ->orderBy('created_at', 'desc')
+                      ->paginate(10);
+    
+    $lineList = MasterLine::where('status_aktif', true)
+        ->orderBy('nama_line')
+        ->pluck('nama_line');
+
+    return view('timbangan.index', compact('timbangan', 'lineList'));
+}
 
     // Method untuk create modal
-    public function create()
-    {
-        return response()->json([
-            'success' => true,
-            'html' => view('timbangan.partials.create-modal')->render()
-        ]);
-    }
+public function create()
+{
+    $lineList = MasterLine::where('status_aktif', true)
+        ->orderBy('nama_line')
+        ->pluck('nama_line');
+        
+    return response()->json([
+        'success' => true,
+        'html' => view('timbangan.partials.create-modal', compact('lineList'))->render()
+    ]);
+}
 
     public function store(Request $request)
-    {
-        $request->validate([
-            'kode_asset' => 'required|unique:timbangan,kode_asset',
-            'merk_tipe_no_seri' => 'required|string',
-            'tanggal_datang' => 'required|date'
-        ], [
-            'kode_asset.unique' => 'Kode Asset sudah ada.'
-        ]);
+{
+    $request->validate([
+        'kode_asset' => 'required|unique:timbangan,kode_asset',
+        'merk_tipe_no_seri' => 'required|string',
+        'tanggal_datang' => 'required|date',
+        'lokasi_asli' => 'required|string' // TAMBAH VALIDASI
+    ], [
+        'kode_asset.unique' => 'Kode Asset sudah ada.',
+        'lokasi_asli.required' => 'Lokasi asli harus dipilih.'
+    ]);
 
-        Timbangan::create([
-            'kode_asset' => $request->kode_asset,
-            'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
-            'tanggal_datang' => $request->tanggal_datang,
-            'kondisi_saat_ini' => 'Baik'
-        ]);
+    Timbangan::create([
+        'kode_asset' => $request->kode_asset,
+        'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
+        'tanggal_datang' => $request->tanggal_datang,
+        'lokasi_asli' => $request->lokasi_asli, // SIMPAN LOKASI ASLI
+        'status_line' => null, // Default di Lab
+        'kondisi_saat_ini' => 'Baik'
+    ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Timbangan berhasil ditambahkan.'
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Timbangan berhasil ditambahkan.'
+    ]);
+}
 
     // Method untuk edit modal
-    public function edit($id)
-    {
-        $timbangan = Timbangan::findOrFail($id);
-            
-        return response()->json([
-            'success' => true,
-            'html' => view('timbangan.partials.edit-modal', compact('timbangan'))->render()
-        ]);
-    }
+public function edit($id)
+{
+    $timbangan = Timbangan::findOrFail($id);
+    $lineList = MasterLine::where('status_aktif', true)
+        ->orderBy('nama_line')
+        ->pluck('nama_line');
+        
+    return response()->json([
+        'success' => true,
+        'html' => view('timbangan.partials.edit-modal', compact('timbangan', 'lineList'))->render()
+    ]);
+}
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'kode_asset' => 'required|unique:timbangan,kode_asset,' . $id,
-            'merk_tipe_no_seri' => 'required|string',
-            'tanggal_datang' => 'required|date'
-        ], [
-            'kode_asset.unique' => 'Kode Asset sudah ada.'
-        ]);
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'kode_asset' => 'required|unique:timbangan,kode_asset,' . $id,
+        'merk_tipe_no_seri' => 'required|string',
+        'tanggal_datang' => 'required|date',
+        'lokasi_asli' => 'required|string' // TAMBAH VALIDASI
+    ], [
+        'kode_asset.unique' => 'Kode Asset sudah ada.',
+        'lokasi_asli.required' => 'Lokasi asli harus dipilih.'
+    ]);
 
-        $timbangan = Timbangan::findOrFail($id);
-        $timbangan->update([
-            'kode_asset' => $request->kode_asset,
-            'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
-            'tanggal_datang' => $request->tanggal_datang
-        ]);
+    $timbangan = Timbangan::findOrFail($id);
+    $timbangan->update([
+        'kode_asset' => $request->kode_asset,
+        'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
+        'tanggal_datang' => $request->tanggal_datang,
+        'lokasi_asli' => $request->lokasi_asli // UPDATE LOKASI ASLI
+    ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Timbangan berhasil diperbarui.'
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'message' => 'Timbangan berhasil diperbarui.'
+    ]);
+}
 
     public function destroy($id)
     {

@@ -11,14 +11,15 @@ class Timbangan extends Model
 
     protected $table = 'timbangan';
     
-    protected $fillable = [
-        'kode_asset',
-        'merk_tipe_no_seri',
-        'tanggal_datang',
-        'status_line',
-        'kondisi_saat_ini'
-    ];
-
+   protected $fillable = [
+    'kode_asset',
+    'merk_tipe_no_seri', 
+    'tanggal_datang',
+    'lokasi_asli', // TAMBAH INI
+    'status_line',
+    'kondisi_saat_ini',
+    'catatan' // TAMBAH INI
+];
     protected $casts = [
         'tanggal_datang' => 'date',
         'created_at' => 'datetime',
@@ -133,6 +134,18 @@ class Timbangan extends Model
         return $this->kondisi_saat_ini === 'Dalam Perbaikan' && $this->status_line === null;
     }
 
+    // Method untuk cek apakah di lokasi asli
+public function isDiLokasiAsli()
+{
+    return $this->status_line === $this->lokasi_asli;
+}
+
+// Method untuk cek apakah dipinjam
+public function isDipinjam()
+{
+    return $this->status_line && $this->status_line !== $this->lokasi_asli;
+}
+
     // Accessor untuk status lengkap
     public function getStatusLengkapAttribute()
     {
@@ -148,4 +161,19 @@ class Timbangan extends Model
             return $this->kondisi_saat_ini;
         }
     }
+
+    // Method baru untuk mendapatkan status lokasi
+public function getStatusLokasiAttribute()
+{
+    if (!$this->status_line) {
+        return 'Di Lab';
+    }
+    
+    if ($this->status_line === $this->lokasi_asli) {
+        return 'Di Lokasi Asli';
+    }
+    
+    return 'Dipinjam ke ' . $this->status_line;
+}
+
 }

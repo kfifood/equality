@@ -46,19 +46,23 @@
                                         <input type="text" name="kode_asset" class="form-control" 
                                                value="{{ request('kode_asset') }}" placeholder="Cari kode asset...">
                                     </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Line</label>
+                                        <input type="text" name="line" class="form-control" 
+                                               value="{{ request('line') }}" placeholder="Cari line...">
+                                    </div>
                                     <div class="col-md-2 d-flex align-items-end">
-    <div class="d-flex gap-2 w-100">
-        <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
-            <i class="bi bi-funnel"></i>
-        </button>
-        <a href="{{ route('riwayat.timeline') }}" 
-           class="btn btn-secondary d-flex align-items-center justify-content-center" 
-           title="Reset">
-            <i class="bi bi-arrow-clockwise"></i>
-        </a>
-    </div>
-</div>
-
+                                        <div class="d-flex gap-2 w-100">
+                                            <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
+                                                <i class="bi bi-funnel"></i>
+                                            </button>
+                                            <a href="{{ route('riwayat.timeline') }}" 
+                                               class="btn btn-secondary d-flex align-items-center justify-content-center" 
+                                               title="Reset">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -95,6 +99,28 @@
                                             </small>
                                         </div>
                                         
+                                        <!-- PERUBAHAN: Tampilkan info lokasi asli dan status -->
+                                        <div class="row mb-2">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Lokasi Asli:</small>
+                                                <span class="badge bg-primary ms-1">{{ $item->timbangan->lokasi_asli ?? 'Lab' }}</span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">Status Saat Ini:</small>
+                                                @php
+                                                    $statusColor = match($item->timbangan->kondisi_saat_ini) {
+                                                        'Baik' => 'success',
+                                                        'Rusak' => 'danger',
+                                                        'Dalam Perbaikan' => 'warning',
+                                                        default => 'secondary'
+                                                    };
+                                                @endphp
+                                                <span class="badge bg-{{ $statusColor }} ms-1">
+                                                    {{ $item->timbangan->kondisi_saat_ini }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
                                         @if($item->jenis == 'penggunaan')
                                             <p class="mb-1">
                                                 <i class="bi bi-arrow-right text-success me-1"></i>
@@ -103,6 +129,23 @@
                                                     oleh <strong>{{ $item->pic }}</strong>
                                                 @endif
                                             </p>
+                                            <!-- PERUBAHAN: Tampilkan status penggunaan -->
+                                            @php
+                                                $penggunaan = $item->jenis == 'penggunaan' ? 
+                                                    \App\Models\RiwayatPenggunaan::find($item->id) : null;
+                                                $statusPenggunaan = $penggunaan ? $penggunaan->status_penggunaan : null;
+                                                $statusColor = match($statusPenggunaan) {
+                                                    'Masih Digunakan' => 'success',
+                                                    'Dikembalikan' => 'warning',
+                                                    'Selesai' => 'secondary',
+                                                    default => 'secondary'
+                                                };
+                                            @endphp
+                                            @if($statusPenggunaan)
+                                                <span class="badge bg-{{ $statusColor }} mb-2">
+                                                    Status: {{ $statusPenggunaan }}
+                                                </span>
+                                            @endif
                                             @if($item->keterangan)
                                                 <p class="text-muted mb-0"><small>{{ $item->keterangan }}</small></p>
                                             @endif
@@ -111,6 +154,31 @@
                                                 <i class="bi bi-arrow-left text-warning me-1"></i>
                                                 Dikembalikan dari <strong>{{ $item->lokasi }}</strong> untuk perbaikan
                                             </p>
+                                            <!-- PERUBAHAN: Tampilkan status perbaikan -->
+                                            @php
+                                                $perbaikan = $item->jenis == 'perbaikan' ? 
+                                                    \App\Models\RiwayatPerbaikan::find($item->id) : null;
+                                                $statusPerbaikan = $perbaikan ? $perbaikan->status_perbaikan : null;
+                                                $statusColor = match($statusPerbaikan) {
+                                                    'Masuk Lab' => 'secondary',
+                                                    'Dalam Perbaikan' => 'warning',
+                                                    'Selesai' => 'success',
+                                                    'Dikirim Eksternal' => 'info',
+                                                    default => 'secondary'
+                                                };
+                                            @endphp
+                                            @if($statusPerbaikan)
+                                                <span class="badge bg-{{ $statusColor }} mb-2">
+                                                    <i class="bi bi-{{ match($statusPerbaikan) {
+                                                        'Masuk Lab' => 'box-arrow-in-down',
+                                                        'Dalam Perbaikan' => 'tools',
+                                                        'Selesai' => 'check-circle',
+                                                        'Dikirim Eksternal' => 'arrow-right-circle',
+                                                        default => 'question-circle'
+                                                    } }} me-1"></i>
+                                                    {{ $statusPerbaikan }}
+                                                </span>
+                                            @endif
                                             <p class="text-muted mb-0"><small>{{ $item->keterangan }}</small></p>
                                         @endif
                                     </div>

@@ -11,17 +11,23 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label class="form-label">Pilih Alat <span class="text-danger">*</span></label>
-                    <select name="timbangan_id" class="form-select" required>
+                    <select name="timbangan_id" class="form-select" id="timbanganSelect" required>
                         <option value="">Pilih Alat</option>
                         @foreach($timbangan as $item)
                             <option value="{{ $item->id }}" 
-                                {{ $selectedTimbangan && $selectedTimbangan->id == $item->id ? 'selected' : '' }}>
-                                {{ $item->kode_asset }} - {{ $item->merk_tipe_no_seri }} (Lab)
+                                {{ $selectedTimbangan && $selectedTimbangan->id == $item->id ? 'selected' : '' }}
+                                data-lokasi="{{ $item->status_line ? $item->status_line : 'Lab' }}">
+                                {{ $item->kode_asset }} - {{ $item->merk_tipe_no_seri }} 
+                                @if($item->status_line)
+                                    (Sedang di {{ $item->status_line }})
+                                @else
+                                    (Lab)
+                                @endif
                             </option>
                         @endforeach
                     </select>
-                    <div class="form-text">
-                        Hanya menampilkan timbangan dengan kondisi <strong>Baik</strong> yang berada di <strong>Lab</strong>
+                    <div class="form-text" id="lokasiInfo">
+                        <!-- Info lokasi akan di-update via JavaScript -->
                     </div>
                 </div>
             </div>
@@ -63,17 +69,26 @@
                       placeholder="Keterangan penggunaan (opsional)"></textarea>
         </div>
 
-        <!-- Di bagian alert info -->
-<div class="alert alert-info">
-    <small>
-        <i class="bi bi-info-circle me-1"></i>
-        <strong>Informasi Penggunaan:</strong><br>
-        • Hanya timbangan dengan kondisi <strong>Baik</strong> dan berada di <strong>Lab</strong> yang bisa digunakan<br>
-        • <strong>Timbangan yang baru selesai perbaikan akan otomatis tersedia di Lab</strong><br>
-        • Setelah dicatat, timbangan akan berpindah status ke line tujuan dengan status "Masih Digunakan"<br>
-        • Untuk menggunakan timbangan yang sama lagi, buat data penggunaan baru setelah perbaikan selesai
-    </small>
-</div>
+        <!-- Update alert info -->
+        <div class="alert alert-info">
+            <small>
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Informasi Penggunaan:</strong><br>
+                • Hanya timbangan dengan kondisi <strong>Baik</strong> yang bisa digunakan<br>
+                • Timbangan yang sedang digunakan di line lain <strong>bisa dipindahkan</strong><br>
+                • Status penggunaan sebelumnya otomatis berubah menjadi "Selesai"<br>
+                • Timbangan akan berpindah ke line tujuan yang baru
+            </small>
+        </div>
+
+        <!-- Alert warning untuk timbangan yang sedang digunakan -->
+        <div class="alert alert-warning d-none" id="warningAlert">
+            <small>
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Perhatian:</strong> Timbangan ini sedang digunakan di line lain. 
+                Status penggunaan sebelumnya akan otomatis berubah menjadi "Selesai".
+            </small>
+        </div>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -82,3 +97,30 @@
         </button>
     </div>
 </form>
+
+<script>
+$(document).ready(function() {
+    // Update info lokasi saat timbangan dipilih
+    $('#timbanganSelect').change(function() {
+        const selectedOption = $(this).find('option:selected');
+        const lokasi = selectedOption.data('lokasi');
+        
+        if (lokasi) {
+            $('#lokasiInfo').html('Lokasi saat ini: <strong>' + lokasi + '</strong>');
+            
+            // Tampilkan warning jika timbangan sedang digunakan di line
+            if (lokasi !== 'Lab') {
+                $('#warningAlert').removeClass('d-none');
+            } else {
+                $('#warningAlert').addClass('d-none');
+            }
+        } else {
+            $('#lokasiInfo').html('Pilih timbangan untuk melihat info lokasi');
+            $('#warningAlert').addClass('d-none');
+        }
+    });
+
+    // Trigger change event saat modal terbuka
+    $('#timbanganSelect').trigger('change');
+});
+</script>

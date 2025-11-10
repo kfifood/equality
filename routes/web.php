@@ -69,12 +69,15 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Line Routes
-    Route::prefix('line')->group(function () {
-        Route::get('/', [LineController::class, 'index'])->name('line.index');
-        Route::post('/', [LineController::class, 'store'])->name('line.store');
-        Route::put('/{id}', [LineController::class, 'update'])->name('line.update');
-        Route::delete('/{id}', [LineController::class, 'destroy'])->name('line.destroy');
-    });
+Route::prefix('line')->group(function () {
+    Route::get('/', [LineController::class, 'index'])->name('line.index');
+    Route::post('/', [LineController::class, 'store'])->name('line.store');
+    Route::put('/{id}', [LineController::class, 'update'])->name('line.update');
+    Route::delete('/{id}', [LineController::class, 'destroy'])->name('line.destroy');
+    
+    // KOREKSI: Route untuk melihat timbangan di line
+    Route::get('/{id}/timbangan', [LineController::class, 'timbangan'])->name('line.timbangan');
+});
 
     // ==================== OPERATIONS ====================
     // Penggunaan Timbangan - SEMUA ROUTE PENGGUNAAN DI SINI

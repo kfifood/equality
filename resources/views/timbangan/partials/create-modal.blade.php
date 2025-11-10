@@ -25,6 +25,20 @@
                            value="{{ old('tanggal_datang') }}" required>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="lokasi_asli" class="form-label">Lokasi Asli <span class="text-danger">*</span></label>
+                    <select class="form-select" id="lokasi_asli" name="lokasi_asli" required>
+                        <option value="">Pilih Line</option>
+                        <option value="Lab">Lab</option>
+                        @foreach($lineList as $line)
+                            <option value="{{ $line }}" {{ old('lokasi_asli') == $line ? 'selected' : '' }}>
+                                {{ $line }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
         </div>
 
         <div class="mb-3">
@@ -37,6 +51,7 @@
             <small>
                 <i class="bi bi-info-circle me-1"></i>
                 Timbangan baru otomatis akan disimpan di <strong>Lab</strong> dengan kondisi <strong>Baik</strong>.
+                Lokasi asli menentukan line tujuan utama timbangan ini.
             </small>
         </div>
     </div>

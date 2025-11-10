@@ -8,7 +8,7 @@
                 <div class="card-header d-flex justify-content-between align-items-center"
                     style="background-color:white; color:#4361EE;">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-speedometer me-2"></i>Data Peralatan 
+                        <i class="bi bi-speedometer me-2"></i>Data Peralatan
                     </h5>
                     <div>
                         <!--<button class="btn btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal"
@@ -39,8 +39,9 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <form action="{{ route('timbangan.index') }}" method="GET" id="filterForm">
+                                <!-- Di bagian Filter Section -->
                                 <div class="row g-3">
-                                    <div class="col-md-3">
+                                    <div class="col-md-2">
                                         <label class="form-label">Kondisi</label>
                                         <select name="kondisi" class="form-select"
                                             onchange="document.getElementById('filterForm').submit()">
@@ -50,12 +51,28 @@
                                             <option value="Rusak" {{ request('kondisi') == 'Rusak' ? 'selected' : '' }}>
                                                 Rusak</option>
                                             <option value="Dalam Perbaikan"
-                                                {{ request('kondisi') == 'Dalam Perbaikan' ? 'selected' : '' }}>Dalam
-                                                Perbaikan</option>
+                                                {{ request('kondisi') == 'Dalam Perbaikan' ? 'selected' : '' }}>
+                                                Dalam Perbaikan
+                                            </option>
                                         </select>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Line</label>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Lokasi Asli</label>
+                                        <select name="lokasi_asli" class="form-select"
+                                            onchange="document.getElementById('filterForm').submit()">
+                                            <option value="">Semua Lokasi Asli</option>
+                                            <option value="Lab" {{ request('lokasi_asli') == 'Lab' ? 'selected' : '' }}>
+                                                Lab</option>
+                                            @foreach($lineList as $line)
+                                            <option value="{{ $line }}"
+                                                {{ request('lokasi_asli') == $line ? 'selected' : '' }}>
+                                                {{ $line }}
+                                            </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label">Lokasi Saat Ini</label>
                                         <select name="status_line" class="form-select"
                                             onchange="document.getElementById('filterForm').submit()">
                                             <option value="">Semua Lokasi</option>
@@ -78,7 +95,8 @@
                                             <button class="btn btn-outline-primary" type="submit">
                                                 <i class="bi bi-search"></i>
                                             </button>
-                                            @if(request()->anyFilled(['kondisi', 'status_line', 'search']))
+                                            @if(request()->anyFilled(['kondisi', 'lokasi_asli', 'status_line',
+                                            'search']))
                                             <a href="{{ route('timbangan.index') }}" class="btn btn-outline-danger">
                                                 <i class="bi bi-x-circle"></i>
                                             </a>
@@ -94,17 +112,19 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped" id="timbanganTable">
                             <!-- Di bagian thead -->
-<thead class="table-tmb" style="color:#4361EE;">
-    <tr>
-        <th width="50">No</th>
-        <th>Kode Asset</th>
-        <th>Merk & Seri</th>
-        <th>Tanggal Datang</th>
-        <th>Lokasi Line</th>
-        <th>Kondisi</th>
-        <th width="120" class="text-center">Aksi</th>
-    </tr>
-</thead>
+                            <thead class="table-tmb" style="color:#4361EE;">
+                                <tr>
+                                    <th width="50">No</th>
+                                    <th>Kode Asset</th>
+                                    <th>Merk & Seri</th>
+                                    <th>Tanggal Datang</th>
+                                    <th>Lokasi Asli</th>
+                                    <th>Lokasi Saat Ini</th>
+                                    <th>Status Lokasi</th>
+                                    <th>Kondisi</th>
+                                    <th width="120" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 @foreach($timbangan as $index => $item)
                                 <tr>
@@ -130,11 +150,33 @@
                                         {{ $item->tanggal_datang ? \Carbon\Carbon::parse($item->tanggal_datang)->format('d/m/Y') : '-' }}
                                     </td>
                                     <td>
+                                        <span class="badge bg-primary">{{ $item->lokasi_asli ?? 'Lab' }}</span>
+                                    </td>
+                                    <td>
                                         @if($item->status_line)
                                         <span class="badge bg-info">{{ $item->status_line }}</span>
                                         @else
                                         <span class="badge bg-secondary">Lab</span>
                                         @endif
+                                    </td>
+                                    <td>
+                                        @php
+                                        $statusLokasi = $item->status_lokasi;
+                                        $badgeColor = match(true) {
+                                        $item->isDiLokasiAsli() => 'success',
+                                        $item->isDipinjam() => 'warning',
+                                        default => 'secondary'
+                                        };
+                                        $icon = match(true) {
+                                        $item->isDiLokasiAsli() => 'check-circle',
+                                        $item->isDipinjam() => 'arrow-left-right',
+                                        default => 'house'
+                                        };
+                                        @endphp
+                                        <span class="badge bg-{{ $badgeColor }}" data-bs-toggle="tooltip"
+                                            title="{{ $statusLokasi }}">
+                                            <i class="bi bi-{{ $icon }} me-1"></i>{{ $statusLokasi }}
+                                        </span>
                                     </td>
                                     <td>
                                         @php
@@ -503,7 +545,7 @@ function tandaiRusak(id) {
                 },
                 success: function(response) {
                     Swal.close();
-                    
+
                     if (response.success) {
                         Swal.fire({
                             icon: 'success',
@@ -525,12 +567,12 @@ function tandaiRusak(id) {
                 error: function(xhr) {
                     Swal.close();
                     console.error('Error:', xhr);
-                    
+
                     let errorMessage = 'Gagal menandai timbangan rusak';
                     if (xhr.responseJSON && xhr.responseJSON.message) {
                         errorMessage = xhr.responseJSON.message;
                     }
-                    
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
@@ -541,6 +583,7 @@ function tandaiRusak(id) {
         }
     });
 }
+
 function deleteTimbangan(id) {
     Swal.fire({
         title: 'Apakah Anda yakin?',

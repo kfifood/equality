@@ -30,7 +30,7 @@
                                     <th>Nama Line</th>
                                     <th>Department</th>
                                     <th>Status</th>
-                                    <th>Aksi</th>
+                                    <th width="120">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -47,6 +47,12 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
+                                            <!-- TAMBAHAN: Tombol Lihat Timbangan -->
+                                            <button class="btn btn-info view-timbangan" 
+                                                    title="Lihat Timbangan"
+                                                    data-id="{{ $line->id }}">
+                                                <i class="bi bi-speedometer"></i>
+                                            </button>
                                             <button class="btn btn-warning edit-line" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#editLineModal"
@@ -155,6 +161,15 @@
     </div>
 </div>
 
+<!-- Dynamic Modal Container untuk Timbangan -->
+<div class="modal fade" id="dynamicModal" tabindex="-1" aria-labelledby="dynamicModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content" id="dynamicModalContent">
+            <!-- Content will be loaded here via AJAX -->
+        </div>
+    </div>
+</div>
+
 <script>
 $(document).ready(function() {
     $('#lineTable').DataTable();
@@ -173,6 +188,56 @@ $(document).ready(function() {
         
         $('#editLineForm').attr('action', '/master/line/' + id);
     });
+
+    // TAMBAHAN: Handle tombol lihat timbangan
+$('.view-timbangan').click(function() {
+    var lineId = $(this).data('id');
+    
+    // Show loading
+    Swal.fire({
+        title: 'Memuat data...',
+        text: 'Sedang mengambil data timbangan',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // KOREKSI: Update URL sesuai route yang baru
+    $.ajax({
+        url: '{{ url("line") }}/' + lineId + '/timbangan',
+        type: 'GET',
+        success: function(response) {
+            Swal.close();
+            
+            if (response.success) {
+                $('#dynamicModalContent').html(response.html);
+                $('#dynamicModal').modal('show');
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Gagal memuat data timbangan'
+                });
+            }
+        },
+        error: function(xhr) {
+            Swal.close();
+            console.error('Error:', xhr);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Gagal memuat data timbangan'
+            });
+        }
+    });
+});
+});
+
+// Close modal handler
+$('#dynamicModal').on('hidden.bs.modal', function () {
+    $('#dynamicModalContent').html('');
 });
 </script>
 @endsection

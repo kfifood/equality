@@ -7,27 +7,17 @@
 <div class="modal-body">
     <!-- Info Timbangan -->
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body">
-                    <h6 class="card-title">Kode Asset</h6>
-                    <p class="card-text fw-bold">{{ $timbangan->kode_asset }}</p>
+                    <h6 class="card-title">Lokasi Asli</h6>
+                    <p class="card-text">
+                        <span class="badge bg-primary">{{ $timbangan->lokasi_asli ?? 'Lab' }}</span>
+                    </p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card bg-light">
-                <div class="card-body">
-                    <h6 class="card-title">Merk & Seri</h6>
-                    <p class="card-text">{{ $timbangan->merk_tipe_no_seri }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Status Saat Ini -->
-    <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body">
                     <h6 class="card-title">Lokasi Saat Ini</h6>
@@ -38,6 +28,35 @@
                             <span class="badge bg-secondary">Lab</span>
                         @endif
                     </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Status Lokasi</h6>
+                    <p class="card-text">
+                        @php
+                            $statusLokasi = $timbangan->status_lokasi;
+                            $badgeColor = match(true) {
+                                $timbangan->isDiLokasiAsli() => 'success',
+                                $timbangan->isDipinjam() => 'warning',
+                                default => 'secondary'
+                            };
+                        @endphp
+                        <span class="badge bg-{{ $badgeColor }}">{{ $statusLokasi }}</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Merk & Seri</h6>
+                    <p class="card-text">{{ $timbangan->merk_tipe_no_seri }}</p>
                 </div>
             </div>
         </div>
@@ -63,7 +82,7 @@
         </div>
     </div>
 
-    <!-- Riwayat Penggunaan - SIMPLE VERSION -->
+    <!-- Riwayat Penggunaan - UPDATED VERSION -->
     <div class="card mb-3">
         <div class="card-header">
             <h6 class="card-title mb-0">
@@ -80,6 +99,8 @@
                                 <th>Tanggal</th>
                                 <th>Line Tujuan</th>
                                 <th>PIC</th>
+                                <th>Status</th>
+                                <th>Keterangan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -88,6 +109,20 @@
                                 <td>{{ $riwayat->tanggal_pemakaian ? \Carbon\Carbon::parse($riwayat->tanggal_pemakaian)->format('d/m/Y') : '-' }}</td>
                                 <td>{{ $riwayat->line_tujuan }}</td>
                                 <td>{{ $riwayat->pic ?? '-' }}</td>
+                                <td>
+                                    @php
+                                        $statusColor = match($riwayat->status_penggunaan) {
+                                            'Masih Digunakan' => 'success',
+                                            'Dikembalikan' => 'warning',
+                                            'Selesai' => 'secondary',
+                                            default => 'secondary'
+                                        };
+                                    @endphp
+                                    <span class="badge bg-{{ $statusColor }}">
+                                        {{ $riwayat->status_penggunaan }}
+                                    </span>
+                                </td>
+                                <td>{{ $riwayat->keterangan ?? '-' }}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -99,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Riwayat Perbaikan - SIMPLE VERSION -->
+    <!-- Riwayat Perbaikan - UPDATED VERSION -->
     <div class="card">
         <div class="card-header">
             <h6 class="card-title mb-0">
@@ -116,6 +151,8 @@
                                 <th>Tanggal Masuk</th>
                                 <th>Line Sebelum</th>
                                 <th>Status</th>
+                                <th>Keluhan</th>
+                                <th>Tindakan</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -136,6 +173,18 @@
                                     @endphp
                                     <span class="badge bg-{{ $badgeColor }}">
                                         {{ $status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                          title="{{ $riwayat->deskripsi_keluhan }}">
+                                        {{ $riwayat->deskripsi_keluhan }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" 
+                                          title="{{ $riwayat->tindakan_perbaikan ?? '-' }}">
+                                        {{ $riwayat->tindakan_perbaikan ?? '-' }}
                                     </span>
                                 </td>
                             </tr>
