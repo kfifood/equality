@@ -51,9 +51,11 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 
+    Route::resource('timbangan', TimbanganController::class);
     // ==================== MASTER DATA ====================
     // Timbangan Routes - SEMUA ROUTE TIMBANGAN DI SINI
     Route::prefix('timbangan')->group(function () {
+        
         Route::get('/', [TimbanganController::class, 'index'])->name('timbangan.index');
         Route::get('/create', [TimbanganController::class, 'create'])->name('timbangan.create');
         Route::post('/', [TimbanganController::class, 'store'])->name('timbangan.store');
@@ -65,6 +67,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', [TimbanganController::class, 'export'])->name('timbangan.export');
         Route::get('/template', [TimbanganController::class, 'downloadTemplate'])->name('timbangan.download-template');
         Route::post('/{id}/tandai-rusak', [TimbanganController::class, 'tandaiRusak'])->name('timbangan.tandai-rusak');
+
 
     });
 

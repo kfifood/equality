@@ -238,15 +238,92 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <div class="text-muted">
-                            Menampilkan {{ $timbangan->firstItem() }} hingga {{ $timbangan->lastItem() }}
-                            dari {{ $timbangan->total() }} timbangan
-                        </div>
-                        <nav>
-                            {{ $timbangan->appends(request()->query())->links() }}
-                        </nav>
-                    </div>
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <div class="text-muted">
+        Menampilkan {{ $timbangan->firstItem() ?? 0 }} hingga {{ $timbangan->lastItem() ?? 0 }}
+        dari {{ $timbangan->total() ?? 0 }} timbangan
+    </div>
+    
+    @if($timbangan->hasPages())
+    <nav>
+        <ul class="pagination mb-0">
+            {{-- Previous Page Link --}}
+            @if($timbangan->onFirstPage())
+            <li class="page-item disabled">
+                <span class="page-link">&laquo;</span>
+            </li>
+            @else
+            <li class="page-item">
+                <a class="page-link" href="{{ $timbangan->previousPageUrl() }}" rel="prev">&laquo;</a>
+            </li>
+            @endif
+
+            {{-- Pagination Elements --}}
+            @php
+                // Custom pagination logic untuk tampilan yang konsisten
+                $current = $timbangan->currentPage();
+                $last = $timbangan->lastPage();
+                $start = max(1, $current - 2);
+                $end = min($last, $current + 2);
+                
+                if ($end - $start < 4) {
+                    if ($start == 1) {
+                        $end = min($last, $start + 4);
+                    } else {
+                        $start = max(1, $end - 4);
+                    }
+                }
+            @endphp
+
+            {{-- First Page Link --}}
+            @if($start > 1)
+            <li class="page-item">
+                <a class="page-link" href="{{ $timbangan->url(1) }}">1</a>
+            </li>
+            @if($start > 2)
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            @endif
+            @endif
+
+            {{-- Array Of Links --}}
+            @for($i = $start; $i <= $end; $i++)
+            <li class="page-item {{ ($i == $current) ? 'active' : '' }}">
+                @if($i == $current)
+                <span class="page-link">{{ $i }}</span>
+                @else
+                <a class="page-link" href="{{ $timbangan->url($i) }}">{{ $i }}</a>
+                @endif
+            </li>
+            @endfor
+
+            {{-- Last Page Link --}}
+            @if($end < $last)
+            @if($end < $last - 1)
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            @endif
+            <li class="page-item">
+                <a class="page-link" href="{{ $timbangan->url($last) }}">{{ $last }}</a>
+            </li>
+            @endif
+
+            {{-- Next Page Link --}}
+            @if($timbangan->hasMorePages())
+            <li class="page-item">
+                <a class="page-link" href="{{ $timbangan->nextPageUrl() }}" rel="next">&raquo;</a>
+            </li>
+            @else
+            <li class="page-item disabled">
+                <span class="page-link">&raquo;</span>
+            </li>
+            @endif
+        </ul>
+    </nav>
+    @endif
+</div>
                 </div>
             </div>
         </div>
@@ -325,6 +402,90 @@
 
 .badge {
     font-size: 0.75em;
+}
+
+/* Pagination Styles */
+.pagination {
+    margin-bottom: 0;
+}
+
+.page-link {
+    color: #4361EE;
+    border: 1px solid #dee2e6;
+    padding: 0.375rem 0.75rem;
+}
+
+.page-link:hover {
+    color: #4361EE;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.page-item.active .page-link {
+    background-color: #4361EE;
+    border-color: #4361EE;
+    color: white;
+}
+
+.page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+/* Pagination Styles */
+.pagination {
+    margin-bottom: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.page-link {
+    color: #4361EE;
+    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-width: 42px;
+    text-align: center;
+}
+
+.page-link:hover {
+    color: #4361EE;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+
+.page-item.active .page-link {
+    background-color: #4361EE;
+    border-color: #4361EE;
+    color: white;
+}
+
+.page-item.disabled .page-link {
+    color: #6c757d;
+    background-color: #fff;
+    border-color: #dee2e6;
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+    .pagination {
+        font-size: 0.8rem;
+    }
+    
+    .page-link {
+        padding: 0.375rem 0.5rem;
+        min-width: 36px;
+    }
+    
+    .d-flex.justify-content-between.align-items-center {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between.align-items-center > div:first-child {
+        text-align: center;
+    }
 }
 </style>
 

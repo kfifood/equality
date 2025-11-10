@@ -21,10 +21,12 @@ class TimbanganController extends Controller
     if ($request->has('kondisi') && $request->kondisi != '') {
         $query->where('kondisi_saat_ini', $request->kondisi);
     }
+    
     // Filter berdasarkan lokasi asli
-if ($request->has('lokasi_asli') && $request->lokasi_asli != '') {
-    $query->where('lokasi_asli', $request->lokasi_asli);
-}
+    if ($request->has('lokasi_asli') && $request->lokasi_asli != '') {
+        $query->where('lokasi_asli', $request->lokasi_asli);
+    }
+    
     // Filter berdasarkan status line
     if ($request->has('status_line') && $request->status_line != '') {
         if ($request->status_line == 'Lab') {
@@ -40,13 +42,16 @@ if ($request->has('lokasi_asli') && $request->lokasi_asli != '') {
         $query->where(function($q) use ($search) {
             $q->where('kode_asset', 'like', '%' . $search . '%')
               ->orWhere('merk_tipe_no_seri', 'like', '%' . $search . '%')
-              ->orWhere('lokasi_asli', 'like', '%' . $search . '%'); // TAMBAH INI
+              ->orWhere('lokasi_asli', 'like', '%' . $search . '%');
         });
     }
 
+    // Pagination dengan fallback
+    $perPage = $request->get('per_page', 10);
     $timbangan = $query->orderBy('kode_asset', 'asc')
                       ->orderBy('created_at', 'desc')
-                      ->paginate(10);
+                      ->paginate($perPage)
+                      ->withQueryString(); // Pertahankan query string
     
     $lineList = MasterLine::where('status_aktif', true)
         ->orderBy('nama_line')
