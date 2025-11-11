@@ -113,18 +113,18 @@
                         <table class="table table-bordered table-hover table-striped" id="timbanganTable">
                             <!-- Di bagian thead -->
                             <thead class="table-tmb" style="color:#4361EE;">
-                                <tr>
-                                    <th width="50">No</th>
-                                    <th>Kode Asset</th>
-                                    <th>Merk & Seri</th>
-                                    <th>Tanggal Datang</th>
-                                    <th>Lokasi Asli</th>
-                                    <th>Lokasi Saat Ini</th>
-                                    <th>Status Lokasi</th>
-                                    <th>Kondisi</th>
-                                    <th width="120" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
+    <tr>
+        <th width="50">No</th>
+        <th>Kode Asset</th>
+        <th>Merk & Seri</th>
+        <th>Tanggal Datang</th>
+        <th>Lokasi Asli</th>
+        <th>Tanggal Selesai Perbaikan</th> <!-- GANTI: Dari Lokasi Saat Ini -->
+        <th>Status Lokasi</th>
+        <th>Kondisi</th>
+        <th width="120" class="text-center">Aksi</th>
+    </tr>
+</thead>
                             <tbody>
                                 @foreach($timbangan as $index => $item)
                                 <tr>
@@ -153,12 +153,26 @@
                                         <span class="badge bg-primary">{{ $item->lokasi_asli ?? 'Lab' }}</span>
                                     </td>
                                     <td>
-                                        @if($item->status_line)
-                                        <span class="badge bg-info">{{ $item->status_line }}</span>
-                                        @else
-                                        <span class="badge bg-secondary">Lab</span>
-                                        @endif
-                                    </td>
+        <!-- TAMBAHAN: Tanggal Selesai Perbaikan -->
+        @if($item->tanggal_selesai_perbaikan)
+            @php
+                $isBaruSelesai = $item->isBaruSelesaiPerbaikan();
+                $badgeColor = $isBaruSelesai ? 'success' : 'info';
+                $tooltip = $isBaruSelesai ? 
+                    'Baru selesai perbaikan' : 
+                    'Selesai perbaikan';
+            @endphp
+            <span class="badge bg-{{ $badgeColor }}" data-bs-toggle="tooltip" title="{{ $tooltip }}">
+                <i class="bi bi-tools me-1"></i>
+                {{ \Carbon\Carbon::parse($item->tanggal_selesai_perbaikan)->format('d/m/Y') }}
+                @if($isBaruSelesai)
+                    <i class="bi bi-star-fill ms-1"></i>
+                @endif
+            </span>
+        @else
+            <span class="text-muted">-</span>
+        @endif
+    </td>
                                     <td>
                                         @php
                                         $statusLokasi = $item->status_lokasi;

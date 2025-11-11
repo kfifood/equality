@@ -75,18 +75,19 @@
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped" id="perbaikanTable">
                             <thead class="table-tmb" style="color:#4361EE;">
-                                <tr>
-                                    <th width="50">No</th>
-                                    <th>Kode Asset</th>
-                                    <th>Merk & Tipe</th>
-                                    <th>Line Sebelumnya</th>
-                                    <th>Keluhan</th>
-                                    <th>Status Perbaikan</th>
-                                    <th>Tanggal Masuk</th>
-                                    <th>Durasi</th>
-                                    <th width="100" class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
+    <tr>
+        <th width="50">No</th>
+        <th>Kode Asset</th>
+        <th>Merk & Tipe</th>
+        <th>Line Sebelumnya</th>
+        <th>Keluhan</th>
+        <th>Status Perbaikan</th>
+        <th>Tanggal Masuk</th>
+        <th>Tanggal Rilis</th> <!-- TAMBAHAN: Tanggal Rilis -->
+        <th>Durasi</th>
+        <th width="100" class="text-center">Aksi</th>
+    </tr>
+</thead>
                             <tbody>
                                 @foreach($perbaikan as $index => $item)
                                 <tr>
@@ -143,6 +144,15 @@
                                         <i class="bi bi-calendar me-1 text-primary"></i>
                                         {{ \Carbon\Carbon::parse($item->tanggal_masuk_lab)->format('d/m/Y') }}
                                     </td>
+                                    <td>
+        <!-- TAMBAHAN: Tanggal Rilis -->
+        @if($item->tanggal_selesai_perbaikan)
+            <i class="bi bi-calendar-check me-1 text-success"></i>
+            {{ \Carbon\Carbon::parse($item->tanggal_selesai_perbaikan)->format('d/m/Y') }}
+        @else
+            <span class="text-muted">-</span>
+        @endif
+    </td>
                                     <td>
                                         @if($item->durasi_perbaikan)
                                             <span class="badge bg-light text-dark">

@@ -15,13 +15,15 @@ class Timbangan extends Model
     'kode_asset',
     'merk_tipe_no_seri', 
     'tanggal_datang',
-    'lokasi_asli', // TAMBAH INI
+    'lokasi_asli',
     'status_line',
+    'tanggal_selesai_perbaikan',
     'kondisi_saat_ini',
-    'catatan' // TAMBAH INI
+    'catatan'
 ];
     protected $casts = [
         'tanggal_datang' => 'date',
+        'tanggal_selesai_perbaikan' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
@@ -176,4 +178,24 @@ public function getStatusLokasiAttribute()
     return 'Dipinjam ke ' . $this->status_line;
 }
 
+// Method baru untuk mendapatkan tanggal selesai perbaikan terakhir
+public function getTanggalSelesaiPerbaikanTerakhirAttribute()
+{
+    $perbaikanTerakhir = $this->riwayatPerbaikan()
+        ->where('status_perbaikan', 'Selesai')
+        ->orderBy('tanggal_selesai_perbaikan', 'desc')
+        ->first();
+    
+    return $perbaikanTerakhir ? $perbaikanTerakhir->tanggal_selesai_perbaikan : null;
+}
+
+// Method untuk cek apakah baru selesai perbaikan (dalam 30 hari)
+public function isBaruSelesaiPerbaikan()
+{
+    if (!$this->tanggal_selesai_perbaikan) {
+        return false;
+    }
+    
+    return $this->tanggal_selesai_perbaikan->diffInDays(now()) <= 30;
+}
 }
