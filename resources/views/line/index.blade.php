@@ -169,70 +169,102 @@
         </div>
     </div>
 </div>
-
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     $('#lineTable').DataTable();
 
-    $('.edit-line').click(function() {
+    // PERBAIKAN: Event handler untuk tombol edit
+    $(document).on('click', '.edit-line', function() {
         var id = $(this).data('id');
         var kode = $(this).data('kode');
         var nama = $(this).data('nama');
         var department = $(this).data('department');
         var status = $(this).data('status');
 
+        console.log('Edit data:', {id, kode, nama, department, status}); // Debug log
+
+        // Isi form dengan data yang ada
         $('#edit_kode').val(kode);
         $('#edit_nama').val(nama);
         $('#edit_department').val(department);
         $('#edit_status').val(status ? '1' : '0');
         
-        $('#editLineForm').attr('action', '/master/line/' + id);
+        // PERBAIKAN: Set action form dengan route yang benar
+        $('#editLineForm').attr('action', '{{ url("line") }}/' + id);
     });
 
     // TAMBAHAN: Handle tombol lihat timbangan
-$('.view-timbangan').click(function() {
-    var lineId = $(this).data('id');
-    
-    // Show loading
-    Swal.fire({
-        title: 'Memuat data...',
-        text: 'Sedang mengambil data timbangan',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
+    $(document).on('click', '.view-timbangan', function() {
+        var lineId = $(this).data('id');
+        
+        // Show loading
+        Swal.fire({
+            title: 'Memuat data...',
+            text: 'Sedang mengambil data timbangan',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
-    // KOREKSI: Update URL sesuai route yang baru
-    $.ajax({
-        url: '{{ url("line") }}/' + lineId + '/timbangan',
-        type: 'GET',
-        success: function(response) {
-            Swal.close();
-            
-            if (response.success) {
-                $('#dynamicModalContent').html(response.html);
-                $('#dynamicModal').modal('show');
-            } else {
+        // KOREKSI: Update URL sesuai route yang baru
+        $.ajax({
+            url: '{{ url("line") }}/' + lineId + '/timbangan',
+            type: 'GET',
+            success: function(response) {
+                Swal.close();
+                
+                if (response.success) {
+                    $('#dynamicModalContent').html(response.html);
+                    $('#dynamicModal').modal('show');
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Gagal memuat data timbangan'
+                    });
+                }
+            },
+            error: function(xhr) {
+                Swal.close();
+                console.error('Error:', xhr);
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
                     text: 'Gagal memuat data timbangan'
                 });
             }
-        },
-        error: function(xhr) {
-            Swal.close();
-            console.error('Error:', xhr);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal memuat data timbangan'
-            });
-        }
+        });
     });
-});
+
+    // PERBAIKAN: Handle submit form edit
+    $('#editLineForm').on('submit', function(e) {
+        e.preventDefault();
+        
+        var form = $(this);
+        var url = form.attr('action');
+        var formData = form.serialize();
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            success: function(response) {
+                // Redirect atau reload halaman setelah berhasil
+                window.location.reload();
+            },
+            error: function(xhr) {
+                console.error('Error:', xhr);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Gagal mengupdate data line'
+                });
+            }
+        });
+    });
 });
 
 // Close modal handler
