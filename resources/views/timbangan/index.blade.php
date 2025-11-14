@@ -221,29 +221,30 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-info" title="Riwayat"
-                                                onclick="showRiwayatModal({{ $item->id }})">
-                                                <i class="bi bi-clock-history"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-warning" title="Edit"
-                                                onclick="showEditModal({{ $item->id }})">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <!-- TOMBOL BARU: Tandai Rusak untuk timbangan yang Baik dan di Line -->
-                                            @if($item->kondisi_saat_ini === 'Baik' && $item->status_line)
-                                            <button type="button" class="btn btn-secondary" title="Tandai Rusak"
-                                                onclick="tandaiRusak({{ $item->id }})">
-                                                <i class="bi bi-exclamation-triangle"></i>
-                                            </button>
-                                            @endif
+    <div class="btn-group btn-group-sm" role="group">
+        <button type="button" class="btn btn-info" title="Riwayat"
+            onclick="showRiwayatModal({{ $item->id }})">
+            <i class="bi bi-clock-history"></i>
+        </button>
+        <button type="button" class="btn btn-warning" title="Edit"
+            onclick="showEditModal({{ $item->id }})">
+            <i class="bi bi-pencil"></i>
+        </button>
+        
+        <!-- TOMBOL BARU: Tandai Rusak untuk timbangan yang Baik dan di Line -->
+        @if($item->kondisi_saat_ini === 'Baik' && !empty($item->status_line) && $item->status_line !== 'Lab')
+        <button type="button" class="btn btn-secondary" title="Tandai Rusak"
+            onclick="tandaiRusak({{ $item->id }})">
+            <i class="bi bi-exclamation-triangle"></i>
+        </button>
+        @endif
 
-                                            <button type="button" class="btn btn-danger" title="Hapus"
-                                                onclick="deleteTimbangan({{ $item->id }})">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
+        <button type="button" class="btn btn-danger" title="Hapus"
+            onclick="deleteTimbangan({{ $item->id }})">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</td>
                                     </td>
                                 </tr>
                                 @endforeach
