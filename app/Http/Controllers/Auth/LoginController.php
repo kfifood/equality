@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
@@ -62,6 +63,9 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * Handle failed login attempt
+     */
     protected function sendFailedLoginResponse(Request $request)
     {
         if ($request->ajax() || $request->wantsJson()) {
@@ -71,7 +75,27 @@ class LoginController extends Controller
             ], 422);
         }
 
-        return parent::sendFailedLoginResponse($request);
+        throw ValidationException::withMessages([
+            $this->username() => [trans('auth.failed')],
+        ]);
+    }
+
+    /**
+     * Method untuk menangani login yang gagal
+     */
+    protected function sendLoginResponse(Request $request)
+    {
+        $request->session()->regenerate();
+
+        $this->clearLoginAttempts($request);
+
+        if ($response = $this->authenticated($request, $this->guard()->user())) {
+            return $response;
+        }
+
+        return $request->wantsJson()
+                    ? response()->json(['success' => true, 'redirect' => $this->redirectTo])
+                    : redirect()->intended($this->redirectTo);
     }
 
     // Method baru untuk login dengan RFID

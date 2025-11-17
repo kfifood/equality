@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Timbangan;
 use App\Models\RiwayatPerbaikan;
 use App\Models\MasterLine;
+use App\Models\RiwayatPenggunaan;
 use Illuminate\Http\Request;
 
 class PerbaikanController extends Controller
@@ -63,6 +64,44 @@ class PerbaikanController extends Controller
         ]);
     }
 
+   // Method getTimbanganData di PerbaikanController
+public function getTimbanganData($id)
+{
+    try {
+        $timbangan = Timbangan::with(['riwayatPenggunaan' => function($query) {
+            $query->where('status_penggunaan', 'Masih Digunakan')
+                  ->orWhere('status_penggunaan', 'Selesai')
+                  ->orderBy('tanggal_pemakaian', 'desc')
+                  ->limit(1);
+        }])->findOrFail($id);
+
+        // Ambil PIC dari penggunaan terakhir yang aktif
+        $penggunaanTerakhir = $timbangan->riwayatPenggunaan->first();
+        $pic = $penggunaanTerakhir ? $penggunaanTerakhir->pic : '-';
+
+        $data = [
+            'line_sebelumnya' => $timbangan->status_line ?: 'Lab',
+            'penggunaan_terakhir' => $pic,
+            'kondisi' => $timbangan->kondisi_saat_ini,
+            'lokasi_sekarang' => $timbangan->status_line ?: 'Lab',
+            'kode_asset' => $timbangan->kode_asset,
+            'merk_tipe' => $timbangan->merk_tipe_no_seri
+        ];
+
+        return response()->json([
+            'success' => true,
+            'data' => $data
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Error getTimbanganData: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Data timbangan tidak ditemukan: ' . $e->getMessage()
+        ], 404);
+    }
+}
+
     public function store(Request $request)
     {
         $request->validate([
@@ -114,62 +153,62 @@ class PerbaikanController extends Controller
     }
 
     // di method updateStatus
-public function updateStatus(Request $request, $id)
-{
-    $request->validate([
-        'status_perbaikan' => 'required|in:Masuk Lab,Dalam Perbaikan,Selesai,Dikirim Eksternal',
-        'tindakan_perbaikan' => 'nullable|string',
-        'perbaikan_eksternal' => 'nullable|string',
-        'tanggal_selesai_perbaikan' => 'nullable|date',
-        'line_tujuan' => 'nullable|string'
-    ]);
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status_perbaikan' => 'required|in:Masuk Lab,Dalam Perbaikan,Selesai,Dikirim Eksternal',
+            'tindakan_perbaikan' => 'nullable|string',
+            'perbaikan_eksternal' => 'nullable|string',
+            'tanggal_selesai_perbaikan' => 'nullable|date',
+            'line_tujuan' => 'nullable|string'
+        ]);
 
-    $riwayat = RiwayatPerbaikan::findOrFail($id);
-    $timbangan = $riwayat->timbangan;
+        $riwayat = RiwayatPerbaikan::findOrFail($id);
+        $timbangan = $riwayat->timbangan;
 
-    // Validasi: Jika status sudah Selesai, tidak boleh diupdate lagi
-    if ($riwayat->status_perbaikan === 'Selesai') {
+        // Validasi: Jika status sudah Selesai, tidak boleh diupdate lagi
+        if ($riwayat->status_perbaikan === 'Selesai') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Perbaikan sudah selesai. Tidak dapat diupdate lagi.'
+            ], 422);
+        }
+
+        $riwayat->update([
+            'status_perbaikan' => $request->status_perbaikan,
+            'tindakan_perbaikan' => $request->tindakan_perbaikan,
+            'perbaikan_eksternal' => $request->perbaikan_eksternal,
+            'tanggal_selesai_perbaikan' => $request->tanggal_selesai_perbaikan,
+            'line_tujuan' => $request->line_tujuan
+        ]);
+
+        // Update timbangan berdasarkan status perbaikan
+        if ($request->status_perbaikan == 'Selesai') {
+            // PERBAIKAN SELESAI: Update timbangan
+            $timbangan->update([
+                'kondisi_saat_ini' => 'Baik',
+                'status_line' => null, // Kembali ke Lab
+                'tanggal_selesai_perbaikan' => $request->tanggal_selesai_perbaikan // TAMBAH INI
+            ]);
+        } elseif ($request->status_perbaikan == 'Dikirim Eksternal') {
+            // Timbangan dikirim eksternal, tetap di lab tapi status khusus
+            $timbangan->update([
+                'kondisi_saat_ini' => 'Dalam Perbaikan',
+                'status_line' => null, // Tetap di lab
+                'tanggal_selesai_perbaikan' => null // Reset tanggal selesai
+            ]);
+        } else {
+            // Masih dalam perbaikan internal
+            $timbangan->update([
+                'kondisi_saat_ini' => 'Dalam Perbaikan',
+                'status_line' => null, // Tetap di lab
+                'tanggal_selesai_perbaikan' => null // Reset tanggal selesai
+            ]);
+        }
+
         return response()->json([
-            'success' => false,
-            'message' => 'Perbaikan sudah selesai. Tidak dapat diupdate lagi.'
-        ], 422);
-    }
-
-    $riwayat->update([
-        'status_perbaikan' => $request->status_perbaikan,
-        'tindakan_perbaikan' => $request->tindakan_perbaikan,
-        'perbaikan_eksternal' => $request->perbaikan_eksternal,
-        'tanggal_selesai_perbaikan' => $request->tanggal_selesai_perbaikan,
-        'line_tujuan' => $request->line_tujuan
-    ]);
-
-    // Update timbangan berdasarkan status perbaikan
-    if ($request->status_perbaikan == 'Selesai') {
-        // PERBAIKAN SELESAI: Update timbangan
-        $timbangan->update([
-            'kondisi_saat_ini' => 'Baik',
-            'status_line' => null, // Kembali ke Lab
-            'tanggal_selesai_perbaikan' => $request->tanggal_selesai_perbaikan // TAMBAH INI
-        ]);
-    } elseif ($request->status_perbaikan == 'Dikirim Eksternal') {
-        // Timbangan dikirim eksternal, tetap di lab tapi status khusus
-        $timbangan->update([
-            'kondisi_saat_ini' => 'Dalam Perbaikan',
-            'status_line' => null, // Tetap di lab
-            'tanggal_selesai_perbaikan' => null // Reset tanggal selesai
-        ]);
-    } else {
-        // Masih dalam perbaikan internal
-        $timbangan->update([
-            'kondisi_saat_ini' => 'Dalam Perbaikan',
-            'status_line' => null, // Tetap di lab
-            'tanggal_selesai_perbaikan' => null // Reset tanggal selesai
+            'success' => true,
+            'message' => 'Status perbaikan berhasil diperbarui.'
         ]);
     }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Status perbaikan berhasil diperbarui.'
-    ]);
-}
 }

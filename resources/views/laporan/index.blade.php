@@ -13,55 +13,61 @@
                         <a href="{{ route('laporan.statistik') }}" class="btn btn-outline-primary btn-sm me-2">
                             <i class="bi bi-graph-up me-1"></i>Statistik
                         </a>
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#exportModal">
-                            <i class="bi bi-download me-1"></i>Export
-                        </button>
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Filter Section -->
+                    <!-- Filter & Export Section -->
                     <div class="card mb-4 border-0 bg-light">
                         <div class="card-body">
-                            <form action="{{ route('laporan.index') }}" method="GET">
-                                <div class="row g-3 align-items-end">
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">Tahun</label>
-                                        <select name="year" class="form-select">
-                                            @foreach($years as $y)
-                                                <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
-                                                    {{ $y }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">Bulan</label>
-                                        <select name="month" class="form-select">
-                                            @foreach($months as $key => $name)
-                                                <option value="{{ $key }}" {{ $month == $key ? 'selected' : '' }}>
-                                                    {{ $name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label fw-semibold">Periode</label>
-                                        <select name="period" class="form-select">
-                                            <option value="monthly" {{ $period == 'monthly' ? 'selected' : '' }}>Bulanan</option>
-                                            <option value="quarterly" {{ $period == 'quarterly' ? 'selected' : '' }}>Triwulan</option>
-                                            <option value="yearly" {{ $period == 'yearly' ? 'selected' : '' }}>Tahunan</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="submit" class="btn btn-primary w-100">
-                                            <i class="bi bi-filter me-1"></i>Filter
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-2">
+                                    <label class="form-label fw-semibold">Tahun</label>
+                                    <select name="year" class="form-select" id="filterYear">
+                                        @foreach($years as $y)
+                                            <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>
+                                                {{ $y }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-semibold">Bulan</label>
+                                    <select name="month" class="form-select" id="filterMonth">
+                                        @foreach($months as $key => $name)
+                                            <option value="{{ $key }}" {{ $month == $key ? 'selected' : '' }}>
+                                                {{ $name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label fw-semibold">Format</label>
+                                    <select name="export_type" class="form-select" id="exportType">
+                                        <option value="excel">Excel</option>
+                                        <option value="pdf">PDF</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Tipe Laporan</label>
+                                    <select name="export_format" class="form-select" id="exportFormat">
+                                        <option value="summary">Summary Lengkap</option>
+                                        <option value="riwayat">Riwayat Pergerakan</option>
+                                        <option value="lengkap">Laporan Lengkap</option>
+                                        <option value="timbangan">Data Timbangan</option>
+                                        <option value="penggunaan">Riwayat Penggunaan</option>
+                                        <option value="perbaikan">Riwayat Perbaikan</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-primary" id="btnExport">
+                                            <i class="bi bi-download me-1"></i>Export Laporan
                                         </button>
                                     </div>
                                 </div>
-                            </form>
+                            </div>
                         </div>
                     </div>
-
                     <!-- Summary Cards -->
                     <div class="row mb-5">
                         <div class="col-xl-3 col-md-6 mb-4">
@@ -357,10 +363,12 @@
                         </select>
                     </div>
                     <!-- Di bagian modal export, update opsi format -->
+<!-- Di bagian modal export, update opsi format -->
 <div class="mb-3">
     <label class="form-label">Tipe Laporan</label>
     <select name="format" class="form-select" required>
         <option value="summary">Summary Lengkap (Multiple Sheet)</option>
+        <option value="riwayat">Riwayat Pergerakan Lengkap</option>
         <option value="lengkap">Laporan Lengkap (Single Sheet)</option>
         <option value="timbangan">Data Timbangan</option>
         <option value="penggunaan">Riwayat Penggunaan</option>
@@ -376,12 +384,13 @@
                             <input type="hidden" name="period" value="{{ $period }}">
                         </div>
                     </div>
-                    <!-- Tambahkan deskripsi -->
+                    <!-- Tambahkan deskripsi yang diperbarui -->
 <div class="alert alert-info">
     <small>
         <i class="bi bi-info-circle me-1"></i>
         <strong>Pilihan Laporan:</strong><br>
-        • <strong>Summary Lengkap</strong>: Multiple sheet (Summary, Laporan Lengkap, Data Timbangan, Penggunaan, Perbaikan)<br>
+        • <strong>Riwayat Pergerakan Lengkap</strong>: Semua riwayat penggunaan & perbaikan secara kronologis<br>
+        • <strong>Summary Lengkap</strong>: Multiple sheet (Summary, Riwayat, Data Timbangan, Penggunaan, Perbaikan)<br>
         • <strong>Laporan Lengkap</strong>: Single sheet dengan semua kolom yang diminta<br>
         • Laporan akan diexport berdasarkan filter yang aktif.
     </small>
@@ -414,6 +423,82 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const exportType = document.getElementById('exportType');
+    const exportFormat = document.getElementById('exportFormat');
+    const btnExport = document.getElementById('btnExport');
+
+    // Toggle visibility format selection based on export type
+    function toggleFormatSelection() {
+        if (exportType.value === 'pdf') {
+            exportFormat.style.display = 'none';
+            exportFormat.previousElementSibling.style.display = 'none';
+        } else {
+            exportFormat.style.display = 'block';
+            exportFormat.previousElementSibling.style.display = 'block';
+        }
+    }
+
+    // Initial toggle
+    toggleFormatSelection();
+
+    // Event listener for export type change
+    exportType.addEventListener('change', toggleFormatSelection);
+
+   // Export button handler
+btnExport.addEventListener('click', function() {
+    const year = document.getElementById('filterYear').value;
+    const month = document.getElementById('filterMonth').value;
+    const type = exportType.value;
+    
+    // Untuk PDF, format selalu 'summary'
+    const format = exportType.value === 'pdf' ? 'summary' : exportFormat.value;
+
+    // Show loading
+    const originalText = btnExport.innerHTML;
+    btnExport.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Memproses...';
+    btnExport.disabled = true;
+
+    // Create form and submit
+    const form = document.createElement('form');
+    form.method = 'GET';
+    form.action = '{{ route("laporan.export") }}';
+    
+    const yearInput = document.createElement('input');
+    yearInput.type = 'hidden';
+    yearInput.name = 'year';
+    yearInput.value = year;
+    
+    const monthInput = document.createElement('input');
+    monthInput.type = 'hidden';
+    monthInput.name = 'month';
+    monthInput.value = month;
+    
+    const typeInput = document.createElement('input');
+    typeInput.type = 'hidden';
+    typeInput.name = 'type';
+    typeInput.value = type;
+    
+    const formatInput = document.createElement('input');
+    formatInput.type = 'hidden';
+    formatInput.name = 'format';
+    formatInput.value = format;
+
+    form.appendChild(yearInput);
+    form.appendChild(monthInput);
+    form.appendChild(typeInput);
+    form.appendChild(formatInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    // Reset button after 3 seconds
+    setTimeout(() => {
+        btnExport.innerHTML = originalText;
+        btnExport.disabled = false;
+    }, 3000);
+});
+
     // Auto update progress bar labels
     const progressBars = document.querySelectorAll('.progress-bar');
     progressBars.forEach(bar => {

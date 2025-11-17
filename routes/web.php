@@ -98,6 +98,8 @@ Route::prefix('line')->group(function () {
         Route::get('/create/{timbangan_id}', [PerbaikanController::class, 'create'])->name('perbaikan.create.withId');
         Route::post('/', [PerbaikanController::class, 'store'])->name('perbaikan.store');
         Route::put('/{id}/status', [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
+        // routes/web.php
+Route::get('/perbaikan/timbangan/{id}', [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
     });
 
     // ==================== MONITORING ====================
