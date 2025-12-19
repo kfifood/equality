@@ -335,8 +335,8 @@
     <div class="login-container">
         <div class="login-box">
             <div class="login-logo">
-                <img src="{{ asset('logo.png') }}" alt="Logo K-FISH">
-                <h2> Login to K-FISH </h2>
+                <img src="{{ asset('logo.png') }}" alt="Logo K-SQUID">
+                <h2> Login to K-SQUID</h2>
                 <h3>Login User</h3>
             </div>
 
@@ -359,9 +359,9 @@
                     @endif
                 </div>
 
-                <div class="checkbox text-left">
+                <!--<div class="checkbox text-left">
                     <label><input type="checkbox" name="remember"> Remember Me</label>
-                </div>
+                </div>-->
 
                 <button type="submit" class="btn-login">LOGIN</button>
                 

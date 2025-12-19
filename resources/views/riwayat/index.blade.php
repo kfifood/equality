@@ -61,18 +61,17 @@
                                                value="{{ request('line') }}" placeholder="Cari line...">
                                     </div>
                                     <div class="col-md-2 d-flex align-items-end">
-    <div class="d-flex gap-2 w-100">
-        <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
-            <i class="bi bi-funnel"></i>
-        </button>
-        <a href="{{ route('riwayat.index') }}" 
-           class="btn btn-secondary d-flex align-items-center justify-content-center" 
-           title="Reset">
-            <i class="bi bi-arrow-clockwise"></i>
-        </a>
-    </div>
-</div>
-
+                                        <div class="d-flex gap-2 w-100">
+                                            <button type="submit" class="btn btn-primary d-flex align-items-center justify-content-center" title="Filter">
+                                                <i class="bi bi-funnel"></i>
+                                            </button>
+                                            <a href="{{ route('riwayat.index') }}" 
+                                               class="btn btn-secondary d-flex align-items-center justify-content-center" 
+                                               title="Reset">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -131,7 +130,6 @@
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <!-- Hapus baris untuk nomor_seri_unik -->
                                                 <td>
                                                     <span class="badge bg-info">{{ $item->line_tujuan }}</span>
                                                 </td>
@@ -159,9 +157,61 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="mt-3">
-                                    {{ $riwayatPenggunaan->appends(request()->except('penggunaan_page'))->links() }}
+                                
+                                <!-- PAGINATION PENGEMBALIAN - SIMPLE VERSION -->
+                                @if($riwayatPenggunaan->hasPages())
+                                <div class="mt-4">
+                                    <nav aria-label="Pagination Navigation">
+                                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                                            <div class="mb-2 mb-md-0">
+                                                <p class="small text-muted mb-0">
+                                                    Menampilkan 
+                                                    <span class="fw-semibold">{{ $riwayatPenggunaan->firstItem() }}</span>
+                                                    sampai 
+                                                    <span class="fw-semibold">{{ $riwayatPenggunaan->lastItem() }}</span>
+                                                    dari 
+                                                    <span class="fw-semibold">{{ $riwayatPenggunaan->total() }}</span>
+                                                    data
+                                                </p>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="btn-group" role="group" aria-label="Pagination">
+                                                    {{-- Previous Page --}}
+                                                    @if($riwayatPenggunaan->onFirstPage())
+                                                        <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                                                            <i class="bi bi-chevron-left"></i> Prev
+                                                        </button>
+                                                    @else
+                                                        <a href="{{ $riwayatPenggunaan->appends(request()->except('penggunaan_page'))->previousPageUrl() }}" 
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            <i class="bi bi-chevron-left"></i> Prev
+                                                        </a>
+                                                    @endif
+                                                    
+                                                    {{-- Current Page Info --}}
+                                                    <button type="button" class="btn btn-primary btn-sm disabled">
+                                                        Halaman {{ $riwayatPenggunaan->currentPage() }} / {{ $riwayatPenggunaan->lastPage() }}
+                                                    </button>
+                                                    
+                                                    {{-- Next Page --}}
+                                                    @if($riwayatPenggunaan->hasMorePages())
+                                                        <a href="{{ $riwayatPenggunaan->appends(request()->except('penggunaan_page'))->nextPageUrl() }}" 
+                                                           class="btn btn-outline-primary btn-sm">
+                                                            Next <i class="bi bi-chevron-right"></i>
+                                                        </a>
+                                                    @else
+                                                        <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                                                            Next <i class="bi bi-chevron-right"></i>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </nav>
                                 </div>
+                                @endif
+                                
                             @else
                                 <div class="text-center py-5">
                                     <i class="bi bi-arrow-right-circle fa-3x text-muted mb-3"></i>
@@ -205,7 +255,6 @@
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <!-- Hapus baris untuk nomor_seri_unik -->
                                                 <td>
                                                     <span class="badge bg-info">{{ $item->line_sebelumnya }}</span>
                                                 </td>
@@ -255,9 +304,61 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="mt-3">
-                                    {{ $riwayatPerbaikan->appends(request()->except('perbaikan_page'))->links() }}
+                                
+                                <!-- PAGINATION PERBAIKAN - SIMPLE VERSION -->
+                                @if($riwayatPerbaikan->hasPages())
+                                <div class="mt-4">
+                                    <nav aria-label="Pagination Navigation">
+                                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                                            <div class="mb-2 mb-md-0">
+                                                <p class="small text-muted mb-0">
+                                                    Menampilkan 
+                                                    <span class="fw-semibold">{{ $riwayatPerbaikan->firstItem() }}</span>
+                                                    sampai 
+                                                    <span class="fw-semibold">{{ $riwayatPerbaikan->lastItem() }}</span>
+                                                    dari 
+                                                    <span class="fw-semibold">{{ $riwayatPerbaikan->total() }}</span>
+                                                    data
+                                                </p>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="btn-group" role="group" aria-label="Pagination">
+                                                    {{-- Previous Page --}}
+                                                    @if($riwayatPerbaikan->onFirstPage())
+                                                        <button type="button" class="btn btn-outline-warning btn-sm disabled">
+                                                            <i class="bi bi-chevron-left"></i> Prev
+                                                        </button>
+                                                    @else
+                                                        <a href="{{ $riwayatPerbaikan->appends(request()->except('perbaikan_page'))->previousPageUrl() }}" 
+                                                           class="btn btn-outline-warning btn-sm">
+                                                            <i class="bi bi-chevron-left"></i> Prev
+                                                        </a>
+                                                    @endif
+                                                    
+                                                    {{-- Current Page Info --}}
+                                                    <button type="button" class="btn btn-warning btn-sm disabled">
+                                                        Halaman {{ $riwayatPerbaikan->currentPage() }} / {{ $riwayatPerbaikan->lastPage() }}
+                                                    </button>
+                                                    
+                                                    {{-- Next Page --}}
+                                                    @if($riwayatPerbaikan->hasMorePages())
+                                                        <a href="{{ $riwayatPerbaikan->appends(request()->except('perbaikan_page'))->nextPageUrl() }}" 
+                                                           class="btn btn-outline-warning btn-sm">
+                                                            Next <i class="bi bi-chevron-right"></i>
+                                                        </a>
+                                                    @else
+                                                        <button type="button" class="btn btn-outline-warning btn-sm disabled">
+                                                            Next <i class="bi bi-chevron-right"></i>
+                                                        </button>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </nav>
                                 </div>
+                                @endif
+                                
                             @else
                                 <div class="text-center py-5">
                                     <i class="bi bi-tools fa-3x text-muted mb-3"></i>
@@ -298,13 +399,33 @@
 .badge {
     font-size: 0.75em;
 }
+
+/* PAGINATION BUTTON STYLES */
+.btn-group .btn {
+    border-radius: 0;
+    min-width: 80px;
+}
+.btn-group .btn:first-child {
+    border-top-left-radius: 0.375rem;
+    border-bottom-left-radius: 0.375rem;
+}
+.btn-group .btn:last-child {
+    border-top-right-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+.btn-group .btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 </style>
 
-<!-- SweetAlert2 CSS & JS -->
-<link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+<!-- Loading JavaScript Libraries -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap JS Bundle (popper + bootstrap) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
     // Show session messages dengan SweetAlert
@@ -339,35 +460,34 @@ $(document).ready(function() {
         }, 800);
     });
 
-    // Initialize tooltips
+    // Initialize Bootstrap tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl)
     });
 
-    // Simpan tab state dengan error handling
-    $('button[data-bs-toggle="tab"]').on('click', function() {
+    // Simpan tab state ke localStorage
+    $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function(e) {
         try {
-            localStorage.setItem('activeRiwayatTab', $(this).attr('id'));
+            localStorage.setItem('activeRiwayatTab', $(e.target).attr('id'));
         } catch (e) {
-            console.log('Local storage not available');
+            console.log('LocalStorage not available');
         }
     });
 
-    // Load tab state dengan error handling
+    // Load tab state dari localStorage
     try {
         var activeTab = localStorage.getItem('activeRiwayatTab');
-        if (activeTab && $('#' + activeTab).length) {
+        if (activeTab) {
             $('#' + activeTab).tab('show');
         }
     } catch (e) {
-        console.log('Local storage not available');
+        console.log('LocalStorage not available');
     }
 });
 
 // Function untuk show timbangan riwayat
 function showTimbanganRiwayat(timbanganId) {
-    // Show loading
     Swal.fire({
         title: 'Memuat data...',
         text: 'Sedang mengambil data riwayat',
@@ -385,7 +505,8 @@ function showTimbanganRiwayat(timbanganId) {
             
             if (response.success) {
                 $('#dynamicModalContent').html(response.html);
-                $('#dynamicModal').modal('show');
+                var modal = new bootstrap.Modal(document.getElementById('dynamicModal'));
+                modal.show();
             } else {
                 Swal.fire({
                     icon: 'error',
