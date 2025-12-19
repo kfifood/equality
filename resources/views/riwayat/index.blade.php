@@ -7,7 +7,7 @@
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center" style="background-color:white; color:#4361EE;">
                     <h5 class="card-title mb-0">
-                        <i class="bi bi-clock-history me-2"></i>Riwayat Lengkap Timbangan
+                        <i class="bi bi-clock-history me-2"></i>Riwayat Lengkap 
                     </h5>
                     <a href="{{ route('riwayat.timeline') }}" class="btn btn-sm" style="background-color:#4361EE; color:white;">
                         <i class="bi bi-list-ul me-1"></i>Lihat Timeline
