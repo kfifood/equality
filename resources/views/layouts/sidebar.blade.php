@@ -39,6 +39,12 @@
         <span class="nav-text">Data Line</span>
     </a>
 </li>
+<li class="nav-item">
+    <a href="{{ route('pic.index') }}" class="nav-link {{ Request::is('pic*') ? 'active' : '' }}">
+        <i class="bi bi-person-badge nav-icon"></i>
+        <span class="nav-text">Data PIC</span>
+    </a>
+</li>
 
         <!-- Operations Section -->
         <li class="nav-section">

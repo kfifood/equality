@@ -25,102 +25,122 @@ class RiwayatPerbaikan extends Model
     ];
 
     protected $casts = [
-        'tanggal_masuk_lab' => 'date',
+        'tanggal_masuk_lab'         => 'date',
         'tanggal_selesai_perbaikan' => 'date',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'created_at'                => 'datetime',
+        'updated_at'                => 'datetime'
     ];
 
-    // Relasi ke timbangan
+    // ──────────────────────────────────────────────
+    // Relasi
+    // ──────────────────────────────────────────────
+
     public function timbangan()
     {
         return $this->belongsTo(Timbangan::class, 'timbangan_id');
     }
 
-    // Accessor untuk kode asset lengkap
+    // ──────────────────────────────────────────────
+    // Accessors
+    // ──────────────────────────────────────────────
+
     public function getKodeAssetLengkapAttribute()
     {
         return $this->timbangan ? $this->timbangan->kode_asset : '-';
     }
 
-    // Accessor untuk merk lengkap
     public function getMerkLengkapAttribute()
     {
         return $this->timbangan ? $this->timbangan->merk_tipe_no_seri : '-';
     }
 
-    // Accessor untuk kondisi timbangan
     public function getKondisiTimbanganAttribute()
     {
         return $this->timbangan ? $this->timbangan->kondisi_saat_ini : '-';
     }
 
-    // Scope untuk perbaikan aktif
-    public function scopeAktif($query)
-    {
-        return $query->whereIn('status_perbaikan', ['Masuk Lab', 'Dalam Perbaikan', 'Dikirim Eksternal']);
-    }
-
-    // Scope untuk perbaikan selesai
-    public function scopeSelesai($query)
-    {
-        return $query->where('status_perbaikan', 'Selesai');
-    }
-
-    // Accessor untuk durasi perbaikan
+    /** Durasi perbaikan dalam hari */
     public function getDurasiPerbaikanAttribute()
     {
         if ($this->tanggal_selesai_perbaikan && $this->tanggal_masuk_lab) {
             return $this->tanggal_masuk_lab->diffInDays($this->tanggal_selesai_perbaikan);
         }
-        
-        // Jika belum selesai, hitung dari tanggal masuk sampai sekarang
         if ($this->tanggal_masuk_lab) {
             return $this->tanggal_masuk_lab->diffInDays(now());
         }
-        
         return null;
     }
 
-    // Method untuk cek apakah perbaikan sudah selesai
-    public function isSelesai()
+    /**
+     * Bootstrap Bootstrap color class untuk badge status.
+     *
+     * Masuk Lab        → secondary (abu)
+     * Perbaikan Internal → warning  (kuning)
+     * Dikirim Eksternal  → info     (biru muda)
+     * Selesai           → success   (hijau)
+     */
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->status_perbaikan) {
+            'Masuk Lab'          => 'secondary',
+            'Perbaikan Internal' => 'warning',
+            'Dikirim Eksternal'  => 'info',
+            'Selesai'            => 'success',
+            default              => 'secondary'
+        };
+    }
+
+    /** Bootstrap Icon untuk tiap status */
+    public function getStatusIconAttribute(): string
+    {
+        return match($this->status_perbaikan) {
+            'Masuk Lab'          => 'box-arrow-in-down',
+            'Perbaikan Internal' => 'tools',
+            'Dikirim Eksternal'  => 'arrow-right-circle',
+            'Selesai'            => 'check-circle',
+            default              => 'question-circle'
+        };
+    }
+
+    // ──────────────────────────────────────────────
+    // Scopes
+    // ──────────────────────────────────────────────
+
+    /** Semua perbaikan yang belum selesai */
+    public function scopeAktif($query)
+    {
+        return $query->whereIn('status_perbaikan', [
+            'Masuk Lab',
+            'Perbaikan Internal',
+            'Dikirim Eksternal',
+        ]);
+    }
+
+    public function scopeSelesai($query)
+    {
+        return $query->where('status_perbaikan', 'Selesai');
+    }
+
+    // ──────────────────────────────────────────────
+    // Helper methods
+    // ──────────────────────────────────────────────
+
+    public function isSelesai(): bool
     {
         return $this->status_perbaikan === 'Selesai';
     }
 
-    // Method untuk cek apakah masih bisa diupdate
-    public function canBeUpdated()
+    public function canBeUpdated(): bool
     {
         return !$this->isSelesai();
     }
 
-    // Accessor untuk status warna
-    public function getStatusColorAttribute()
+    public function isDalamPerbaikan(): bool
     {
-        return match($this->status_perbaikan) {
-            'Masuk Lab' => 'secondary',
-            'Dalam Perbaikan' => 'warning',
-            'Selesai' => 'success',
-            'Dikirim Eksternal' => 'info',
-            default => 'secondary'
-        };
-    }
-
-    // Accessor untuk status icon
-    public function getStatusIconAttribute()
-    {
-        return match($this->status_perbaikan) {
-            'Masuk Lab' => 'box-arrow-in-down',
-            'Dalam Perbaikan' => 'tools',
-            'Selesai' => 'check-circle',
-            'Dikirim Eksternal' => 'arrow-right-circle',
-            default => 'question-circle'
-        };
-    }
-
-    // Method untuk cek apakah masih dalam perbaikan
-    public function isDalamPerbaikan()
-    {
-        return in_array($this->status_perbaikan, ['Masuk Lab', 'Dalam Perbaikan', 'Dikirim Eksternal']);
+        return in_array($this->status_perbaikan, [
+            'Masuk Lab',
+            'Perbaikan Internal',
+            'Dikirim Eksternal',
+        ]);
     }
 }

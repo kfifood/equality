@@ -10,6 +10,7 @@ use App\Http\Controllers\TimbanganController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PicController;
 
 /*
 |--------------------------------------------------------------------------
@@ -119,6 +120,14 @@ Route::prefix('reports')->group(function () {
 });
 });
 
+// Di dalam Route::middleware(['auth'])->group():
+Route::prefix('pic')->group(function () {
+    Route::get('/',           [PicController::class, 'index'])->name('pic.index');
+    Route::post('/',          [PicController::class, 'store'])->name('pic.store');
+    Route::put('/{id}',       [PicController::class, 'update'])->name('pic.update');
+    Route::delete('/{id}',    [PicController::class, 'destroy'])->name('pic.destroy');
+    Route::get('/list-aktif', [PicController::class, 'listAktif'])->name('pic.list-aktif');
+});
 // Fallback route
 Route::fallback(function () {
     if (Auth::check()) {
