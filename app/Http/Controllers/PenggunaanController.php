@@ -83,7 +83,7 @@ class PenggunaanController extends Controller
             'timbangan_id'      => 'required|exists:timbangan,id',
             'line_tujuan'       => 'required|string',
             'tanggal_pemakaian' => 'required|date',
-            'pic'               => 'nullable|string|max:255',
+            'pic'               => 'required|string|max:255',
             'keterangan'        => 'nullable|string',
         ]);
 

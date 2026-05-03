@@ -235,6 +235,64 @@
                     </div>
                 </div>
             </div>
+
+            {{-- Field PIC — muncul hanya jika line tujuan bukan Lab --}}
+            <div class="row" id="picRow" style="display:none;">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            PIC Penerima di Line <span class="text-danger">*</span>
+                        </label>
+
+                        {{-- Hidden input yang dikirim ke server --}}
+                        <input type="hidden" name="pic_penerima" id="picPenerimaValue">
+
+                        {{-- Custom search box — menggantikan Select2 --}}
+                        <div style="position:relative;">
+                            <input type="text" id="picSearchInput" class="form-control"
+                                placeholder="Ketik nama PIC..." autocomplete="off">
+                            <div id="picDropdown"
+                                style="display:none;
+                                       position:absolute;
+                                       top:100%; left:0; right:0;
+                                       background:#fff;
+                                       border:1px solid #ced4da;
+                                       border-radius:0.375rem;
+                                       box-shadow:0 4px 12px rgba(0,0,0,0.15);
+                                       z-index:9999;
+                                       max-height:200px;
+                                       overflow-y:auto;">
+                            </div>
+                        </div>
+
+                        {{-- Data semua PIC aktif untuk JS --}}
+                        <div id="allPicDataPerbaikan" class="d-none"
+                             data-pics="{{ json_encode(
+                                 $picList->map(fn($p) => [
+                                     'id'        => $p->id,
+                                     'nama_pic'  => $p->nama_pic,
+                                     'jabatan'   => $p->jabatan ?? '',
+                                     'line_nama' => $p->line->nama_line ?? '',
+                                 ])
+                             ) }}">
+                        </div>
+
+                        <div class="invalid-feedback d-block" id="errorPicPenerima"></div>
+                        <div class="form-text text-muted" id="picPenerimaHint">
+                            <i class="bi bi-person me-1"></i>Daftar PIC difilter sesuai Line Tujuan.
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="alert alert-info py-2 mb-0 mt-4">
+                        <small>
+                            <i class="bi bi-info-circle me-1"></i>
+                            PIC yang dipilih akan tercatat sebagai penanggung jawab
+                            penggunaan alat di line tujuan.
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>{{-- end modal-body --}}
@@ -271,12 +329,22 @@
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
     background-color: #4361EE;
 }
+
+/* Custom PIC dropdown item hover */
+#picDropdown .pic-item:hover {
+    background-color: #f0f4ff;
+    cursor: pointer;
+}
 </style>
 
 <script>
 $(document).ready(function () {
 
-    // ── Init Select2 tindakan ──────────────────────────────────────────────
+    // ── Data PIC dari server ──────────────────────────────────────────────────
+    const allPics = JSON.parse($('#allPicDataPerbaikan').attr('data-pics') || '[]');
+    let filteredPics = [];
+
+    // ── Init Select2 tindakan saja (PIC pakai custom dropdown) ───────────────
     $('#selectTindakan').select2({
         placeholder: 'Pilih tindakan yang dilakukan...',
         allowClear: true,
@@ -285,12 +353,130 @@ $(document).ready(function () {
         closeOnSelect: false,
     });
 
-    // ── Toggle field Selesai ───────────────────────────────────────────────
+    // ── Render custom dropdown PIC ────────────────────────────────────────────
+    function renderPicDropdown(pics) {
+        const $drop = $('#picDropdown');
+        $drop.empty();
+
+        if (pics.length === 0) {
+            $drop.append(
+                $('<div>').addClass('px-3 py-2 text-warning small').html(
+                    '<i class="bi bi-person-x me-1"></i>Tidak ada PIC aktif untuk line ini.'
+                )
+            );
+        } else {
+            pics.forEach(function (p) {
+                const label = p.nama_pic + (p.jabatan ? ' (' + p.jabatan + ')' : '');
+                $('<div>')
+                    .addClass('px-3 py-2 pic-item')
+                    .css({ fontSize: '0.9rem', borderBottom: '1px solid #f0f0f0' })
+                    .text(label)
+                    .on('mousedown', function (e) {
+                        e.preventDefault(); // cegah blur sebelum klik selesai
+                        $('#picSearchInput').val(p.nama_pic);
+                        $('#picPenerimaValue').val(p.nama_pic);
+                        $('#picDropdown').hide();
+                        $('#picSearchInput').removeClass('is-invalid');
+                        $('#errorPicPenerima').text('');
+                    })
+                    .appendTo($drop);
+            });
+        }
+
+        $drop.show();
+    }
+
+    // ── Filter PIC berdasarkan line ───────────────────────────────────────────
+    function filterPicByLine(lineNama) {
+        filteredPics = allPics.filter(function (p) {
+            return p.line_nama === lineNama;
+        });
+
+        $('#picSearchInput').val('');
+        $('#picPenerimaValue').val('');
+        $('#picDropdown').hide();
+
+        if (filteredPics.length === 0) {
+            $('#picPenerimaHint').html(
+                '<i class="bi bi-person-x me-1 text-warning"></i>' +
+                '<span class="text-warning">Tidak ada PIC aktif untuk line ini. ' +
+                'Tambahkan di <strong>Master Data → Data PIC</strong>.</span>'
+            );
+        } else {
+            $('#picPenerimaHint').html(
+                '<i class="bi bi-person me-1"></i>Daftar PIC difilter sesuai Line Tujuan.'
+            );
+        }
+    }
+
+    // ── Event: fokus ke search box → tampilkan semua PIC line ini ────────────
+    $('#picSearchInput').on('focus', function () {
+        const keyword = $(this).val().toLowerCase().trim();
+        const hasil = keyword
+            ? filteredPics.filter(p => p.nama_pic.toLowerCase().includes(keyword))
+            : filteredPics;
+        renderPicDropdown(hasil);
+    });
+
+    // ── Event: ketik di search box → filter live ──────────────────────────────
+    $('#picSearchInput').on('input', function () {
+        const keyword = $(this).val().toLowerCase().trim();
+        $('#picPenerimaValue').val(''); // reset hidden jika user edit manual
+
+        const hasil = keyword
+            ? filteredPics.filter(p => p.nama_pic.toLowerCase().includes(keyword))
+            : filteredPics;
+        renderPicDropdown(hasil);
+    });
+
+    // ── Event: blur → tutup dropdown (delay agar mousedown sempat jalan) ─────
+    $('#picSearchInput').on('blur', function () {
+        setTimeout(function () { $('#picDropdown').hide(); }, 200);
+    });
+
+    // ── Tutup dropdown jika klik di luar area PIC ────────────────────────────
+    $(document).on('click', function (e) {
+        if (!$(e.target).closest('#picRow').length) {
+            $('#picDropdown').hide();
+        }
+    });
+
+    // ── Toggle field PIC berdasarkan line tujuan ──────────────────────────────
+    function togglePicField(lineTujuan) {
+        const keLineAktif = lineTujuan && lineTujuan !== '' && lineTujuan !== 'Lab';
+        $('#picRow').toggle(keLineAktif);
+
+        if (!keLineAktif) {
+            $('#picSearchInput').val('');
+            $('#picPenerimaValue').val('');
+            $('#picDropdown').hide();
+            $('#picSearchInput').removeClass('is-invalid');
+            $('#errorPicPenerima').text('');
+        } else {
+            filterPicByLine(lineTujuan);
+        }
+    }
+
+    // ── Saat Line Tujuan berubah → filter PIC ────────────────────────────────
+    $('#selectLineTujuan').on('change', function () {
+        togglePicField($(this).val());
+    });
+
+    // ── Toggle field Selesai ──────────────────────────────────────────────────
     function toggleSelesaiFields(status) {
         const isSelesai = (status === 'Selesai');
         $('#selesaiFields').toggle(isSelesai);
         $('#inputTanggalSelesai').prop('required', isSelesai);
         $('#selectLineTujuan').prop('required', isSelesai);
+
+        if (!isSelesai) {
+            $('#picRow').hide();
+            $('#picSearchInput').val('');
+            $('#picPenerimaValue').val('');
+            $('#picDropdown').hide();
+        } else {
+            togglePicField($('#selectLineTujuan').val());
+        }
     }
 
     // Init state berdasarkan nilai awal
@@ -300,7 +486,7 @@ $(document).ready(function () {
         toggleSelesaiFields($(this).val());
     });
 
-    // ── Submit form proses ─────────────────────────────────────────────────
+    // ── Submit form proses ────────────────────────────────────────────────────
     $('#formProsesModal').on('submit', function (e) {
         e.preventDefault();
         const form   = $(this);
@@ -326,15 +512,31 @@ $(document).ready(function () {
                 $('#selectLineTujuan').removeClass('is-invalid');
             }
 
+            // Validasi PIC jika dikirim ke Line (bukan Lab)
+            const lineTujuan = $('#selectLineTujuan').val();
+            if (lineTujuan && lineTujuan !== 'Lab') {
+                if (!$('#picPenerimaValue').val().trim()) {
+                    $('#picSearchInput').addClass('is-invalid');
+                    $('#errorPicPenerima').text('PIC penerima harus dipilih.');
+                    valid = false;
+                } else {
+                    $('#picSearchInput').removeClass('is-invalid');
+                    $('#errorPicPenerima').text('');
+                }
+            }
+
             if (!valid) return;
         }
 
         // Konfirmasi jika status Selesai
         if (status === 'Selesai') {
-            const lineTujuan = $('#selectLineTujuan option:selected').text().trim();
+            const lineTujuanText = $('#selectLineTujuan option:selected').text().trim();
+            const picNama        = $('#picPenerimaValue').val();
+            const picInfo        = picNama ? ' dengan PIC <strong>' + picNama + '</strong>' : '';
             Swal.fire({
                 title: 'Tandai Perbaikan Selesai?',
-                html: 'Kondisi alat akan kembali menjadi <strong>Baik</strong> dan dikirim ke <strong>' + lineTujuan + '</strong>.',
+                html: 'Kondisi alat akan kembali menjadi <strong>Baik</strong> dan dikirim ke <strong>' +
+                      lineTujuanText + '</strong>' + picInfo + '.',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#4361EE',
@@ -370,7 +572,6 @@ $(document).ready(function () {
             error: function (xhr) {
                 btn.prop('disabled', false).html('<i class="bi bi-save me-1"></i>Simpan Update Perbaikan');
                 if (xhr.status === 422 && xhr.responseJSON?.errors) {
-                    // Tampilkan error validasi server
                     const errors = xhr.responseJSON.errors;
                     if (errors.line_tujuan) {
                         $('#selectLineTujuan').addClass('is-invalid');
@@ -379,6 +580,10 @@ $(document).ready(function () {
                     if (errors.tanggal_selesai_perbaikan) {
                         $('#inputTanggalSelesai').addClass('is-invalid');
                         $('#errorTanggalSelesai').text(errors.tanggal_selesai_perbaikan[0]);
+                    }
+                    if (errors.pic_penerima) {
+                        $('#picSearchInput').addClass('is-invalid');
+                        $('#errorPicPenerima').text(errors.pic_penerima[0]);
                     }
                 } else {
                     Swal.fire({

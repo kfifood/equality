@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DetailTindakanPerbaikan;
 use App\Models\LaporanKerusakan;
 use App\Models\MasterLine;
+use App\Models\MasterPic;
 use App\Models\MasterTindakan;
 use App\Models\RiwayatPenggunaan;
 use App\Models\RiwayatPerbaikan;
@@ -72,6 +73,7 @@ class PerbaikanController extends Controller
 
         $tindakanList = MasterTindakan::orderBy('nama_tindakan')->get();
         $lineList     = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
+        $picList      = MasterPic::with('line')->aktif()->orderBy('nama_pic')->get();
 
         // Ambil perbaikan terakhir jika ada (untuk pre-fill form)
         $perbaikanTerakhir = $laporan->riwayatPerbaikan->first();
@@ -79,7 +81,7 @@ class PerbaikanController extends Controller
         return response()->json([
             'success' => true,
             'html'    => view('perbaikan.partials.proses-modal', compact(
-                'laporan', 'tindakanList', 'lineList', 'perbaikanTerakhir'
+                'laporan', 'tindakanList', 'lineList', 'picList', 'perbaikanTerakhir'
             ))->render(),
         ]);
     }
@@ -98,6 +100,7 @@ class PerbaikanController extends Controller
             'catatan'                   => 'nullable|string|max:500',
             'tanggal_selesai_perbaikan' => 'nullable|date',
             'line_tujuan'               => 'nullable|string',
+            'pic_penerima'              => 'nullable|string|max:100',
         ]);
 
         // Wajib isi line_tujuan jika status Selesai
@@ -113,6 +116,17 @@ class PerbaikanController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Tanggal selesai perbaikan harus diisi.',
+            ], 422);
+        }
+
+        // Wajib isi pic_penerima jika dikirim ke Line (bukan Lab)
+        if ($request->status_perbaikan === 'Selesai'
+            && $request->line_tujuan !== 'Lab'
+            && !empty($request->line_tujuan)
+            && empty($request->pic_penerima)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'PIC penerima harus diisi saat timbangan dikirim ke line.',
             ], 422);
         }
 
@@ -182,7 +196,7 @@ class PerbaikanController extends Controller
                         'timbangan_id'      => $timbangan->id,
                         'line_tujuan'       => $statusLine,
                         'tanggal_pemakaian' => $request->tanggal_selesai_perbaikan ?? now()->toDateString(),
-                        'pic'               => 'Teknisi Lab (selesai perbaikan)',
+                        'pic'               => $request->pic_penerima ?? '-',
                         'keterangan'        => 'Dikembalikan ke ' . $statusLine . ' setelah perbaikan selesai.',
                     ]);
                 }
