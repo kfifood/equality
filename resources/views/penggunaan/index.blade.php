@@ -106,16 +106,16 @@
                                 @php
                                     $kondisi       = $item->timbangan->kondisi_saat_ini;
                                     $badgeColor    = match($kondisi) {
-                                        'Baik'           => 'success',
-                                        'Rusak'          => 'danger',
-                                        'Dalam Perbaikan'=> 'warning',
-                                        default          => 'secondary'
+                                        'Baik'            => 'success',
+                                        'Rusak'           => 'danger',
+                                        'Dalam Perbaikan' => 'warning',
+                                        default           => 'secondary'
                                     };
                                     $kondisiIcon   = match($kondisi) {
-                                        'Baik'           => 'check-circle',
-                                        'Rusak'          => 'exclamation-triangle',
-                                        'Dalam Perbaikan'=> 'tools',
-                                        default          => 'question-circle'
+                                        'Baik'            => 'check-circle',
+                                        'Rusak'           => 'exclamation-triangle',
+                                        'Dalam Perbaikan' => 'tools',
+                                        default           => 'question-circle'
                                     };
                                     $statusColor   = match($item->status_penggunaan) {
                                         'Masih Digunakan' => 'success',
@@ -138,10 +138,9 @@
                                         default => 'Status penggunaan'
                                     };
 
-                                    // Logika tombol Laporkan Rusak
-                                    $bisaLaporkan      = $item->timbangan->bisaDilaporkanRusak();
-                                    $sudahDilaporkan   = $item->sudahDilaporkanRusak();
-                                    $adaLaporan        = $item->laporanKerusakan !== null;
+                                    $bisaLaporkan    = $item->timbangan->bisaDilaporkanRusak();
+                                    $sudahDilaporkan = $item->sudahDilaporkanRusak();
+                                    $adaLaporan      = $item->laporanKerusakan !== null;
                                 @endphp
                                 <tr>
                                     <td class="text-center">{{ $penggunaan->firstItem() + $index }}</td>
@@ -156,7 +155,8 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-truncate" style="max-width: 200px;" title="{{ $item->timbangan->merk_tipe_no_seri }}">
+                                        <span class="text-truncate" style="max-width:200px;"
+                                            title="{{ $item->timbangan->merk_tipe_no_seri }}">
                                             {{ $item->timbangan->merk_tipe_no_seri }}
                                         </span>
                                     </td>
@@ -169,7 +169,8 @@
                                         {{ \Carbon\Carbon::parse($item->tanggal_pemakaian)->format('d/m/Y') }}
                                     </td>
                                     <td>
-                                        <span class="badge bg-{{ $statusColor }}" data-bs-toggle="tooltip" title="{{ $statusTooltip }}">
+                                        <span class="badge bg-{{ $statusColor }}"
+                                            data-bs-toggle="tooltip" title="{{ $statusTooltip }}">
                                             <i class="bi bi-{{ $statusIcon }} me-1"></i>{{ $item->status_penggunaan }}
                                         </span>
                                     </td>
@@ -180,17 +181,14 @@
                                     </td>
                                     <td>{{ $item->keterangan ?? '-' }}</td>
 
-                                    {{-- ── Kolom Aksi ────────────────────────────────── --}}
                                     <td class="text-center">
                                         @if($sudahDilaporkan || $adaLaporan)
-                                            {{-- Sudah ada laporan aktif --}}
                                             <span class="badge bg-danger py-2 px-2"
                                                 data-bs-toggle="tooltip"
                                                 title="Sudah ada laporan kerusakan aktif untuk alat ini">
                                                 <i class="bi bi-exclamation-triangle me-1"></i>Dilaporkan
                                             </span>
                                         @elseif($bisaLaporkan)
-                                            {{-- Bisa dilaporkan: kondisi Baik, di Line --}}
                                             <button class="btn btn-sm btn-outline-danger"
                                                 onclick="showLaporkanRusakModal({{ $item->id }})"
                                                 data-bs-toggle="tooltip"
@@ -198,13 +196,12 @@
                                                 <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
                                             </button>
                                         @elseif($kondisi === 'Dalam Perbaikan')
-                                            {{-- Sedang diperbaiki di lab --}}
                                             <span class="badge bg-warning text-dark py-2 px-2"
-                                                data-bs-toggle="tooltip" title="Alat sedang dalam proses perbaikan">
+                                                data-bs-toggle="tooltip"
+                                                title="Alat sedang dalam proses perbaikan">
                                                 <i class="bi bi-tools me-1"></i>Diperbaiki
                                             </span>
                                         @else
-                                            {{-- Sudah selesai / di Lab / kondisi tidak memungkinkan --}}
                                             <span class="text-muted small">—</span>
                                         @endif
                                     </td>
@@ -214,16 +211,62 @@
                         </table>
                     </div>
 
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-4">
-                        <div class="text-muted">
-                            Menampilkan {{ $penggunaan->firstItem() }} hingga {{ $penggunaan->lastItem() }}
-                            dari {{ $penggunaan->total() }} riwayat penggunaan
+                    {{-- ── Pagination ───────────────────────────────────────── --}}
+                    @if($penggunaan->hasPages())
+                    @php
+                        $cur   = $penggunaan->currentPage();
+                        $last  = $penggunaan->lastPage();
+                        $pages = collect();
+                        for ($i = 1; $i <= min(2, $last); $i++) $pages->push($i);
+                        for ($i = max(1, $cur - 2); $i <= min($last, $cur + 2); $i++) $pages->push($i);
+                        for ($i = max(1, $last - 1); $i <= $last; $i++) $pages->push($i);
+                        $pages = $pages->unique()->sort()->values();
+                        $q     = request()->except('page');
+                    @endphp
+                    <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2">
+                        <div class="text-muted small">
+                            Menampilkan <strong>{{ $penggunaan->firstItem() }}</strong>
+                            hingga <strong>{{ $penggunaan->lastItem() }}</strong>
+                            dari <strong>{{ $penggunaan->total() }}</strong> riwayat penggunaan
                         </div>
                         <nav>
-                            {{ $penggunaan->appends(request()->query())->links() }}
+                            <ul class="pagination pagination-sm mb-0">
+                                {{-- << First --}}
+                                <li class="page-item {{ $cur == 1 ? 'disabled' : '' }}">
+                                    <a class="page-link" href="{{ $penggunaan->url(1) }}&{{ http_build_query($q) }}">&laquo;</a>
+                                </li>
+                                {{-- < Prev --}}
+                                <li class="page-item {{ $cur == 1 ? 'disabled' : '' }}">
+                                    <a class="page-link" href="{{ $penggunaan->previousPageUrl() ?? '#' }}&{{ http_build_query($q) }}">&lsaquo;</a>
+                                </li>
+
+                                @php $prev = null; @endphp
+                                @foreach($pages as $page)
+                                    @if($prev !== null && $page - $prev > 1)
+                                        <li class="page-item disabled"><span class="page-link px-2">…</span></li>
+                                    @endif
+                                    <li class="page-item {{ $page == $cur ? 'active' : '' }}">
+                                        @if($page == $cur)
+                                            <span class="page-link">{{ $page }}</span>
+                                        @else
+                                            <a class="page-link" href="{{ $penggunaan->url($page) }}&{{ http_build_query($q) }}">{{ $page }}</a>
+                                        @endif
+                                    </li>
+                                    @php $prev = $page; @endphp
+                                @endforeach
+
+                                {{-- > Next --}}
+                                <li class="page-item {{ !$penggunaan->hasMorePages() ? 'disabled' : '' }}">
+                                    <a class="page-link" href="{{ $penggunaan->nextPageUrl() ?? '#' }}&{{ http_build_query($q) }}">&rsaquo;</a>
+                                </li>
+                                {{-- >> Last --}}
+                                <li class="page-item {{ !$penggunaan->hasMorePages() ? 'disabled' : '' }}">
+                                    <a class="page-link" href="{{ $penggunaan->url($last) }}&{{ http_build_query($q) }}">&raquo;</a>
+                                </li>
+                            </ul>
                         </nav>
                     </div>
+                    @endif
 
                 </div>
             </div>
@@ -231,12 +274,10 @@
     </div>
 </div>
 
-<!-- ── Dynamic Modal Container (dipakai oleh create & laporkan rusak) ─── -->
+<!-- ── Dynamic Modal Container ─── -->
 <div class="modal fade" id="dynamicModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content" id="dynamicModalContent">
-            <!-- Content di-load via AJAX -->
-        </div>
+        <div class="modal-content" id="dynamicModalContent"></div>
     </div>
 </div>
 
@@ -245,6 +286,21 @@
 .card { border: none; border-radius: 12px; }
 .table th { font-weight: 600; background-color: #f8f9fa !important; }
 .badge { font-size: 0.75em; }
+.pagination .page-item.active .page-link {
+    background-color: #4361EE;
+    border-color: #4361EE;
+    color: #fff;
+    font-weight: 600;
+}
+.pagination .page-link {
+    color: #4361EE;
+    border-radius: 6px !important;
+    margin: 0 2px;
+    min-width: 34px;
+    text-align: center;
+}
+.pagination .page-link:hover { background-color: #eef0fd; color: #4361EE; }
+.pagination .page-item.disabled .page-link { color: #adb5bd; }
 </style>
 
 @endsection
@@ -252,29 +308,24 @@
 @push('scripts')
 <script>
 $(document).ready(function () {
-    // Session messages
     const successMsg = $('#session-success').text();
     const errorMsg   = $('#session-error').text();
     if (successMsg) Swal.fire({ icon: 'success', title: 'Berhasil', text: successMsg, timer: 3000, showConfirmButton: false });
     if (errorMsg)   Swal.fire({ icon: 'error',   title: 'Error',    text: errorMsg,   timer: 4000 });
 
-    // Auto-submit filter
     let searchTimer;
     $('input[name="kode_asset"]').on('input', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => $('#filterForm').submit(), 800);
     });
 
-    // Tooltips
     $('[data-bs-toggle="tooltip"]').each(function () { new bootstrap.Tooltip(this); });
 
-    // Bersihkan modal content setelah ditutup
     $('#dynamicModal').on('hidden.bs.modal', function () {
         $('#dynamicModalContent').html('');
     });
 });
 
-// ── Buka modal catat penggunaan ────────────────────────────────────────────
 function showCreatePenggunaanModal(timbanganId = null) {
     let url = '{{ route("penggunaan.create") }}';
     if (timbanganId) url = '{{ url("penggunaan/create") }}/' + timbanganId;
@@ -299,7 +350,6 @@ function showCreatePenggunaanModal(timbanganId = null) {
     });
 }
 
-// ── Buka modal laporkan rusak ──────────────────────────────────────────────
 function showLaporkanRusakModal(penggunaanId) {
     Swal.fire({ title: 'Memuat form...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -322,7 +372,6 @@ function showLaporkanRusakModal(penggunaanId) {
     });
 }
 
-// ── Handle submit form catat penggunaan ────────────────────────────────────
 $(document).on('submit', '#createPenggunaanForm', function (e) {
     e.preventDefault();
     const form          = $(this);

@@ -97,7 +97,7 @@
         </li>
 
         <li class="nav-item">
-            <a href="{{ route('laporan.index') }}" class="nav-link {{ Request::is('laporan*') ? 'active' : '' }}">
+            <a href="{{ route('laporan.index') }}" class="nav-link {{ Request::is('reports*') ? 'active' : '' }}">
                 <i class="bi bi-graph-up nav-icon"></i>
                 <span class="nav-text">Laporan Timbangan</span>
             </a>

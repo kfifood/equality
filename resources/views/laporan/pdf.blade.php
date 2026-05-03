@@ -4,277 +4,342 @@
     <meta charset="utf-8">
     <title>Laporan Timbangan - {{ $periode }}</title>
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
             font-family: 'DejaVu Sans', Arial, sans-serif;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 10.5px;
+            line-height: 1.45;
+            color: #2d2d2d;
+            /* Margin halaman: DomPDF menerapkan padding body sebagai margin */
+            padding: 30px 36px 30px 36px;
         }
+
+        /* ── Header ──────────────────────────────────────────────── */
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #333;
+            margin-bottom: 14px;
             padding-bottom: 10px;
+            border-bottom: 2px solid #555;
         }
         .header h1 {
-            margin: 0;
-            color: #333;
-            font-size: 18px;
+            font-size: 15px;
+            color: #222;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
         }
-        .header .periode {
+        .header .sub {
+            font-size: 9.5px;
             color: #666;
-            font-size: 14px;
-            margin-top: 5px;
+            margin-top: 4px;
         }
-        .summary-cards {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
-            margin-bottom: 20px;
+
+        /* ── Summary bar (satu baris) ─────────────────────────────── */
+        .summary-bar {
+            display: table;
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            border: 1px solid #ccc;
         }
-        .card {
-            border: 1px solid #ddd;
-            padding: 10px;
-            border-radius: 5px;
+        .summary-bar .s-cell {
+            display: table-cell;
             text-align: center;
+            padding: 7px 5px;
+            border-right: 1px solid #ccc;
+            vertical-align: middle;
+            background: #f5f5f5;
         }
-        .card .value {
-            font-size: 18px;
+        .summary-bar .s-cell:last-child { border-right: none; }
+        .summary-bar .s-val {
+            font-size: 15px;
             font-weight: bold;
-            color: #4361EE;
+            color: #333;
+            display: block;
         }
-        .card .label {
-            font-size: 11px;
+        .summary-bar .s-val.green  { color: #2e7d32; }
+        .summary-bar .s-val.red    { color: #c62828; }
+        .summary-bar .s-val.orange { color: #e65100; }
+        .summary-bar .s-val.teal   { color: #00695c; }
+        .summary-bar .s-lbl {
+            font-size: 8.5px;
             color: #666;
+            display: block;
+            margin-top: 1px;
         }
+
+        /* ── Section title ────────────────────────────────────────── */
+        .section-title {
+            background: #e8e8e8;
+            color: #222;
+            padding: 4px 8px;
+            margin: 14px 0 6px;
+            font-size: 10px;
+            font-weight: bold;
+            border-left: 3px solid #888;
+            letter-spacing: 0.4px;
+        }
+
+        /* ── Tables ───────────────────────────────────────────────── */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+            font-size: 9px;
         }
         th {
-            background-color: #4361EE;
-            color: white;
-            padding: 8px;
+            background: #555;
+            color: #fff;
+            padding: 5px 6px;
             text-align: left;
-            font-size: 11px;
-        }
-        td {
-            padding: 6px;
-            border: 1px solid #ddd;
-            font-size: 10px;
-        }
-        .section-title {
-            background-color: #f8f9fa;
-            padding: 8px;
-            margin: 15px 0 10px 0;
-            font-weight: bold;
-            border-left: 4px solid #4361EE;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            font-size: 10px;
-            color: #666;
-        }
-        .page-break {
-            page-break-after: always;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 3px;
             font-size: 9px;
             font-weight: bold;
         }
-        .badge-success { background-color: #d4edda; color: #155724; }
-        .badge-warning { background-color: #fff3cd; color: #856404; }
-        .badge-danger { background-color: #f8d7da; color: #721c24; }
-        .badge-info { background-color: #d1ecf1; color: #0c5460; }
+        td {
+            padding: 4px 6px;
+            border: 1px solid #d4d4d4;
+            vertical-align: top;
+        }
+        tr:nth-child(even) td { background: #f9f9f9; }
+
+        /* ── Badges ───────────────────────────────────────────────── */
+        .badge {
+            display: inline-block;
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 8px;
+            font-weight: bold;
+        }
+        .badge-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .badge-warning { background: #fff8e1; color: #e65100; border: 1px solid #ffcc80; }
+        .badge-danger  { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+        .badge-info    { background: #f0f0f0; color: #444;    border: 1px solid #bdbdbd; }
+
+        /* ── Misc ─────────────────────────────────────────────────── */
+        .text-center { text-align: center; }
+        .text-right  { text-align: right; }
+        .page-break  { page-break-after: always; }
+        .col-wrap    { word-wrap: break-word; }
+
+        .footer {
+            text-align: center;
+            margin-top: 22px;
+            padding-top: 8px;
+            border-top: 1px solid #ccc;
+            font-size: 8.5px;
+            color: #999;
+        }
     </style>
 </head>
 <body>
+
+    {{-- ── Header ───────────────────────────────────────────────────── --}}
     <div class="header">
-        <h1>LAPORAN TIMBANGAN</h1>
-        <div class="periode">Periode: {{ $periode }}</div>
-        <div class="periode">Tanggal Cetak: {{ $tanggalCetak }}</div>
-    </div>
-
-    <!-- Summary Cards -->
-    <div class="section-title">SUMMARY</div>
-    <div class="summary-cards">
-        <div class="card">
-            <div class="value">{{ $statistik['total'] }}</div>
-            <div class="label">Total Timbangan</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $statistik['baik'] }}</div>
-            <div class="label">Timbangan Baik</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $statistik['rusak'] }}</div>
-            <div class="label">Timbangan Rusak</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $statistik['perbaikan'] }}</div>
-            <div class="label">Dalam Perbaikan</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $penggunaanPeriod }}</div>
-            <div class="label">Penggunaan</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $perbaikanPeriod }}</div>
-            <div class="label">Perbaikan</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $statistik['di_lab'] }}</div>
-            <div class="label">Di Lab</div>
-        </div>
-        <div class="card">
-            <div class="value">{{ $statistik['di_line'] }}</div>
-            <div class="label">Di Line</div>
+        <h1>Laporan Timbangan</h1>
+        <div class="sub">
+            Periode: <strong>{{ $periode }}</strong>
+            &nbsp;&bull;&nbsp;
+            Line: <strong>{{ $filterLine }}</strong>
+            &nbsp;&bull;&nbsp;
+            Dicetak: {{ $tanggalCetak }}
         </div>
     </div>
 
-    <!-- Distribusi per Line -->
+    {{-- ── Summary — satu baris ─────────────────────────────────────── --}}
+    <div class="summary-bar">
+        <div class="s-cell">
+            <span class="s-val">{{ $statistik['total'] }}</span>
+            <span class="s-lbl">Total Alat</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val green">{{ $statistik['baik'] }}</span>
+            <span class="s-lbl">Baik ({{ $statistik['persentase_baik'] }}%)</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val red">{{ $statistik['rusak'] }}</span>
+            <span class="s-lbl">Rusak</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val orange">{{ $statistik['perbaikan'] }}</span>
+            <span class="s-lbl">Dalam Perbaikan</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val teal">{{ $penggunaanPeriod }}</span>
+            <span class="s-lbl">Penggunaan Bln Ini</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val orange">{{ $perbaikanPeriod }}</span>
+            <span class="s-lbl">Perbaikan Bln Ini</span>
+        </div>
+        @if($filterLine === 'Semua Line')
+        <div class="s-cell">
+            <span class="s-val">{{ $statistik['di_lab'] }}</span>
+            <span class="s-lbl">Di Lab</span>
+        </div>
+        <div class="s-cell">
+            <span class="s-val">{{ $statistik['di_line'] }}</span>
+            <span class="s-lbl">Di Line</span>
+        </div>
+        @endif
+    </div>
+
+    {{-- ── Distribusi per Line ───────────────────────────────────────── --}}
     <div class="section-title">DISTRIBUSI PER LINE</div>
     <table>
         <thead>
             <tr>
                 <th>Line</th>
-                <th class="text-center">Jumlah</th>
-                <th class="text-center">Persentase</th>
+                <th class="text-center" style="width:70px">Jumlah</th>
+                <th class="text-center" style="width:80px">Persentase</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($distribusiLine as $line)
+            @forelse($distribusiLine as $dist)
             <tr>
-                <td>{{ $line->status_line }}</td>
-                <td class="text-center">{{ $line->total }}</td>
+                <td>{{ $dist->status_line }}</td>
+                <td class="text-center">{{ $dist->total }}</td>
                 <td class="text-center">
-                    {{ $statistik['di_line'] > 0 ? round(($line->total / $statistik['di_line']) * 100, 1) : 0 }}%
+                    {{ $statistik['di_line'] > 0 ? round(($dist->total / $statistik['di_line']) * 100, 1) : 0 }}%
                 </td>
             </tr>
             @empty
-            <tr>
-                <td colspan="3" class="text-center">Tidak ada timbangan di line</td>
-            </tr>
+            <tr><td colspan="3" class="text-center">Tidak ada timbangan di line</td></tr>
             @endforelse
         </tbody>
     </table>
 
-    <!-- Riwayat Penggunaan Terbaru -->
+    {{-- ── Riwayat Penggunaan ───────────────────────────────────────── --}}
     <div class="section-title">RIWAYAT PENGGUNAAN TERBARU</div>
     <table>
         <thead>
             <tr>
-                <th>Kode Asset</th>
-                <th>Line Tujuan</th>
-                <th>Tanggal</th>
-                <th>PIC</th>
+                <th style="width:90px">Kode Asset</th>
+                <th>Merk / Seri</th>
+                <th style="width:80px">Line Tujuan</th>
+                <th style="width:65px">Tanggal</th>
+                <th style="width:80px">PIC</th>
             </tr>
         </thead>
         <tbody>
             @forelse($recentPenggunaan as $penggunaan)
             <tr>
                 <td>{{ $penggunaan->timbangan->kode_asset ?? '-' }}</td>
+                <td class="col-wrap">{{ $penggunaan->timbangan->merk_tipe_no_seri ?? '-' }}</td>
                 <td>{{ $penggunaan->line_tujuan }}</td>
                 <td>{{ \Carbon\Carbon::parse($penggunaan->tanggal_pemakaian)->format('d/m/Y') }}</td>
                 <td>{{ $penggunaan->pic ?? '-' }}</td>
             </tr>
             @empty
-            <tr>
-                <td colspan="4" class="text-center">Tidak ada data penggunaan</td>
-            </tr>
+            <tr><td colspan="5" class="text-center">Tidak ada data penggunaan</td></tr>
             @endforelse
         </tbody>
     </table>
 
-    <!-- Riwayat Perbaikan Terbaru -->
+    {{-- ── Riwayat Perbaikan ────────────────────────────────────────── --}}
     <div class="section-title">RIWAYAT PERBAIKAN TERBARU</div>
     <table>
         <thead>
             <tr>
-                <th>Kode Asset</th>
-                <th>Line Sebelumnya</th>
-                <th>Tanggal Masuk</th>
-                <th>Status</th>
+                <th style="width:85px">Kode Asset</th>
+                <th style="width:75px">Line Sebelum</th>
+                <th style="width:60px">Tgl Masuk</th>
+                <th style="width:60px">Tgl Selesai</th>
+                <th>Keluhan</th>
+                <th>Tindakan Perbaikan</th>
+                <th style="width:80px">Status</th>
             </tr>
         </thead>
         <tbody>
             @forelse($recentPerbaikan as $perbaikan)
+            @php
+                /* Keluhan */
+                if ($perbaikan->laporanKerusakan && $perbaikan->laporanKerusakan->keluhanList->count()) {
+                    $keluhanText = $perbaikan->laporanKerusakan->keluhanList
+                        ->map(fn($k) => $k->nama_keluhan ?? $k->keluhan ?? '-')
+                        ->join(', ');
+                } else {
+                    $keluhanText = $perbaikan->deskripsi_keluhan ?? '-';
+                }
+
+                /* Tindakan */
+                if ($perbaikan->relationLoaded('detailTindakan') && $perbaikan->detailTindakan->count()) {
+                    $tindakanText = $perbaikan->detailTindakan
+                        ->map(fn($d) => $d->masterTindakan->nama_tindakan ?? '-')
+                        ->unique()->join(', ');
+                } else {
+                    $tindakanText = $perbaikan->tindakan_perbaikan ?? '-';
+                }
+
+                $badgeClass = match($perbaikan->status_perbaikan) {
+                    'Selesai'             => 'badge-success',
+                    'Perbaikan Internal',
+                    'Menunggu Penanganan' => 'badge-warning',
+                    'Masuk Lab',
+                    'Dikirim Eksternal'   => 'badge-info',
+                    default               => 'badge-info',
+                };
+            @endphp
             <tr>
                 <td>{{ $perbaikan->timbangan->kode_asset ?? '-' }}</td>
-                <td>{{ $perbaikan->line_sebelumnya }}</td>
-                <td>{{ \Carbon\Carbon::parse($perbaikan->tanggal_masuk_lab)->format('d/m/Y') }}</td>
-                <td>
-                    @php
-                        $badgeColor = match($perbaikan->status_perbaikan) {
-                            'Masuk Lab' => 'badge-info',
-                            'Dalam Perbaikan' => 'badge-warning',
-                            'Selesai' => 'badge-success',
-                            'Dikirim Eksternal' => 'badge-info',
-                            default => 'badge-info'
-                        };
-                    @endphp
-                    <span class="badge {{ $badgeColor }}">{{ $perbaikan->status_perbaikan }}</span>
-                </td>
+                <td>{{ $perbaikan->line_sebelumnya ?? '-' }}</td>
+                <td>{{ $perbaikan->tanggal_masuk_lab ? \Carbon\Carbon::parse($perbaikan->tanggal_masuk_lab)->format('d/m/Y') : '-' }}</td>
+                <td>{{ $perbaikan->tanggal_selesai_perbaikan ? \Carbon\Carbon::parse($perbaikan->tanggal_selesai_perbaikan)->format('d/m/Y') : '-' }}</td>
+                <td class="col-wrap">{{ $keluhanText }}</td>
+                <td class="col-wrap">{{ $tindakanText }}</td>
+                <td><span class="badge {{ $badgeClass }}">{{ $perbaikan->status_perbaikan }}</span></td>
             </tr>
             @empty
-            <tr>
-                <td colspan="4" class="text-center">Tidak ada data perbaikan</td>
-            </tr>
+            <tr><td colspan="7" class="text-center">Tidak ada data perbaikan</td></tr>
             @endforelse
         </tbody>
     </table>
 
-    <!-- Data Timbangan -->
+    {{-- ── Data Timbangan (halaman baru) ───────────────────────────── --}}
     <div class="page-break"></div>
-    <div class="section-title">DATA TIMBANGAN</div>
+
+    <div class="header" style="margin-bottom:12px;">
+        <h1>Data Timbangan — {{ strtoupper($filterLine) }}</h1>
+        <div class="sub">Periode: <strong>{{ $periode }}</strong> &bull; Dicetak: {{ $tanggalCetak }}</div>
+    </div>
+
+    <div class="section-title">DAFTAR TIMBANGAN</div>
     <table>
         <thead>
             <tr>
-                <th>Kode Asset</th>
-                <th>Merk & Seri</th>
-                <th>Lokasi</th>
-                <th>Kondisi</th>
+                <th style="width:90px">Kode Asset</th>
+                <th>Merk &amp; Seri</th>
+                <th style="width:80px">Lokasi Asli</th>
+                <th style="width:80px">Lokasi Saat Ini</th>
+                <th style="width:75px">Kondisi</th>
                 <th>Status</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($timbanganList as $timbangan)
+            @foreach($timbanganList as $tmb)
+            @php
+                $badgeClass = match($tmb->kondisi_saat_ini) {
+                    'Baik'            => 'badge-success',
+                    'Rusak'           => 'badge-danger',
+                    'Dalam Perbaikan' => 'badge-warning',
+                    default           => 'badge-info',
+                };
+            @endphp
             <tr>
-                <td>{{ $timbangan->kode_asset }}</td>
-                <td>{{ $timbangan->merk_tipe_no_seri }}</td>
-                <td>{{ $timbangan->status_line ?: 'Lab' }}</td>
-                <td>
-                    @php
-                        $badgeColor = match($timbangan->kondisi_saat_ini) {
-                            'Baik' => 'badge-success',
-                            'Rusak' => 'badge-danger',
-                            'Dalam Perbaikan' => 'badge-warning',
-                            default => 'badge-info'
-                        };
-                    @endphp
-                    <span class="badge {{ $badgeColor }}">{{ $timbangan->kondisi_saat_ini }}</span>
-                </td>
-                <td>{{ $timbangan->getStatusLengkapAttribute() }}</td>
+                <td>{{ $tmb->kode_asset }}</td>
+                <td class="col-wrap">{{ $tmb->merk_tipe_no_seri }}</td>
+                <td>{{ $tmb->lokasi_asli ?? '-' }}</td>
+                <td>{{ $tmb->status_line ?: 'Lab' }}</td>
+                <td><span class="badge {{ $badgeClass }}">{{ $tmb->kondisi_saat_ini }}</span></td>
+                <td>{{ $tmb->getStatusLengkapAttribute() }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
     <div class="footer">
-        Laporan ini dibuat secara otomatis oleh Sistem Manajemen Timbangan<br>
-        {{ config('app.name') }} - {{ date('Y') }}
+        Dicetak otomatis oleh Sistem Manajemen Timbangan &mdash;
+        {{ config('app.name') }} &mdash; {{ date('Y') }}
     </div>
+
 </body>
 </html>

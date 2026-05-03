@@ -18,183 +18,218 @@ class LaporanController extends Controller
     public function index(Request $request)
     {
         $period = $request->get('period', 'monthly');
-        $year = $request->get('year', date('Y'));
-        $month = $request->get('month', date('m'));
+        $year   = $request->get('year', date('Y'));
+        $month  = $request->get('month', date('m'));
+        $line   = $request->get('line', '');
 
-        // Statistik dasar
-        $statistik = [
-            'total' => Timbangan::count(),
-            'baik' => Timbangan::where('kondisi_saat_ini', 'Baik')->count(),
-            'rusak' => Timbangan::where('kondisi_saat_ini', 'Rusak')->count(),
-            'perbaikan' => Timbangan::where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
-            'di_lab' => Timbangan::whereNull('status_line')->count(),
-            'di_line' => Timbangan::whereNotNull('status_line')->count(),
-        ];
+        // ── Daftar line untuk dropdown ─────────────────────────────────────
+        $lineList = MasterLine::where('status_aktif', true)
+            ->orderBy('nama_line')
+            ->pluck('nama_line');
 
-        $statistik['persentase_baik'] = $statistik['total'] > 0 ? 
-            round(($statistik['baik'] / $statistik['total']) * 100, 1) : 0;
+        // ── Statistik ──────────────────────────────────────────────────────
+        $statistik = $this->buildStatistik($line);
 
-        // Data untuk periode tertentu
+        // ── Periode ────────────────────────────────────────────────────────
         $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
 
-        $penggunaanPeriod = RiwayatPenggunaan::whereBetween('tanggal_pemakaian', [$startDate, $endDate])->count();
-        $perbaikanPeriod = RiwayatPerbaikan::whereBetween('tanggal_masuk_lab', [$startDate, $endDate])->count();
+        $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
+        $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
 
-        // Distribusi per line
-        $distribusiLine = Timbangan::select('status_line')
-            ->whereNotNull('status_line')
-            ->selectRaw('COUNT(*) as total')
-            ->groupBy('status_line')
-            ->orderBy('total', 'desc')
-            ->get();
+        // ── Distribusi per line ────────────────────────────────────────────
+        $distribusiLine = $this->buildDistribusiLine($line);
 
-        // Riwayat terbaru untuk laporan
-        $recentPenggunaan = RiwayatPenggunaan::with('timbangan')
-            ->whereBetween('tanggal_pemakaian', [$startDate, $endDate])
+        // ── Riwayat terbaru ────────────────────────────────────────────────
+        $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
+            ->with('timbangan')
             ->orderBy('tanggal_pemakaian', 'desc')
-            ->limit(10)
-            ->get();
+            ->limit(10)->get();
 
-        $recentPerbaikan = RiwayatPerbaikan::with('timbangan')
-            ->whereBetween('tanggal_masuk_lab', [$startDate, $endDate])
+        $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
+            ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
             ->orderBy('tanggal_masuk_lab', 'desc')
-            ->limit(10)
-            ->get();
+            ->limit(10)->get();
 
-        // Data timbangan untuk PDF
-        $timbanganList = Timbangan::orderBy('kode_asset')->get();
+        // ── Timbangan list ─────────────────────────────────────────────────
+        $timbanganList = Timbangan::orderBy('kode_asset')
+            ->when($line !== '', fn($q) => $q->where('status_line', $line))
+            ->get();
 
         $years = range(date('Y') - 2, date('Y'));
         $months = [
-            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
-            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
-            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
-            '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+            '01' => 'Januari',  '02' => 'Februari', '03' => 'Maret',
+            '04' => 'April',    '05' => 'Mei',       '06' => 'Juni',
+            '07' => 'Juli',     '08' => 'Agustus',   '09' => 'September',
+            '10' => 'Oktober',  '11' => 'November',  '12' => 'Desember',
         ];
 
-        // Handle PDF export langsung dari index
         if ($request->has('export_pdf')) {
-            return $this->generatePDF($year, $month, $statistik, $penggunaanPeriod, $perbaikanPeriod, $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList);
+            return $this->generatePDF(
+                $year, $month, $line,
+                $statistik, $penggunaanPeriod, $perbaikanPeriod,
+                $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+            );
         }
 
         return view('laporan.index', compact(
-            'statistik',
-            'distribusiLine',
-            'recentPenggunaan',
-            'recentPerbaikan',
-            'penggunaanPeriod',
-            'perbaikanPeriod',
-            'timbanganList',
-            'years',
-            'months',
-            'year',
-            'month',
-            'period'
+            'statistik', 'distribusiLine',
+            'recentPenggunaan', 'recentPerbaikan',
+            'penggunaanPeriod', 'perbaikanPeriod',
+            'timbanganList', 'years', 'months',
+            'year', 'month', 'period', 'line', 'lineList'
         ));
     }
 
     public function export(Request $request)
     {
-        $type = $request->get('type', 'excel');
+        $type   = $request->get('type', 'excel');
         $format = $request->get('format', 'summary');
-        $year = $request->get('year', date('Y'));
-        $month = $request->get('month', date('m'));
-        
+        $year   = $request->get('year', date('Y'));
+        $month  = $request->get('month', date('m'));
+        $line   = $request->get('line', '');
+
         try {
             if ($type === 'pdf') {
-                // Untuk PDF, kita perlu mengambil data lagi
-                $statistik = [
-                    'total' => Timbangan::count(),
-                    'baik' => Timbangan::where('kondisi_saat_ini', 'Baik')->count(),
-                    'rusak' => Timbangan::where('kondisi_saat_ini', 'Rusak')->count(),
-                    'perbaikan' => Timbangan::where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
-                    'di_lab' => Timbangan::whereNull('status_line')->count(),
-                    'di_line' => Timbangan::whereNotNull('status_line')->count(),
-                ];
+                $statistik = $this->buildStatistik($line);
 
                 $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                $endDate = Carbon::create($year, $month, 1)->endOfMonth();
+                $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
 
-                $penggunaanPeriod = RiwayatPenggunaan::whereBetween('tanggal_pemakaian', [$startDate, $endDate])->count();
-                $perbaikanPeriod = RiwayatPerbaikan::whereBetween('tanggal_masuk_lab', [$startDate, $endDate])->count();
+                $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
+                $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
+                $distribusiLine   = $this->buildDistribusiLine($line);
 
-                $distribusiLine = Timbangan::select('status_line')
-                    ->whereNotNull('status_line')
-                    ->selectRaw('COUNT(*) as total')
-                    ->groupBy('status_line')
-                    ->orderBy('total', 'desc')
+                $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
+                    ->with('timbangan')->orderBy('tanggal_pemakaian', 'desc')->limit(10)->get();
+
+                $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
+                    ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
+                    ->orderBy('tanggal_masuk_lab', 'desc')->limit(10)->get();
+
+                $timbanganList = Timbangan::orderBy('kode_asset')
+                    ->when($line !== '', fn($q) => $q->where('status_line', $line))
                     ->get();
 
-                $recentPenggunaan = RiwayatPenggunaan::with('timbangan')
-                    ->whereBetween('tanggal_pemakaian', [$startDate, $endDate])
-                    ->orderBy('tanggal_pemakaian', 'desc')
-                    ->limit(10)
-                    ->get();
-
-                $recentPerbaikan = RiwayatPerbaikan::with('timbangan')
-                    ->whereBetween('tanggal_masuk_lab', [$startDate, $endDate])
-                    ->orderBy('tanggal_masuk_lab', 'desc')
-                    ->limit(10)
-                    ->get();
-
-                $timbanganList = Timbangan::orderBy('kode_asset')->get();
-
-                return $this->generatePDF($year, $month, $statistik, $penggunaanPeriod, $perbaikanPeriod, $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList);
+                return $this->generatePDF(
+                    $year, $month, $line,
+                    $statistik, $penggunaanPeriod, $perbaikanPeriod,
+                    $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+                );
 
             } else {
-                $filename = 'laporan-timbangan-' . $year . '-' . $month . '-' . $format . '.xlsx';
-                
-                return Excel::download(new TimbanganExport($year, $month, $format), $filename, \Maatwebsite\Excel\Excel::XLSX, [
-                    'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                ]);
+                // ── Excel — teruskan $line ke TimbanganExport ──────────────
+                $lineSuffix = $line ? '-' . str_replace(' ', '_', $line) : '';
+                $filename   = 'laporan-timbangan-' . $year . '-' . $month . $lineSuffix . '-' . $format . '.xlsx';
+
+                return Excel::download(
+                    new TimbanganExport($year, $month, $format, $line),
+                    $filename,
+                    \Maatwebsite\Excel\Excel::XLSX,
+                    ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+                );
             }
         } catch (\Exception $e) {
             Log::error('Export Error: ' . $e->getMessage());
             Log::error('Export Trace: ' . $e->getTraceAsString());
-            
+
             return redirect()->route('laporan.index')
                 ->with('error', 'Error exporting data: ' . $e->getMessage());
         }
     }
 
-    private function generatePDF($year, $month, $statistik, $penggunaanPeriod, $perbaikanPeriod, $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList)
+    // ── Private helpers ────────────────────────────────────────────────────
+
+    private function buildStatistik(string $line): array
     {
+        $q = Timbangan::query()->when($line !== '', fn($x) => $x->where('status_line', $line));
+
+        $total    = (clone $q)->count();
+        $baik     = (clone $q)->where('kondisi_saat_ini', 'Baik')->count();
+
+        return [
+            'total'            => $total,
+            'baik'             => $baik,
+            'rusak'            => (clone $q)->where('kondisi_saat_ini', 'Rusak')->count(),
+            'perbaikan'        => (clone $q)->where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
+            'di_lab'           => $line === '' ? Timbangan::whereNull('status_line')->count() : 0,
+            'di_line'          => $line === ''
+                ? Timbangan::whereNotNull('status_line')->count()
+                : $total,
+            'persentase_baik'  => $total > 0 ? round(($baik / $total) * 100, 1) : 0,
+        ];
+    }
+
+    private function buildPenggunaanQuery($startDate, $endDate, string $line)
+    {
+        return RiwayatPenggunaan::whereBetween('tanggal_pemakaian', [$startDate, $endDate])
+            ->when($line !== '', fn($q) => $q->where('line_tujuan', $line));
+    }
+
+    private function buildPerbaikanQuery($startDate, $endDate, string $line)
+    {
+        return RiwayatPerbaikan::whereBetween('tanggal_masuk_lab', [$startDate, $endDate])
+            ->when($line !== '', fn($q) => $q->where('line_sebelumnya', $line));
+    }
+
+    private function buildDistribusiLine(string $line)
+    {
+        return Timbangan::select('status_line')
+            ->whereNotNull('status_line')
+            ->selectRaw('COUNT(*) as total')
+            ->groupBy('status_line')
+            ->orderBy('total', 'desc')
+            ->when($line !== '', fn($q) => $q->where('status_line', $line))
+            ->get();
+    }
+
+    private function generatePDF(
+        $year, $month, $line,
+        $statistik, $penggunaanPeriod, $perbaikanPeriod,
+        $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+    ) {
         $months = [
-            '01' => 'Januari', '02' => 'Februari', '03' => 'Maret',
-            '04' => 'April', '05' => 'Mei', '06' => 'Juni',
-            '07' => 'Juli', '08' => 'Agustus', '09' => 'September',
-            '10' => 'Oktober', '11' => 'November', '12' => 'Desember'
+            '01' => 'Januari',  '02' => 'Februari', '03' => 'Maret',
+            '04' => 'April',    '05' => 'Mei',       '06' => 'Juni',
+            '07' => 'Juli',     '08' => 'Agustus',   '09' => 'September',
+            '10' => 'Oktober',  '11' => 'November',  '12' => 'Desember',
         ];
 
         $data = [
-            'periode' => $months[$month] . ' ' . $year,
-            'tanggalCetak' => Carbon::now()->format('d/m/Y H:i'),
-            'statistik' => $statistik,
+            'periode'          => $months[$month] . ' ' . $year,
+            'filterLine'       => $line ?: 'Semua Line',
+            'tanggalCetak'     => Carbon::now()->format('d/m/Y H:i'),
+            'statistik'        => $statistik,
             'penggunaanPeriod' => $penggunaanPeriod,
-            'perbaikanPeriod' => $perbaikanPeriod,
-            'distribusiLine' => $distribusiLine,
+            'perbaikanPeriod'  => $perbaikanPeriod,
+            'distribusiLine'   => $distribusiLine,
             'recentPenggunaan' => $recentPenggunaan,
-            'recentPerbaikan' => $recentPerbaikan,
-            'timbanganList' => $timbanganList,
+            'recentPerbaikan'  => $recentPerbaikan,
+            'timbanganList'    => $timbanganList,
         ];
 
-        $filename = 'laporan-timbangan-' . $year . '-' . $month . '.pdf';
+        $suffix   = $line ? '-' . str_replace(' ', '_', $line) : '';
+        $filename = 'laporan-timbangan-' . $year . '-' . $month . $suffix . '.pdf';
 
         $pdf = PDF::loadView('laporan.pdf', $data)
-                  ->setPaper('a4', 'portrait')
-                  ->setOptions([
-                      'defaultFont' => 'sans-serif',
-                      'isHtml5ParserEnabled' => true,
-                      'isRemoteEnabled' => true
-                  ]);
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont'          => 'sans-serif',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => true,
+                'margin_top'           => 0,
+                'margin_right'         => 0,
+                'margin_bottom'        => 0,
+                'margin_left'          => 0,
+            ]);
 
         return $pdf->download($filename);
     }
 
+    // ── Statistik page ─────────────────────────────────────────────────────
+
     public function statistik(Request $request)
     {
-        // Data untuk charts
         $distribusiLine = Timbangan::select('status_line')
             ->whereNotNull('status_line')
             ->selectRaw('COUNT(*) as total')
@@ -207,10 +242,9 @@ class LaporanController extends Controller
             ->groupBy('kondisi_saat_ini')
             ->get();
 
-        // Data perbaikan 30 hari terakhir
         $startDate = Carbon::now()->subDays(30);
-        $endDate = Carbon::now();
-        
+        $endDate   = Carbon::now();
+
         $perbaikanHarian = RiwayatPerbaikan::whereBetween('tanggal_masuk_lab', [$startDate, $endDate])
             ->selectRaw('DATE(tanggal_masuk_lab) as tanggal, COUNT(*) as total')
             ->groupBy('tanggal')
@@ -223,23 +257,18 @@ class LaporanController extends Controller
             ->orderBy('bulan')
             ->get();
 
-        // MTBF Calculation (Mean Time Between Failures)
         $mtbfData = $this->calculateMTBF();
 
         return view('laporan.statistik', compact(
-            'distribusiLine', 
-            'distribusiKondisi',
-            'perbaikanHarian',
-            'penggunaanBulanan',
-            'mtbfData'
+            'distribusiLine', 'distribusiKondisi',
+            'perbaikanHarian', 'penggunaanBulanan', 'mtbfData'
         ));
     }
-
 
     public function downloadTemplate()
     {
         $filePath = public_path('templates/template-laporan-timbangan.xlsx');
-        
+
         if (!file_exists($filePath)) {
             return redirect()->route('laporan.index')
                 ->with('error', 'Template tidak ditemukan.');
@@ -248,9 +277,8 @@ class LaporanController extends Controller
         return response()->download($filePath, 'template-laporan-timbangan.xlsx');
     }
 
-    private function calculateMTBF()
+    private function calculateMTBF(): array
     {
-        // Simple MTBF calculation based on repair data
         $perbaikanData = RiwayatPerbaikan::where('status_perbaikan', 'Selesai')
             ->whereNotNull('tanggal_selesai_perbaikan')
             ->orderBy('tanggal_masuk_lab')
@@ -258,20 +286,17 @@ class LaporanController extends Controller
 
         $mtbf = [
             'total_perbaikan' => $perbaikanData->count(),
-            'avg_downtime' => 0,
-            'reliability' => 0
+            'avg_downtime'    => 0,
+            'reliability'     => 0,
         ];
 
         if ($perbaikanData->count() > 1) {
             $totalDays = 0;
-            $count = 0;
+            $count     = 0;
 
             for ($i = 1; $i < $perbaikanData->count(); $i++) {
-                $current = $perbaikanData[$i];
-                $previous = $perbaikanData[$i - 1];
-                
-                $daysBetween = $previous->tanggal_selesai_perbaikan->diffInDays($current->tanggal_masuk_lab);
-                $totalDays += $daysBetween;
+                $totalDays += $perbaikanData[$i - 1]->tanggal_selesai_perbaikan
+                    ->diffInDays($perbaikanData[$i]->tanggal_masuk_lab);
                 $count++;
             }
 
@@ -280,12 +305,11 @@ class LaporanController extends Controller
             }
         }
 
-        // Calculate reliability (percentage of time operational)
-        $totalTimbangan = Timbangan::count();
-        $timbanganBaik = Timbangan::where('kondisi_saat_ini', 'Baik')->count();
-        
-        if ($totalTimbangan > 0) {
-            $mtbf['reliability'] = round(($timbanganBaik / $totalTimbangan) * 100, 1);
+        $total = Timbangan::count();
+        $baik  = Timbangan::where('kondisi_saat_ini', 'Baik')->count();
+
+        if ($total > 0) {
+            $mtbf['reliability'] = round(($baik / $total) * 100, 1);
         }
 
         return $mtbf;
