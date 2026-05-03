@@ -10,86 +10,110 @@ class Timbangan extends Model
     use HasFactory;
 
     protected $table = 'timbangan';
-    
-   protected $fillable = [
-    'kode_asset',
-    'merk_tipe_no_seri', 
-    'tanggal_datang',
-    'lokasi_asli',
-    'status_line',
-    'tanggal_selesai_perbaikan',
-    'kondisi_saat_ini',
-    'catatan'
-];
-    protected $casts = [
-        'tanggal_datang' => 'date',
-        'tanggal_selesai_perbaikan' => 'date',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+
+    protected $fillable = [
+        'kode_asset',
+        'merk_tipe_no_seri',
+        'tanggal_datang',
+        'lokasi_asli',
+        'status_line',
+        'tanggal_selesai_perbaikan',
+        'kondisi_saat_ini',
+        'catatan',
     ];
 
-    // Accessor untuk menampilkan kode asset lengkap
-    public function getKodeAssetLengkapAttribute()
-    {
-        return $this->kode_asset;
-    }
+    protected $casts = [
+        'tanggal_datang'            => 'date',
+        'tanggal_selesai_perbaikan' => 'date',
+        'created_at'                => 'datetime',
+        'updated_at'                => 'datetime',
+    ];
 
-    // Relasi ke riwayat perbaikan
+    // ── Relasi ────────────────────────────────────────────────────────────────
+
     public function riwayatPerbaikan()
     {
         return $this->hasMany(RiwayatPerbaikan::class, 'timbangan_id');
     }
 
-    // Relasi ke riwayat penggunaan
     public function riwayatPenggunaan()
     {
         return $this->hasMany(RiwayatPenggunaan::class, 'timbangan_id');
     }
 
-    // Relasi ke master line
     public function masterLine()
     {
         return $this->belongsTo(MasterLine::class, 'status_line', 'nama_line');
     }
 
-    // Scope untuk mencari berdasarkan kode asset
+    /**
+     * BARU — semua laporan kerusakan timbangan ini
+     */
+    public function laporanKerusakan()
+    {
+        return $this->hasMany(LaporanKerusakan::class, 'timbangan_id');
+    }
+
+    /**
+     * BARU — laporan kerusakan yang masih aktif (belum selesai)
+     */
+    public function laporanKerusakanAktif()
+    {
+        return $this->hasOne(LaporanKerusakan::class, 'timbangan_id')
+                    ->whereIn('status', ['Menunggu', 'Diproses'])
+                    ->latest();
+    }
+
+    /**
+     * BARU — penggunaan aktif saat ini (timbangan masih di line ini)
+     */
+    public function penggunaanAktif()
+    {
+        return $this->hasOne(RiwayatPenggunaan::class, 'timbangan_id')
+                    ->whereColumn('line_tujuan', 'timbangan.status_line')
+                    ->latest('tanggal_pemakaian');
+    }
+
+    // ── Scopes ────────────────────────────────────────────────────────────────
+
     public function scopeByKodeAsset($query, $kodeAsset)
     {
         return $query->where('kode_asset', $kodeAsset);
     }
 
-    // Scope untuk timbangan aktif (baik)
     public function scopeBaik($query)
     {
         return $query->where('kondisi_saat_ini', 'Baik');
     }
 
-    // Scope untuk timbangan rusak
     public function scopeRusak($query)
     {
         return $query->where('kondisi_saat_ini', 'Rusak');
     }
 
-    // Scope untuk timbangan dalam perbaikan
     public function scopeDalamPerbaikan($query)
     {
         return $query->where('kondisi_saat_ini', 'Dalam Perbaikan');
     }
 
-    // Scope untuk timbangan di line tertentu
     public function scopeDiLine($query, $line)
     {
         return $query->where('status_line', $line);
     }
 
-    // Scope untuk timbangan di lab (tidak ada status_line)
     public function scopeDiLab($query)
     {
         return $query->whereNull('status_line');
     }
 
-    // Accessor untuk status
-    public function getStatusAttribute()
+    // ── Accessors ─────────────────────────────────────────────────────────────
+
+    public function getKodeAssetLengkapAttribute(): string
+    {
+        return $this->kode_asset;
+    }
+
+    public function getStatusAttribute(): string
     {
         if ($this->kondisi_saat_ini === 'Baik' && $this->status_line) {
             return 'Digunakan di ' . $this->status_line;
@@ -100,56 +124,7 @@ class Timbangan extends Model
         }
     }
 
-    // Method untuk cek apakah bisa digunakan
-    public function bisaDigunakan()
-    {
-        return $this->kondisi_saat_ini === 'Baik';
-    }
-
-    // Method untuk cek apakah sedang diperbaiki
-    public function sedangDiperbaiki()
-    {
-        return $this->kondisi_saat_ini === 'Dalam Perbaikan';
-    }
-
-    // Method untuk cek apakah siap digunakan (di Lab dan kondisi Baik)
-    public function isSiapDigunakan()
-    {
-        return $this->kondisi_saat_ini === 'Baik' && $this->status_line === null;
-    }
-
-    // Method untuk cek apakah sedang digunakan
-    public function isSedangDigunakan()
-    {
-        return $this->kondisi_saat_ini === 'Baik' && $this->status_line !== null;
-    }
-
-    // Method untuk cek apakah perlu perbaikan
-    public function isPerluPerbaikan()
-    {
-        return in_array($this->kondisi_saat_ini, ['Rusak', 'Dalam Perbaikan']) && $this->status_line !== null;
-    }
-
-    // Method untuk cek apakah sedang diperbaiki
-    public function isSedangDiperbaiki()
-    {
-        return $this->kondisi_saat_ini === 'Dalam Perbaikan' && $this->status_line === null;
-    }
-
-    // Method untuk cek apakah di lokasi asli
-public function isDiLokasiAsli()
-{
-    return $this->status_line === $this->lokasi_asli;
-}
-
-// Method untuk cek apakah dipinjam
-public function isDipinjam()
-{
-    return $this->status_line && $this->status_line !== $this->lokasi_asli;
-}
-
-    // Accessor untuk status lengkap
-    public function getStatusLengkapAttribute()
+    public function getStatusLengkapAttribute(): string
     {
         if ($this->isSiapDigunakan()) {
             return 'Siap Digunakan (Lab)';
@@ -164,38 +139,83 @@ public function isDipinjam()
         }
     }
 
-    // Method baru untuk mendapatkan status lokasi
-public function getStatusLokasiAttribute()
-{
-    if (!$this->status_line) {
-        return 'Di Lab';
+    public function getStatusLokasiAttribute(): string
+    {
+        if (!$this->status_line) {
+            return 'Di Lab';
+        }
+        if ($this->status_line === $this->lokasi_asli) {
+            return 'Di Lokasi Asli';
+        }
+        return 'Dipinjam ke ' . $this->status_line;
     }
-    
-    if ($this->status_line === $this->lokasi_asli) {
-        return 'Di Lokasi Asli';
-    }
-    
-    return 'Dipinjam ke ' . $this->status_line;
-}
 
-// Method baru untuk mendapatkan tanggal selesai perbaikan terakhir
-public function getTanggalSelesaiPerbaikanTerakhirAttribute()
-{
-    $perbaikanTerakhir = $this->riwayatPerbaikan()
-        ->where('status_perbaikan', 'Selesai')
-        ->orderBy('tanggal_selesai_perbaikan', 'desc')
-        ->first();
-    
-    return $perbaikanTerakhir ? $perbaikanTerakhir->tanggal_selesai_perbaikan : null;
-}
-
-// Method untuk cek apakah baru selesai perbaikan (dalam 30 hari)
-public function isBaruSelesaiPerbaikan()
-{
-    if (!$this->tanggal_selesai_perbaikan) {
-        return false;
+    public function getTanggalSelesaiPerbaikanTerakhirAttribute()
+    {
+        return $this->riwayatPerbaikan()
+            ->where('status_perbaikan', 'Selesai')
+            ->orderBy('tanggal_selesai_perbaikan', 'desc')
+            ->value('tanggal_selesai_perbaikan');
     }
-    
-    return $this->tanggal_selesai_perbaikan->diffInDays(now()) <= 30;
-}
+
+    // ── Helper Methods ────────────────────────────────────────────────────────
+
+    public function bisaDigunakan(): bool
+    {
+        return $this->kondisi_saat_ini === 'Baik';
+    }
+
+    public function isSiapDigunakan(): bool
+    {
+        return $this->kondisi_saat_ini === 'Baik' && $this->status_line === null;
+    }
+
+    public function isSedangDigunakan(): bool
+    {
+        return $this->kondisi_saat_ini === 'Baik' && $this->status_line !== null;
+    }
+
+    public function isPerluPerbaikan(): bool
+    {
+        return in_array($this->kondisi_saat_ini, ['Rusak', 'Dalam Perbaikan'])
+            && $this->status_line !== null;
+    }
+
+    public function isSedangDiperbaiki(): bool
+    {
+        return $this->kondisi_saat_ini === 'Dalam Perbaikan' && $this->status_line === null;
+    }
+
+    public function sedangDiperbaiki(): bool
+    {
+        return $this->kondisi_saat_ini === 'Dalam Perbaikan';
+    }
+
+    public function isDiLokasiAsli(): bool
+    {
+        return $this->status_line === $this->lokasi_asli;
+    }
+
+    public function isDipinjam(): bool
+    {
+        return $this->status_line && $this->status_line !== $this->lokasi_asli;
+    }
+
+    public function isBaruSelesaiPerbaikan(): bool
+    {
+        if (!$this->tanggal_selesai_perbaikan) {
+            return false;
+        }
+        return $this->tanggal_selesai_perbaikan->diffInDays(now()) <= 30;
+    }
+
+    /**
+     * BARU — apakah timbangan ini bisa dilaporkan rusak
+     * (harus Baik, sedang di Line, dan belum ada laporan aktif)
+     */
+    public function bisaDilaporkanRusak(): bool
+    {
+        return $this->kondisi_saat_ini === 'Baik'
+            && $this->status_line !== null;
+    }
 }
