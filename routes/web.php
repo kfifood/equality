@@ -73,7 +73,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Line Routes
-Route::prefix('line')->group(function () {
+    Route::prefix('line')->group(function () {
     Route::get('/', [LineController::class, 'index'])->name('line.index');
     Route::post('/', [LineController::class, 'store'])->name('line.store');
     Route::put('/{id}', [LineController::class, 'update'])->name('line.update');
@@ -81,7 +81,7 @@ Route::prefix('line')->group(function () {
     
     // KOREKSI: Route untuk melihat timbangan di line
     Route::get('/{id}/timbangan', [LineController::class, 'timbangan'])->name('line.timbangan');
-});
+    });
 
     // ==================== OPERATIONS ====================
     // Penggunaan Timbangan - SEMUA ROUTE PENGGUNAAN DI SINI
@@ -100,7 +100,7 @@ Route::prefix('line')->group(function () {
         Route::post('/', [PerbaikanController::class, 'store'])->name('perbaikan.store');
         Route::put('/{id}/status', [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
         // routes/web.php
-Route::get('/perbaikan/timbangan/{id}', [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
+    Route::get('/perbaikan/timbangan/{id}', [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
     });
 
     // ==================== MONITORING ====================
@@ -112,26 +112,64 @@ Route::get('/perbaikan/timbangan/{id}', [PerbaikanController::class, 'getTimbang
     // ==================== REPORTS ===================
 
     // Reports Routes
-Route::prefix('reports')->group(function () {
+    Route::prefix('reports')->group(function () {
     Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
     Route::get('/laporan/statistik', [LaporanController::class, 'statistik'])->name('laporan.statistik');
     Route::get('/laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
     Route::get('/laporan/template', [LaporanController::class, 'downloadTemplate'])->name('laporan.download-template');
-});
-});
+    });
 
-// Di dalam Route::middleware(['auth'])->group():
-Route::prefix('pic')->group(function () {
+
+    // Di dalam Route::middleware(['auth'])->group():
+    Route::prefix('pic')->group(function () {
     Route::get('/',           [PicController::class, 'index'])->name('pic.index');
     Route::post('/',          [PicController::class, 'store'])->name('pic.store');
     Route::put('/{id}',       [PicController::class, 'update'])->name('pic.update');
     Route::delete('/{id}',    [PicController::class, 'destroy'])->name('pic.destroy');
     Route::get('/list-aktif', [PicController::class, 'listAktif'])->name('pic.list-aktif');
-});
-// Fallback route
-Route::fallback(function () {
+    });
+    // Fallback route
+    Route::fallback(function () {
     if (Auth::check()) {
         return redirect()->route('dashboard');
     }
     return redirect('/login');
+    });
+    // ==================== MASTER KELUHAN ====================
+Route::prefix('master/keluhan')->group(function () {
+    Route::get('/',        [App\Http\Controllers\MasterKeluhanController::class, 'index'])->name('master-keluhan.index');
+    Route::post('/',       [App\Http\Controllers\MasterKeluhanController::class, 'store'])->name('master-keluhan.store');
+    Route::get('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'edit'])->name('master-keluhan.edit');
+    Route::put('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'update'])->name('master-keluhan.update');
+    Route::delete('/{id}', [App\Http\Controllers\MasterKeluhanController::class, 'destroy'])->name('master-keluhan.destroy');
 });
+ 
+// ==================== MASTER TINDAKAN ====================
+Route::prefix('master/tindakan')->group(function () {
+    Route::get('/',        [App\Http\Controllers\MasterTindakanController::class, 'index'])->name('master-tindakan.index');
+    Route::post('/',       [App\Http\Controllers\MasterTindakanController::class, 'store'])->name('master-tindakan.store');
+    Route::get('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'edit'])->name('master-tindakan.edit');
+    Route::put('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'update'])->name('master-tindakan.update');
+    Route::delete('/{id}', [App\Http\Controllers\MasterTindakanController::class, 'destroy'])->name('master-tindakan.destroy');
+});
+ 
+// ==================== LAPORAN KERUSAKAN ====================
+Route::prefix('laporan-kerusakan')->group(function () {
+    // Ambil HTML modal laporan rusak (dipanggil dari tabel penggunaan)
+    Route::get('/{penggunaan_id}/create', [App\Http\Controllers\LaporanKerusakanController::class, 'create'])->name('laporan-kerusakan.create');
+    // Simpan laporan kerusakan baru
+    Route::post('/',                      [App\Http\Controllers\LaporanKerusakanController::class, 'store'])->name('laporan-kerusakan.store');
+});
+ 
+// ==================== PENGGUNAAN — data helper ====================
+// (tambahkan di dalam prefix('penggunaan') yang sudah ada jika belum ada)
+Route::get('/penggunaan/{id}/laporan-data', [App\Http\Controllers\PenggunaanController::class, 'getPenggunaanUntukLaporan'])
+    ->name('penggunaan.laporan-data');
+ 
+// ==================== PERBAIKAN — route baru ====================
+// (tambahkan di dalam prefix('perbaikan') yang sudah ada)
+Route::get('/perbaikan/{laporan_id}/proses',  [App\Http\Controllers\PerbaikanController::class, 'prosesModal'])->name('perbaikan.proses-modal');
+Route::post('/perbaikan/{laporan_id}/proses', [App\Http\Controllers\PerbaikanController::class, 'prosesStore'])->name('perbaikan.proses-store');
+Route::get('/perbaikan/{laporan_id}/detail',  [App\Http\Controllers\PerbaikanController::class, 'detail'])->name('perbaikan.detail');
+
+    });
