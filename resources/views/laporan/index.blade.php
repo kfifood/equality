@@ -429,7 +429,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         document.body.appendChild(form);
         form.submit();
-        document.body.removeChild(form);
 
         setTimeout(() => {
             btnExport.innerHTML = originalText;

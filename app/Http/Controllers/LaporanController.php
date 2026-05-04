@@ -16,127 +16,120 @@ use Illuminate\Support\Facades\Log;
 class LaporanController extends Controller
 {
     public function index(Request $request)
-    {
-        $period = $request->get('period', 'monthly');
-        $year   = $request->get('year', date('Y'));
-        $month  = $request->get('month', date('m'));
-        $line   = $request->get('line', '');
+{
+    $period = $request->get('period', 'monthly');
+    $year   = $request->get('year', date('Y'));
+    $month  = $request->get('month', date('m'));
+    $line   = (string) $request->get('line', '');
 
-        // ── Daftar line untuk dropdown ─────────────────────────────────────
-        $lineList = MasterLine::where('status_aktif', true)
-            ->orderBy('nama_line')
-            ->pluck('nama_line');
+    $lineList = MasterLine::where('status_aktif', true)
+        ->orderBy('nama_line')
+        ->pluck('nama_line');
 
-        // ── Statistik ──────────────────────────────────────────────────────
-        $statistik = $this->buildStatistik($line);
+    $statistik = $this->buildStatistik($line);
 
-        // ── Periode ────────────────────────────────────────────────────────
-        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+    $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+    $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
 
-        $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
-        $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
+    $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
+    $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
 
-        // ── Distribusi per line ────────────────────────────────────────────
-        $distribusiLine = $this->buildDistribusiLine($line);
+    $distribusiLine = $this->buildDistribusiLine($line);
 
-        // ── Riwayat terbaru ────────────────────────────────────────────────
-        $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
-            ->with('timbangan')
-            ->orderBy('tanggal_pemakaian', 'desc')
-            ->limit(10)->get();
+    $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
+        ->with('timbangan')
+        ->orderBy('tanggal_pemakaian', 'desc')
+        ->limit(10)->get();
 
-        $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
-            ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
-            ->orderBy('tanggal_masuk_lab', 'desc')
-            ->limit(10)->get();
+    $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
+        ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
+        ->orderBy('tanggal_masuk_lab', 'desc')
+        ->limit(10)->get();
 
-        // ── Timbangan list ─────────────────────────────────────────────────
-        $timbanganList = Timbangan::orderBy('kode_asset')
-            ->when($line !== '', fn($q) => $q->where('status_line', $line))
-            ->get();
+    $timbanganList = Timbangan::orderBy('kode_asset')
+        ->when($line !== '', fn($q) => $q->where('status_line', $line))
+        ->get();
 
-        $years = range(date('Y') - 2, date('Y'));
-        $months = [
-            '01' => 'Januari',  '02' => 'Februari', '03' => 'Maret',
-            '04' => 'April',    '05' => 'Mei',       '06' => 'Juni',
-            '07' => 'Juli',     '08' => 'Agustus',   '09' => 'September',
-            '10' => 'Oktober',  '11' => 'November',  '12' => 'Desember',
-        ];
+    $years = range(date('Y') - 2, date('Y'));
+    $months = [
+        '01' => 'Januari',  '02' => 'Februari', '03' => 'Maret',
+        '04' => 'April',    '05' => 'Mei',       '06' => 'Juni',
+        '07' => 'Juli',     '08' => 'Agustus',   '09' => 'September',
+        '10' => 'Oktober',  '11' => 'November',  '12' => 'Desember',
+    ];
 
-        if ($request->has('export_pdf')) {
+    if ($request->has('export_pdf')) {
+        return $this->generatePDF(
+            $year, $month, $line,
+            $statistik, $penggunaanPeriod, $perbaikanPeriod,
+            $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+        );
+    }
+
+    return view('laporan.index', compact(
+        'statistik', 'distribusiLine',
+        'recentPenggunaan', 'recentPerbaikan',
+        'penggunaanPeriod', 'perbaikanPeriod',
+        'timbanganList', 'years', 'months',
+        'year', 'month', 'period', 'line', 'lineList'
+    ));
+}
+
+    public function export(Request $request)
+{
+    $type   = $request->get('type', 'excel');
+    $format = $request->get('format', 'summary');
+    $year   = $request->get('year', date('Y'));
+    $month  = $request->get('month', date('m'));
+    $line   = (string) $request->get('line', '');
+
+    try {
+        if ($type === 'pdf') {
+            $statistik = $this->buildStatistik($line);
+
+            $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+            $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
+
+            $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
+            $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
+            $distribusiLine   = $this->buildDistribusiLine($line);
+
+            $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
+                ->with('timbangan')->orderBy('tanggal_pemakaian', 'desc')->limit(10)->get();
+
+            $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
+                ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
+                ->orderBy('tanggal_masuk_lab', 'desc')->limit(10)->get();
+
+            $timbanganList = Timbangan::orderBy('kode_asset')
+                ->when($line !== '', fn($q) => $q->where('status_line', $line))
+                ->get();
+
             return $this->generatePDF(
                 $year, $month, $line,
                 $statistik, $penggunaanPeriod, $perbaikanPeriod,
                 $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
             );
+
+        } else {
+            $lineSuffix = $line ? '-' . str_replace(' ', '_', $line) : '';
+            $filename   = 'laporan-timbangan-' . $year . '-' . $month . $lineSuffix . '-' . $format . '.xlsx';
+
+            return Excel::download(
+                new TimbanganExport($year, $month, $format, $line),
+                $filename,
+                \Maatwebsite\Excel\Excel::XLSX,
+                ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+            );
         }
+    } catch (\Exception $e) {
+        Log::error('Export Error: ' . $e->getMessage());
+        Log::error('Export Trace: ' . $e->getTraceAsString());
 
-        return view('laporan.index', compact(
-            'statistik', 'distribusiLine',
-            'recentPenggunaan', 'recentPerbaikan',
-            'penggunaanPeriod', 'perbaikanPeriod',
-            'timbanganList', 'years', 'months',
-            'year', 'month', 'period', 'line', 'lineList'
-        ));
+        return redirect()->route('laporan.index')
+            ->with('error', 'Error exporting data: ' . $e->getMessage());
     }
-
-    public function export(Request $request)
-    {
-        $type   = $request->get('type', 'excel');
-        $format = $request->get('format', 'summary');
-        $year   = $request->get('year', date('Y'));
-        $month  = $request->get('month', date('m'));
-        $line   = $request->get('line', '');
-
-        try {
-            if ($type === 'pdf') {
-                $statistik = $this->buildStatistik($line);
-
-                $startDate = Carbon::create($year, $month, 1)->startOfMonth();
-                $endDate   = Carbon::create($year, $month, 1)->endOfMonth();
-
-                $penggunaanPeriod = $this->buildPenggunaanQuery($startDate, $endDate, $line)->count();
-                $perbaikanPeriod  = $this->buildPerbaikanQuery($startDate, $endDate, $line)->count();
-                $distribusiLine   = $this->buildDistribusiLine($line);
-
-                $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
-                    ->with('timbangan')->orderBy('tanggal_pemakaian', 'desc')->limit(10)->get();
-
-                $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
-                    ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
-                    ->orderBy('tanggal_masuk_lab', 'desc')->limit(10)->get();
-
-                $timbanganList = Timbangan::orderBy('kode_asset')
-                    ->when($line !== '', fn($q) => $q->where('status_line', $line))
-                    ->get();
-
-                return $this->generatePDF(
-                    $year, $month, $line,
-                    $statistik, $penggunaanPeriod, $perbaikanPeriod,
-                    $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
-                );
-
-            } else {
-                // ── Excel — teruskan $line ke TimbanganExport ──────────────
-                $lineSuffix = $line ? '-' . str_replace(' ', '_', $line) : '';
-                $filename   = 'laporan-timbangan-' . $year . '-' . $month . $lineSuffix . '-' . $format . '.xlsx';
-
-                return Excel::download(
-                    new TimbanganExport($year, $month, $format, $line),
-                    $filename,
-                    \Maatwebsite\Excel\Excel::XLSX,
-                    ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-                );
-            }
-        } catch (\Exception $e) {
-            Log::error('Export Error: ' . $e->getMessage());
-            Log::error('Export Trace: ' . $e->getTraceAsString());
-
-            return redirect()->route('laporan.index')
-                ->with('error', 'Error exporting data: ' . $e->getMessage());
-        }
-    }
+}
 
     // ── Private helpers ────────────────────────────────────────────────────
 
