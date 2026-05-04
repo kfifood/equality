@@ -91,7 +91,10 @@ public function create()
         'tanggal_datang' => $request->tanggal_datang,
         'lokasi_asli' => $request->lokasi_asli, // SIMPAN LOKASI ASLI
         'status_line' => null, // Default di Lab
-        'kondisi_saat_ini' => 'Baik'
+        'kondisi_saat_ini' => 'Baik',
+        'certificate_number' => $request->certificate_number,
+        'jenis_alat_ukur'    => $request->jenis_alat_ukur,
+        'kapasitas'          => $request->kapasitas,
     ]);
 
     return response()->json([
@@ -131,7 +134,10 @@ public function update(Request $request, $id)
         'kode_asset' => $request->kode_asset,
         'merk_tipe_no_seri' => $request->merk_tipe_no_seri,
         'tanggal_datang' => $request->tanggal_datang,
-        'lokasi_asli' => $request->lokasi_asli // UPDATE LOKASI ASLI
+        'lokasi_asli' => $request->lokasi_asli, // UPDATE LOKASI ASLI
+        'certificate_number' => $request->certificate_number, 
+        'jenis_alat_ukur'    => $request->jenis_alat_ukur, 
+        'kapasitas'          => $request->kapasitas,          
     ]);
 
     return response()->json([

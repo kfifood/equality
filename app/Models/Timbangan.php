@@ -20,6 +20,9 @@ class Timbangan extends Model
         'tanggal_selesai_perbaikan',
         'kondisi_saat_ini',
         'catatan',
+        'certificate_number',
+        'jenis_alat_ukur',
+        'kapasitas',
     ];
 
     protected $casts = [
@@ -218,4 +221,15 @@ class Timbangan extends Model
         return $this->kondisi_saat_ini === 'Baik'
             && $this->status_line !== null;
     }
+
+    public function kalibrasi()
+{
+    return $this->hasMany(\App\Models\Kalibrasi::class, 'timbangan_id');
+}
+ 
+public function kalibrasiterakhir()
+{
+    return $this->hasOne(\App\Models\Kalibrasi::class, 'timbangan_id')
+                ->latest('tanggal_pelaksanaan');
+}
 }

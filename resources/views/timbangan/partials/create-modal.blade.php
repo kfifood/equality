@@ -47,6 +47,34 @@
                    value="{{ old('merk_tipe_no_seri') }}" placeholder="Contoh: AND EK-2000i No.12345" required>
         </div>
 
+        {{--Section alat ukur --}}
+<hr class="my-3">
+<h6 class="text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Informasi Teknis <small class="fw-normal">(opsional)</small></h6>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label for="jenis_alat_ukur" class="form-label">Jenis Alat Ukur</label>
+            <select class="form-select" id="jenis_alat_ukur" name="jenis_alat_ukur">
+                <option value="">-- Pilih Jenis --</option>
+                <option value="Timbangan" {{ old('jenis_alat_ukur') == 'Timbangan' ? 'selected' : '' }}>Timbangan</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label for="kapasitas" class="form-label">Kapasitas</label>
+            <input type="text" class="form-control" id="kapasitas" name="kapasitas"
+                   value="{{ old('kapasitas') }}" placeholder="Contoh: 30 kg, 5000 g">
+        </div>
+    </div>
+</div>
+
+<div class="mb-3">
+    <label for="certificate_number" class="form-label">Certificate Number</label>
+    <input type="text" class="form-control" id="certificate_number" name="certificate_number"
+           value="{{ old('certificate_number') }}" placeholder="Contoh: CERT-2024-001">
+</div>
         <div class="alert alert-info">
             <small>
                 <i class="bi bi-info-circle me-1"></i>

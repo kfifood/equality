@@ -11,6 +11,7 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\PicController;
+use App\Http\Controllers\KalibrasiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -172,4 +173,12 @@ Route::get('/perbaikan/{laporan_id}/proses',  [App\Http\Controllers\PerbaikanCon
 Route::post('/perbaikan/{laporan_id}/proses', [App\Http\Controllers\PerbaikanController::class, 'prosesStore'])->name('perbaikan.proses-store');
 Route::get('/perbaikan/{laporan_id}/detail',  [App\Http\Controllers\PerbaikanController::class, 'detail'])->name('perbaikan.detail');
 
+Route::post('/kalibrasi/sticker-batch', [KalibrasiController::class, 'stickerBatch'])
+     ->name('kalibrasi.sticker.batch');
+ 
+Route::get('/kalibrasi/{id}/sticker', [KalibrasiController::class, 'sticker'])
+     ->name('kalibrasi.sticker');
+ 
+// Contoh lengkap jika kamu pakai resource:
+Route::resource('kalibrasi', KalibrasiController::class)->except(['show']);
     });

@@ -91,6 +91,14 @@
             </a>
         </li>
 
+        <li class="nav-item">
+    <a href="{{ route('kalibrasi.index') }}"
+       class="nav-link {{ Request::is('kalibrasi*') ? 'active' : '' }}">
+        <i class="bi bi-patch-check nav-icon"></i>
+        <span class="nav-text">Data Kalibrasi</span>
+    </a>
+</li>
+
         <!-- ── LAPORAN ─────────────────────────────────────── -->
         <li class="nav-section">
             <span class="nav-section-text">LAPORAN</span>
