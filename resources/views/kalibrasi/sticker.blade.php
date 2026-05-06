@@ -1,6 +1,6 @@
 {{--
     resources/views/kalibrasi/sticker.blade.php
-    Halaman cetak sticker kalibrasi — satuan & batch
+    Cetak & Download sticker kalibrasi — transparan (siap cetak kertas emas)
 --}}
 <!DOCTYPE html>
 <html lang="id">
@@ -9,30 +9,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cetak Sticker Kalibrasi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            /* Sticker: rasio 2:1 */
-            --sticker-w: 180mm;
-            --sticker-h: 90mm;
-            /* Lebar kolom kiri (logo & label) — sejajar */
+            --sticker-w: 680px;   /* ~180mm pada 96dpi — lebar preview layar */
+            --sticker-h: 340px;   /* ~90mm */
             --col-left: 32%;
+            --border: 2px solid #000;
         }
 
         body {
             font-family: 'Montserrat', sans-serif;
-            background: #dde3f0;
+            background: #cdd3e0;
             color: #000;
         }
 
-        /* ── CONTROL PANEL (layar saja) ── */
+        /* ── CONTROL PANEL ─────────────────────────────────────── */
         .control-panel {
             background: #fff;
             border-bottom: 3px solid #4361EE;
-            padding: 16px 28px;
+            padding: 14px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -47,148 +47,176 @@
             font-size: 1rem;
             font-weight: 800;
             color: #4361EE;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .control-panel h1 span {
-            font-weight: 400;
+            font-weight: 500;
             color: #888;
             font-size: 0.82rem;
-            margin-left: 8px;
         }
-        .btn-print {
-            background: #4361EE;
-            color: #fff;
-            border: none;
-            padding: 9px 22px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 0.9rem;
-            cursor: pointer;
-        }
-        .btn-print:hover { background: #2d47c4; }
-        .btn-back {
-            background: #f1f3f5;
-            color: #555;
-            border: none;
-            padding: 9px 18px;
-            border-radius: 8px;
-            font-family: 'Montserrat', sans-serif;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
+        .cp-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+        .btn-cp {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
         }
-        .btn-back:hover { background: #e2e6ea; }
+        .btn-cp.primary  { background: #4361EE; color: #fff; }
+        .btn-cp.primary:hover  { background: #2d47c4; }
+        .btn-cp.success  { background: #198754; color: #fff; }
+        .btn-cp.success:hover  { background: #146c43; }
+        .btn-cp.secondary { background: #f1f3f5; color: #444; }
+        .btn-cp.secondary:hover { background: #dee2e6; }
+        .btn-cp.warning  { background: #f59e0b; color: #fff; }
+        .btn-cp.warning:hover { background: #d97706; }
 
-        /* ── PREVIEW AREA ── */
+        .info-badge {
+            background: #e8f0fe;
+            color: #4361EE;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* ── PREVIEW AREA ───────────────────────────────────────── */
         .preview-area {
             padding: 36px 28px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 40px;
+            gap: 48px;
         }
 
-        /* ── STICKER WRAPPER
-           Background transparan sepenuhnya.
-           Di layar: shadow tipis supaya batas terlihat.
-        ── */
+        /* Wrapper satu sticker */
+        .sticker-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Label nomor sticker */
+        .sticker-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #4361EE;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Tombol aksi per sticker */
+        .sticker-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .sticker-actions button {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.78rem;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-dl-png  { background: #198754; color: #fff; }
+        .btn-dl-png:hover  { background: #146c43; }
+        .btn-dl-svg  { background: #6f42c1; color: #fff; }
+        .btn-dl-svg:hover  { background: #5a32a3; }
+        .btn-print-one { background: #4361EE; color: #fff; }
+        .btn-print-one:hover { background: #2d47c4; }
+
+        /* ── STICKER WRAPPER ────────────────────────────────────── */
         .sticker-wrap {
             width: var(--sticker-w);
             height: var(--sticker-h);
             background: transparent;
             position: relative;
-            box-shadow: 0 0 0 1px #99a8c8, 0 8px 32px rgba(0,0,0,.14);
+            /* shadow hanya di layar */
+            box-shadow: 0 0 0 1px #8899cc, 0 8px 32px rgba(0,0,0,.18);
             border-radius: 3px;
         }
 
-        /* ── STICKER INNER
-           Margin dalam dari tepi sticker (agar tidak mepet tepi bahan)
-        ── */
+        /* ── STICKER INNER ──────────────────────────────────────── */
         .sticker-inner {
             position: absolute;
-            inset: 5.5mm;
-            border: 2px solid #000;
+            inset: 16px;           /* ≈5.5mm margin bahan */
+            border: var(--border);
             display: flex;
             flex-direction: column;
             background: transparent;
         }
 
-        /* ─────────────────────────────────────────
-           HEADER
-           Kolom kiri: logo  → lebar = --col-left
-           Kolom kanan: judul + nomor
-        ───────────────────────────────────────── */
+        /* HEADER */
         .s-header {
             display: grid;
             grid-template-columns: var(--col-left) 1fr;
-            border-bottom: 2px solid #000;
+            border-bottom: var(--border);
+            flex-shrink: 0;
         }
-
-        /* Logo cell */
         .s-logo-cell {
-            border-right: 2px solid #000;
+            border-right: var(--border);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 2.5mm 3mm;
-            background: transparent;
+            padding: 5px 7px;
         }
         .s-logo-cell img {
             max-width: 100%;
-            max-height: 17mm;
-            object-fit: contain;
+            max-height: 52px;
+            transform: scaleX(1.25);
         }
         .s-logo-placeholder {
-            font-size: 10pt;
+            font-size: 11pt;
             font-weight: 900;
             letter-spacing: 2px;
             color: #000;
-            text-align: center;
         }
-
-        /* Title + Nomor cell */
         .s-title-cell {
             display: flex;
             flex-direction: column;
         }
         .s-title-main {
-            font-size: 11pt;
+            font-size: 12pt;
             font-weight: 900;
             letter-spacing: .8px;
             text-align: center;
-            padding: 2.5mm 3mm;
+            padding: 8px 10px;
             border-bottom: 1.5px solid #000;
             text-transform: uppercase;
-            color: #000;
-            line-height: 1.2;
-            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
+            flex: 1;
         }
         .s-title-nomor {
-            font-size: 9.5pt;
+            font-size: 9pt;
             font-weight: 700;
-            padding: 2mm 3mm;
-            color: #000;
-            flex: 1;
+            padding: 6px 10px;
             display: flex;
             align-items: center;
+            flex: 1;
         }
 
-        /* ─────────────────────────────────────────
-           BODY — baris-baris data
-           Kolom label kiri = --col-left (sejajar logo)
-        ───────────────────────────────────────── */
+        /* BODY */
         .s-body {
             flex: 1;
             display: flex;
             flex-direction: column;
         }
-
         .s-row {
             display: grid;
             grid-template-columns: var(--col-left) 1fr;
@@ -196,52 +224,64 @@
             flex: 1;
             min-height: 0;
         }
-        .s-row:last-child {
-            border-bottom: none;
-        }
-
+        .s-row:last-child { border-bottom: none; }
         .s-label {
-            font-size: 9pt;
+            font-size: 8.5pt;
             font-weight: 700;
-            padding: 1.6mm 3mm;
+            padding: 5px 10px;
             border-right: 1.5px solid #000;
             display: flex;
             align-items: center;
-            background: transparent;
-            color: #000;
-            line-height: 1.3;
         }
-
         .s-value {
-            font-size: 9pt;
+            font-size: 8.5pt;
             font-weight: 600;
-            padding: 1.6mm 3mm;
+            padding: 5px 10px;
             display: flex;
             align-items: center;
-            background: transparent;
-            color: #000;
             word-break: break-word;
-            line-height: 1.3;
+            line-height: 1.35;
         }
 
-        /* ── PRINT STYLES ── */
+        /* ── LOADING OVERLAY ────────────────────────────────────── */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            gap: 16px;
+        }
+        #loadingOverlay.show { display: flex; }
+        .spinner {
+            width: 44px; height: 44px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── PRINT STYLES ───────────────────────────────────────── */
         @media print {
-            @page {
-                size: auto;
-                margin: 10mm;
-            }
+            @page { size: auto; margin: 8mm; }
             body { background: transparent !important; }
-            .control-panel { display: none !important; }
-            .preview-area {
-                padding: 0 !important;
-                gap: 0 !important;
-                align-items: center;
-            }
+            .control-panel,
+            .sticker-label,
+            .sticker-actions { display: none !important; }
+            .preview-area { padding: 0 !important; gap: 0 !important; align-items: center; }
             .sticker-wrap {
                 box-shadow: none !important;
-                width: var(--sticker-w) !important;
-                height: var(--sticker-h) !important;
-                margin: 6mm auto;
+                width: 180mm !important;
+                height: 90mm !important;
+                margin: 5mm auto;
                 page-break-inside: avoid;
                 break-inside: avoid;
                 background: transparent !important;
@@ -253,21 +293,35 @@
 </head>
 <body>
 
+{{-- ── LOADING OVERLAY ── --}}
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">Membuat PNG…</div>
+</div>
+
 {{-- ── CONTROL PANEL ── --}}
 <div class="control-panel">
-    <h1>🏷️ Cetak Sticker Kalibrasi
-        <span>{{ $kalibrasiList->count() }} sticker</span>
+    <h1>
+        🏷️ Sticker Kalibrasi
+        <span class="info-badge">{{ $kalibrasiList->count() }} sticker</span>
     </h1>
-    <div style="display:flex;gap:10px;align-items:center;">
-        <a href="{{ route('kalibrasi.index') }}" class="btn-back">← Kembali</a>
-        <button class="btn-print" onclick="window.print()">🖨️ Cetak Sekarang</button>
+    <div class="cp-btns">
+        <a href="{{ route('kalibrasi.index') }}" class="btn-cp secondary">← Kembali</a>
+        @if($kalibrasiList->count() > 1)
+            <button class="btn-cp success" onclick="downloadAllPng()">
+                ⬇ Download Semua PNG
+            </button>
+        @endif
+        <button class="btn-cp primary" onclick="window.print()">
+            🖨️ Cetak Sekarang
+        </button>
     </div>
 </div>
 
 {{-- ── STICKER LIST ── --}}
 <div class="preview-area">
 
-@foreach($kalibrasiList as $item)
+@foreach($kalibrasiList as $i => $item)
 @php
     $timbangan = $item->timbangan;
     $alat      = $timbangan->jenis_alat_ukur ?? 'Timbangan';
@@ -279,58 +333,187 @@
     $pelaksana = $item->pelaksana ?? '-';
     $beda      = $item->beda_maksimum ?? '-';
     $nomor     = $item->certificate_number ?? '-';
+    $filename  = 'sticker-' . str_replace(['/', ' '], '-', $kode) . '-' . str_replace('/', '-', $tgl);
 @endphp
 
-<div class="sticker-wrap">
-    <div class="sticker-inner">
+<div class="sticker-block">
+    <div class="sticker-label">Sticker #{{ $i + 1 }} — {{ $kode }}</div>
 
-        {{-- HEADER: Logo kiri | Judul + Nomor kanan --}}
-        <div class="s-header">
-            <div class="s-logo-cell">
-                <img src="{{ asset('images/logo.png') }}" alt="Logo"
-                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block'">
-                <div class="s-logo-placeholder" style="display:none;">LOGO</div>
+    {{-- STICKER — elemen ini yang di-capture html2canvas --}}
+    <div class="sticker-wrap" id="sticker-{{ $item->id }}" data-filename="{{ $filename }}">
+        <div class="sticker-inner">
+
+            {{-- HEADER --}}
+            <div class="s-header">
+                <div class="s-logo-cell">
+                    <img src="{{ asset('images/logo.png') }}" alt="Logo"
+                         crossorigin="anonymous"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                    <div class="s-logo-placeholder" style="display:none;">LOGO</div>
+                </div>
+                <div class="s-title-cell">
+                    <div class="s-title-main">KALIBRASI ALAT UKUR</div>
+                    <div class="s-title-nomor">Nomor :&nbsp; {{ $nomor }}</div>
+                </div>
             </div>
-            <div class="s-title-cell">
-                <div class="s-title-main">KALIBRASI ALAT UKUR</div>
-                <div class="s-title-nomor">Nomor :&nbsp; {{ $nomor }}</div>
+
+            {{-- BODY --}}
+            <div class="s-body">
+                <div class="s-row">
+                    <div class="s-label">Alat Ukur</div>
+                    <div class="s-value">{{ $alat }}</div>
+                </div>
+                <div class="s-row">
+                    <div class="s-label">Merk / Kapasitas</div>
+                    <div class="s-value">{{ $merk }} / {{ $kapasitas }}</div>
+                </div>
+                <div class="s-row">
+                    <div class="s-label">Kode Alat</div>
+                    <div class="s-value">{{ $kode }}</div>
+                </div>
+                <div class="s-row">
+                    <div class="s-label">SBU / Dept / Bagian</div>
+                    <div class="s-value">{{ $dept }}</div>
+                </div>
+                <div class="s-row">
+                    <div class="s-label">Tanggal / Pelaksana</div>
+                    <div class="s-value">{{ $tgl }} / {{ $pelaksana }}</div>
+                </div>
+                <div class="s-row">
+                    <div class="s-label">Beda Maksimum</div>
+                    <div class="s-value">{{ $beda }}</div>
+                </div>
             </div>
+
         </div>
+    </div>
 
-        {{-- BODY --}}
-        <div class="s-body">
-            <div class="s-row">
-                <div class="s-label">Alat Ukur</div>
-                <div class="s-value">{{ $alat }}</div>
-            </div>
-            <div class="s-row">
-                <div class="s-label">Merk/Kapasitas</div>
-                <div class="s-value">{{ $merk }} / {{ $kapasitas }}</div>
-            </div>
-            <div class="s-row">
-                <div class="s-label">Kode Alat</div>
-                <div class="s-value">{{ $kode }}</div>
-            </div>
-            <div class="s-row">
-                <div class="s-label">SBU/Dept/Bagian</div>
-                <div class="s-value">{{ $dept }}</div>
-            </div>
-            <div class="s-row">
-                <div class="s-label">Tanggal/Pelaksana</div>
-                <div class="s-value">{{ $tgl }} / {{ $pelaksana }}</div>
-            </div>
-            <div class="s-row">
-                <div class="s-label">Beda Maksimum</div>
-                <div class="s-value">{{ $beda }}</div>
-            </div>
-        </div>
-
+    {{-- TOMBOL PER STICKER --}}
+    <div class="sticker-actions">
+        <button class="btn-dl-png"
+            onclick="downloadOnePng('sticker-{{ $item->id }}')">
+            ⬇ Download PNG
+        </button>
+        <button class="btn-print-one"
+            onclick="printOne('sticker-{{ $item->id }}')">
+            🖨 Cetak ini
+        </button>
     </div>
 </div>
-
 @endforeach
 
-</div>
+</div>{{-- end preview-area --}}
+
+<script>
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+
+function showLoading(text) {
+    document.getElementById('loadingText').textContent = text || 'Memproses…';
+    document.getElementById('loadingOverlay').classList.add('show');
+}
+function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('show');
+}
+
+/**
+ * Capture satu elemen sticker menjadi PNG transparan dan trigger download.
+ * Menggunakan scale 3× untuk resolusi tinggi (cocok untuk cetak).
+ */
+async function capturePng(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return null;
+
+    const scale = 3; // 3× = ~270 DPI pada layar 96dpi
+
+    const canvas = await html2canvas(el, {
+        scale          : scale,
+        useCORS        : true,
+        allowTaint     : false,
+        backgroundColor: null,   // ← transparan
+        logging        : false,
+        imageTimeout   : 8000,
+    });
+
+    return canvas;
+}
+
+/**
+ * Download PNG satu sticker.
+ */
+async function downloadOnePng(elementId) {
+    showLoading('Membuat PNG…');
+    try {
+        const canvas = await capturePng(elementId);
+        if (!canvas) throw new Error('Element tidak ditemukan');
+
+        const el       = document.getElementById(elementId);
+        const filename = (el.dataset.filename || elementId) + '.png';
+
+        const link  = document.createElement('a');
+        link.href   = canvas.toDataURL('image/png');
+        link.download = filename;
+        link.click();
+    } catch (err) {
+        alert('Gagal membuat PNG: ' + err.message);
+        console.error(err);
+    } finally {
+        hideLoading();
+    }
+}
+
+/**
+ * Download semua sticker sekaligus (sequential, satu per satu).
+ */
+async function downloadAllPng() {
+    const stickers = document.querySelectorAll('.sticker-wrap');
+    if (stickers.length === 0) return;
+
+    showLoading('Mempersiapkan ' + stickers.length + ' sticker…');
+
+    try {
+        for (let i = 0; i < stickers.length; i++) {
+            const el = stickers[i];
+            document.getElementById('loadingText').textContent =
+                'Membuat PNG ' + (i + 1) + ' / ' + stickers.length + '…';
+
+            const canvas   = await capturePng(el.id);
+            const filename = (el.dataset.filename || el.id) + '.png';
+
+            const link    = document.createElement('a');
+            link.href     = canvas.toDataURL('image/png');
+            link.download = filename;
+            link.click();
+
+            // Jeda singkat antar download agar browser tidak blokir
+            await new Promise(r => setTimeout(r, 600));
+        }
+    } catch (err) {
+        alert('Gagal membuat PNG: ' + err.message);
+        console.error(err);
+    } finally {
+        hideLoading();
+    }
+}
+
+/**
+ * Cetak satu sticker saja — sembunyikan yang lain sementara.
+ */
+function printOne(elementId) {
+    // Tambah class print-only ke elemen yang mau dicetak
+    const allBlocks = document.querySelectorAll('.sticker-block');
+    const target    = document.getElementById(elementId)?.closest('.sticker-block');
+
+    allBlocks.forEach(b => b.style.display = 'none');
+    if (target) target.style.removeProperty('display');
+
+    window.print();
+
+    // Kembalikan semua setelah print dialog tutup
+    setTimeout(() => {
+        allBlocks.forEach(b => b.style.removeProperty('display'));
+    }, 1000);
+}
+</script>
 
 </body>
 </html>
