@@ -5,6 +5,67 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
+<style>
+.ts-wrap { position: relative; }
+.ts-input {
+    width: 100%;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    border: 1px solid #ced4da;
+    border-radius: .375rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+.ts-input.open,
+.ts-input:focus { border-color: #86b7fe; outline: 0; box-shadow: 0 0 0 .25rem rgba(13,110,253,.25); }
+.ts-placeholder { color: #6c757d; }
+.ts-arrow { font-size: .75rem; color: #6c757d; margin-left: 8px; flex-shrink: 0; }
+.ts-dropdown {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0; right: 0;
+    background: #fff;
+    border: 1px solid #ced4da;
+    border-radius: .375rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    z-index: 9999;
+    display: none;
+    max-height: 260px;
+    flex-direction: column;
+}
+.ts-dropdown.open { display: flex; }
+.ts-search-box {
+    padding: 8px;
+    border-bottom: 1px solid #e9ecef;
+    flex-shrink: 0;
+}
+.ts-search-box input {
+    width: 100%;
+    padding: .3rem .6rem;
+    font-size: .9rem;
+    border: 1px solid #ced4da;
+    border-radius: .25rem;
+    outline: none;
+}
+.ts-search-box input:focus { border-color: #86b7fe; box-shadow: 0 0 0 .2rem rgba(13,110,253,.2); }
+.ts-list { overflow-y: auto; flex: 1; }
+.ts-option {
+    padding: .45rem .75rem;
+    cursor: pointer;
+    font-size: .95rem;
+    color: #212529;
+}
+.ts-option:hover  { background: #e8f0fe; color: #1a3fcc; }
+.ts-option.selected { background: #4361EE; color: #fff; }
+.ts-no-result { padding: .6rem .75rem; color: #6c757d; font-size: .9rem; font-style: italic; }
+</style>
+
 <form id="editForm" action="{{ route('kalibrasi.update', $kalibrasi->id) }}" method="POST">
     @csrf
     @method('PUT')
@@ -12,23 +73,38 @@
 
         {{-- Timbangan --}}
         <div class="mb-3">
-            <label for="timbangan_id" class="form-label">
-                Timbangan <span class="text-danger">*</span>
-            </label>
-            <select class="form-select" id="timbangan_id" name="timbangan_id" required>
+            <label class="form-label">Timbangan <span class="text-danger">*</span></label>
+
+            {{-- Select asli (hidden) — tetap dipakai untuk submit --}}
+            <select id="timbangan_id" name="timbangan_id" required style="display:none;">
                 <option value="">-- Pilih Timbangan --</option>
                 @foreach($timbanganList as $t)
-    <option value="{{ $t->id }}"
-        data-certificate="{{ $t->certificate_number ?? '' }}"
-        {{ old('timbangan_id', $kalibrasi->timbangan_id) == $t->id ? 'selected' : '' }}>
-        {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
-    </option>
-@endforeach
+                    <option value="{{ $t->id }}"
+                        data-certificate="{{ $t->certificate_number ?? '' }}"
+                        {{ old('timbangan_id', $kalibrasi->timbangan_id) == $t->id ? 'selected' : '' }}>
+                        {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
+                    </option>
+                @endforeach
             </select>
+
+            {{-- Custom dropdown --}}
+            <div class="ts-wrap" id="e_wrap">
+                <div class="ts-input" id="e_input" tabindex="0">
+                    <span id="e_label" class="ts-placeholder">-- Pilih Timbangan --</span>
+                    <span class="ts-arrow">▼</span>
+                </div>
+                <div class="ts-dropdown" id="e_dropdown">
+                    <div class="ts-search-box">
+                        <input type="text" id="e_search"
+                               placeholder="🔍 Cari kode / merk timbangan..."
+                               autocomplete="off">
+                    </div>
+                    <div class="ts-list" id="e_list"></div>
+                </div>
+            </div>
         </div>
 
         <div class="row">
-            {{-- Tanggal Pelaksanaan --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="tanggal_pelaksanaan" class="form-label">
@@ -40,7 +116,6 @@
                            required>
                 </div>
             </div>
-            {{-- Hasil --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="hasil" class="form-label">Hasil Kalibrasi</label>
@@ -60,7 +135,6 @@
         </div>
 
         <div class="row">
-            {{-- Dept / Bagian --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="dept_bagian" class="form-label">Dept / Bagian</label>
@@ -69,7 +143,6 @@
                            placeholder="Contoh: QC, Produksi, Lab">
                 </div>
             </div>
-            {{-- Pelaksana --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="pelaksana" class="form-label">Pelaksana</label>
@@ -81,7 +154,6 @@
         </div>
 
         <div class="row">
-            {{-- Certificate Number --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="certificate_number" class="form-label">Certificate Number</label>
@@ -91,7 +163,6 @@
                            placeholder="Contoh: CAL-2024-001">
                 </div>
             </div>
-            {{-- Beda Maksimum --}}
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="beda_maksimum" class="form-label">
@@ -106,14 +177,12 @@
             </div>
         </div>
 
-        {{-- Catatan --}}
         <div class="mb-3">
             <label for="catatan" class="form-label">Catatan</label>
             <textarea class="form-control" id="catatan" name="catatan" rows="3"
                       placeholder="Catatan tambahan (opsional)">{{ old('catatan', $kalibrasi->catatan) }}</textarea>
         </div>
 
-        {{-- Info record --}}
         <div class="alert alert-light border small text-muted mb-0">
             <i class="bi bi-info-circle me-1"></i>
             Dibuat: {{ $kalibrasi->created_at?->format('d/m/Y H:i') ?? '-' }}
@@ -129,10 +198,98 @@
         </button>
     </div>
 </form>
+
 <script>
-document.getElementById('timbangan_id').addEventListener('change', function () {
-    const selected = this.options[this.selectedIndex];
-    const certNo   = selected.getAttribute('data-certificate') || '';
-    document.getElementById('certificate_number').value = certNo;
-});
+(function () {
+    var selectEl  = document.getElementById('timbangan_id');
+    var inputEl   = document.getElementById('e_input');
+    var dropdown  = document.getElementById('e_dropdown');
+    var searchEl  = document.getElementById('e_search');
+    var listEl    = document.getElementById('e_list');
+    var labelEl   = document.getElementById('e_label');
+    var certInput = document.getElementById('certificate_number');
+
+    // Ambil semua option dari select asli
+    var options = [];
+    Array.prototype.forEach.call(selectEl.options, function (opt) {
+        if (!opt.value) return;
+        options.push({
+            value      : opt.value,
+            text       : opt.text.trim(),
+            certificate: opt.getAttribute('data-certificate') || ''
+        });
+    });
+
+    // Set nilai awal jika sudah ada selected (mode edit)
+    var selectedValue = selectEl.value || '';
+    if (selectedValue) {
+        var current = options.find(function (o) { return o.value === selectedValue; });
+        if (current) {
+            labelEl.textContent = current.text;
+            labelEl.classList.remove('ts-placeholder');
+        }
+    }
+
+    function renderList(kw) {
+        var keyword = (kw || '').toLowerCase().trim();
+        var filtered = keyword
+            ? options.filter(function (o) { return o.text.toLowerCase().indexOf(keyword) !== -1; })
+            : options;
+
+        listEl.innerHTML = '';
+
+        if (!filtered.length) {
+            listEl.innerHTML = '<div class="ts-no-result">Tidak ditemukan hasil untuk "' + kw + '"</div>';
+            return;
+        }
+
+        filtered.forEach(function (o) {
+            var div = document.createElement('div');
+            div.className = 'ts-option' + (o.value === selectedValue ? ' selected' : '');
+            div.textContent = o.text;
+            div.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                selectedValue       = o.value;
+                selectEl.value      = o.value;
+                labelEl.textContent = o.text;
+                labelEl.classList.remove('ts-placeholder');
+                certInput.value     = o.certificate;
+                closeDropdown();
+            });
+            listEl.appendChild(div);
+        });
+    }
+
+    function openDropdown() {
+        searchEl.value = '';
+        renderList('');
+        dropdown.classList.add('open');
+        inputEl.classList.add('open');
+        setTimeout(function () { searchEl.focus(); }, 50);
+    }
+
+    function closeDropdown() {
+        dropdown.classList.remove('open');
+        inputEl.classList.remove('open');
+    }
+
+    inputEl.addEventListener('click', function () {
+        dropdown.classList.contains('open') ? closeDropdown() : openDropdown();
+    });
+
+    inputEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDropdown(); }
+    });
+
+    searchEl.addEventListener('input', function () {
+        renderList(this.value);
+    });
+
+    document.addEventListener('mousedown', function (e) {
+        var wrap = document.getElementById('e_wrap');
+        if (wrap && !wrap.contains(e.target)) closeDropdown();
+    });
+
+    renderList('');
+})();
 </script>

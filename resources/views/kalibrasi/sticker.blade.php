@@ -16,10 +16,10 @@
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --sticker-w: 680px;   /* ~180mm pada 96dpi — lebar preview layar */
-            --sticker-h: 340px;   /* ~90mm */
-            --col-left: 32%;
-            --border: 2px solid #000;
+            --sticker-w: 720px;   /* ~180mm pada 96dpi — lebar preview layar */
+            --sticker-h: 390px;   /* ~100mm */
+            --col-left: 33%;
+            --border: 3px solid #000;
         }
 
         body {
@@ -172,15 +172,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 5px 7px;
+            /* padding: 8px 12px; */
         }
         .s-logo-cell img {
             max-width: 100%;
-            max-height: 52px;
-            transform: scaleX(1.25);
+            max-height: 72px;
+            transform: scaleX(1.4);
         }
         .s-logo-placeholder {
-            font-size: 11pt;
+            font-size: 13pt;
             font-weight: 900;
             letter-spacing: 2px;
             color: #000;
@@ -190,12 +190,11 @@
             flex-direction: column;
         }
         .s-title-main {
-            font-size: 12pt;
-            font-weight: 900;
-            letter-spacing: .8px;
+            font-size: 18pt;
+            font-weight: 700;
             text-align: center;
-            padding: 8px 10px;
-            border-bottom: 1.5px solid #000;
+            padding: 4px 8px;
+            border-bottom: 3px solid #000;
             text-transform: uppercase;
             display: flex;
             align-items: center;
@@ -203,7 +202,7 @@
             flex: 1;
         }
         .s-title-nomor {
-            font-size: 9pt;
+            font-size: 16pt;
             font-weight: 700;
             padding: 6px 10px;
             display: flex;
@@ -220,21 +219,21 @@
         .s-row {
             display: grid;
             grid-template-columns: var(--col-left) 1fr;
-            border-bottom: 1.5px solid #000;
+            border-bottom: 3px solid #000;
             flex: 1;
             min-height: 0;
         }
         .s-row:last-child { border-bottom: none; }
         .s-label {
-            font-size: 8.5pt;
+            font-size: 14pt;
             font-weight: 700;
             padding: 5px 10px;
-            border-right: 1.5px solid #000;
+            border-right: 3px solid #000;
             display: flex;
             align-items: center;
         }
         .s-value {
-            font-size: 8.5pt;
+            font-size: 14pt;
             font-weight: 600;
             padding: 5px 10px;
             display: flex;

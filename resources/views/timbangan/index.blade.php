@@ -282,12 +282,12 @@
                                                 <i class="bi bi-pencil"></i>
                                             </button>
 
-                                            @if($item->kondisi_saat_ini === 'Baik' && !empty($item->status_line) && $item->status_line !== 'Lab')
+                                           <!-- @if($item->kondisi_saat_ini === 'Baik' && !empty($item->status_line) && $item->status_line !== 'Lab')
                                             <button type="button" class="btn btn-secondary" title="Tandai Rusak"
                                                 onclick="tandaiRusak({{ $item->id }})">
                                                 <i class="bi bi-exclamation-triangle"></i>
                                             </button>
-                                            @endif
+                                            @endif-->
 
                                             <button type="button" class="btn btn-danger" title="Hapus"
                                                 onclick="deleteTimbangan({{ $item->id }})">
