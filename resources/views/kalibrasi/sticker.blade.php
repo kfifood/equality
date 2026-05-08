@@ -142,18 +142,15 @@
         /* ── STICKER WRAPPER ────────────────────────────────────── */
         .sticker-wrap {
             width: var(--sticker-w);
-            height: var(--sticker-h);
+            min-height: var(--sticker-h); /* min-height — bisa melebar ke bawah */
             background: transparent;
-            position: relative;
-            /* shadow hanya di layar */
+            padding: 16px;               /* gantikan inset di sticker-inner */
             box-shadow: 0 0 0 1px #8899cc, 0 8px 32px rgba(0,0,0,.18);
             border-radius: 3px;
         }
 
         /* ── STICKER INNER ──────────────────────────────────────── */
         .sticker-inner {
-            position: absolute;
-            inset: 16px;           /* ≈5.5mm margin bahan */
             border: var(--border);
             display: flex;
             flex-direction: column;
@@ -220,8 +217,6 @@
             display: grid;
             grid-template-columns: var(--col-left) 1fr;
             border-bottom: 3px solid #000;
-            flex: 1;
-            min-height: 0;
         }
         .s-row:last-child { border-bottom: none; }
         .s-label {
@@ -279,7 +274,9 @@
             .sticker-wrap {
                 box-shadow: none !important;
                 width: 180mm !important;
-                height: 90mm !important;
+                min-height: 90mm !important;  /* min-height agar bisa melebar */
+                height: auto !important;
+                padding: 6mm !important;
                 margin: 5mm auto;
                 page-break-inside: avoid;
                 break-inside: avoid;
