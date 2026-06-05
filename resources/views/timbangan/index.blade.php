@@ -39,6 +39,8 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <form action="{{ route('timbangan.index') }}" method="GET" id="filterForm">
+                                <input type="hidden" name="sort_by"  id="sortBy"  value="{{ request('sort_by') }}">
+                                <input type="hidden" name="sort_dir" id="sortDir" value="{{ request('sort_dir', 'asc') }}">
                                 <div class="row g-3">
                                     <div class="col-md-2">
                                         <label class="form-label">Kondisi</label>
@@ -117,14 +119,32 @@
                     <!-- Data Table -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped" id="timbanganTable">
+                            @php
+                                $sortBy  = request('sort_by');
+                                $sortDir = request('sort_dir', 'asc');
+                                function thSort($col, $label, $sortBy, $sortDir, $extraClass = '') {
+                                    $isActive  = $sortBy === $col;
+                                    $nextDir   = ($isActive && $sortDir === 'asc') ? 'desc' : 'asc';
+                                    $icon      = $isActive
+                                        ? ($sortDir === 'asc' ? 'bi-sort-up' : 'bi-sort-down')
+                                        : 'bi-arrow-down-up';
+                                    $activeClass = $isActive ? ' sort-active' : '';
+                                    return '<th class="sort-th' . $activeClass . ($extraClass ? ' '.$extraClass : '') . '" '
+                                         . 'onclick="doSort(\'' . $col . '\', \'' . $nextDir . '\')" '
+                                         . 'style="cursor:pointer;user-select:none;white-space:nowrap;">'
+                                         . $label
+                                         . '<i class="bi ' . $icon . ' ms-1 sort-icon" style="font-size:0.8em;"></i>'
+                                         . '</th>';
+                                }
+                            @endphp
                             <thead class="table-tmb" style="color:#4361EE;">
                                 <tr>
                                     <th width="50">No</th>
-                                    <th>Kode Asset</th>
-                                    <th>Merk & Seri</th>
-                                    <th class="d-none d-md-table-cell">Jenis & Kapasitas</th>
+                                    {!! thSort('kode_asset', 'Kode Asset', $sortBy, $sortDir) !!}
+                                    {!! thSort('merk_tipe', 'Merk &amp; Seri', $sortBy, $sortDir) !!}
+                                    <th class="d-none d-md-table-cell">Jenis &amp; Kapasitas</th>
                                     <th class="d-none d-lg-table-cell">Certificate No.</th>
-                                    <th>Tanggal Datang</th>
+                                    {!! thSort('tanggal_datang', 'Tanggal Datang', $sortBy, $sortDir) !!}
                                     <th>Lokasi Asli</th>
                                     <th class="d-none d-md-table-cell">Tgl. Selesai Perbaikan</th>
                                     <th>Status Lokasi</th>
@@ -448,6 +468,12 @@
 </div>
 
 <style>
+.sort-th { transition: background-color 0.15s; }
+.sort-th:hover { background-color: #eef0fd !important; }
+.sort-th.sort-active { background-color: #e8ecfd !important; color: #2a45cc; }
+.sort-icon { opacity: 0.4; }
+.sort-th.sort-active .sort-icon { opacity: 1; }
+
 .avatar-sm {
     width: 36px;
     height: 36px;
@@ -569,6 +595,12 @@ $(document).ready(function() {
         }, 800);
     });
 });
+
+function doSort(col, dir) {
+    $('#sortBy').val(col);
+    $('#sortDir').val(dir);
+    $('#filterForm').submit();
+}
 
 function showCreateModal() {
     $.ajax({

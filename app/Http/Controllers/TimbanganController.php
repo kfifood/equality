@@ -46,11 +46,25 @@ class TimbanganController extends Controller
         });
     }
 
+    // Sorting
+    $sortBy  = $request->get('sort_by');
+    $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'asc';
+
+    $allowedSorts = [
+        'kode_asset'    => 'kode_asset',
+        'merk_tipe'     => 'merk_tipe_no_seri',
+        'tanggal_datang'=> 'tanggal_datang',
+    ];
+
+    if ($sortBy && isset($allowedSorts[$sortBy])) {
+        $query->orderBy($allowedSorts[$sortBy], $sortDir);
+    } else {
+        $query->orderBy('kode_asset', 'asc')->orderBy('created_at', 'desc');
+    }
+
     // Pagination dengan fallback
     $perPage = $request->get('per_page', 10);
-    $timbangan = $query->orderBy('kode_asset', 'asc')
-                      ->orderBy('created_at', 'desc')
-                      ->paginate($perPage)
+    $timbangan = $query->paginate($perPage)
                       ->withQueryString(); // Pertahankan query string
     
     $lineList = MasterLine::where('status_aktif', true)

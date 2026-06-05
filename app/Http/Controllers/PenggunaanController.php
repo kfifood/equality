@@ -39,9 +39,24 @@ class PenggunaanController extends Controller
             );
         }
 
-        $penggunaan = $query->orderBy('tanggal_pemakaian', 'desc')
-                            ->orderBy('created_at', 'desc')
-                            ->paginate(10);
+        // Sorting
+        $sortBy  = $request->get('sort_by');
+        $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'desc';
+
+        if ($sortBy === 'kode_asset' || $sortBy === 'merk_tipe') {
+            // Sort berdasarkan kolom di tabel timbangan (requires join)
+            $kolom = $sortBy === 'kode_asset' ? 'kode_asset' : 'merk_tipe_no_seri';
+            $query->join('timbangan', 'riwayat_penggunaan.timbangan_id', '=', 'timbangan.id')
+                  ->orderBy('timbangan.' . $kolom, $sortDir)
+                  ->select('riwayat_penggunaan.*');
+        } elseif ($sortBy === 'tanggal_pemakaian') {
+            $query->orderBy('tanggal_pemakaian', $sortDir);
+        } else {
+            $query->orderBy('tanggal_pemakaian', 'desc')
+                  ->orderBy('created_at', 'desc');
+        }
+
+        $penggunaan = $query->paginate(10);
 
         $timbanganList = Timbangan::where('kondisi_saat_ini', 'Baik')
                                   ->orderBy('kode_asset')

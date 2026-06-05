@@ -32,6 +32,8 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <form action="{{ route('penggunaan.index') }}" method="GET" id="filterForm">
+                                <input type="hidden" name="sort_by"  id="sortBy"  value="{{ request('sort_by') }}">
+                                <input type="hidden" name="sort_dir" id="sortDir" value="{{ request('sort_dir', 'desc') }}">
                                 <div class="row g-3">
                                     <div class="col-md-2">
                                         <label class="form-label">Tanggal Dari</label>
@@ -87,14 +89,43 @@
                     <!-- Data Table -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover table-striped" id="penggunaanTable">
+                            @php
+                                $sortBy  = request('sort_by');
+                                $sortDir = request('sort_dir', 'desc');
+                            @endphp
                             <thead class="table-tmb" style="color:#4361EE;">
                                 <tr>
                                     <th width="50">No</th>
-                                    <th>Kode Asset</th>
-                                    <th>Merk & Tipe</th>
+                                    @php
+                                        $sortCols = [
+                                            'kode_asset'       => 'Kode Asset',
+                                            'merk_tipe'        => 'Merk &amp; Tipe',
+                                        ];
+                                    @endphp
+                                    @foreach($sortCols as $col => $label)
+                                    @php
+                                        $isActive  = $sortBy === $col;
+                                        $nextDir   = ($isActive && $sortDir === 'asc') ? 'desc' : 'asc';
+                                        $icon      = $isActive ? ($sortDir === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
+                                    @endphp
+                                    <th class="sort-th {{ $isActive ? 'sort-active' : '' }}"
+                                        onclick="doSort('{{ $col }}', '{{ $nextDir }}')"
+                                        style="cursor:pointer;user-select:none;white-space:nowrap;">
+                                        {!! $label !!} <i class="bi {{ $icon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
+                                    </th>
+                                    @endforeach
                                     <th>Line Tujuan</th>
                                     <th>PIC</th>
-                                    <th>Tanggal Pemakaian</th>
+                                    @php
+                                        $isTglActive = $sortBy === 'tanggal_pemakaian';
+                                        $tglNextDir  = ($isTglActive && $sortDir === 'asc') ? 'desc' : 'asc';
+                                        $tglIcon     = $isTglActive ? ($sortDir === 'asc' ? 'bi-sort-up' : 'bi-sort-down') : 'bi-arrow-down-up';
+                                    @endphp
+                                    <th class="sort-th {{ $isTglActive ? 'sort-active' : '' }}"
+                                        onclick="doSort('tanggal_pemakaian', '{{ $tglNextDir }}')"
+                                        style="cursor:pointer;user-select:none;white-space:nowrap;">
+                                        Tanggal Pemakaian <i class="bi {{ $tglIcon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
+                                    </th>
                                     <th>Status</th>
                                     <th>Kondisi Alat</th>
                                     <th>Keterangan</th>
@@ -282,6 +313,11 @@
 </div>
 
 <style>
+.sort-th { transition: background-color 0.15s; }
+.sort-th:hover { background-color: #eef0fd !important; }
+.sort-th.sort-active { background-color: #e8ecfd !important; color: #2a45cc; }
+.sort-icon { opacity: 0.4; }
+.sort-th.sort-active .sort-icon { opacity: 1; }
 .avatar-sm { width: 36px; height: 36px; font-size: 0.9rem; }
 .card { border: none; border-radius: 12px; }
 .table th { font-weight: 600; background-color: #f8f9fa !important; }
@@ -325,6 +361,12 @@ $(document).ready(function () {
         $('#dynamicModalContent').html('');
     });
 });
+
+function doSort(col, dir) {
+    $('#sortBy').val(col);
+    $('#sortDir').val(dir);
+    $('#filterForm').submit();
+}
 
 function showCreatePenggunaanModal(timbanganId = null) {
     let url = '{{ route("penggunaan.create") }}';
