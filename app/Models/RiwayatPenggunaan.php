@@ -144,8 +144,13 @@ class RiwayatPenggunaan extends Model
     /**
      * BARU — apakah penggunaan ini sudah punya laporan kerusakan aktif
      */
-    public function sudahDilaporkanRusak(): bool
-    {
-        return $this->laporanKerusakan()->whereIn('status', ['Menunggu', 'Diproses'])->exists();
+public function sudahDilaporkanRusak(): bool
+{
+    // Jika timbangan sudah kembali Baik, anggap laporan lama tidak relevan lagi
+    if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Baik') {
+        return false;
     }
+
+    return $this->laporanKerusakan()->whereIn('status', ['Menunggu', 'Diproses'])->exists();
+}
 }
