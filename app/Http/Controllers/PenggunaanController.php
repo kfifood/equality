@@ -7,6 +7,7 @@ use App\Models\MasterPic;
 use App\Models\RiwayatPenggunaan;
 use App\Models\Timbangan;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class PenggunaanController extends Controller
 {
@@ -14,49 +15,94 @@ class PenggunaanController extends Controller
 
     public function index(Request $request)
     {
-        $query = RiwayatPenggunaan::with([
+        // ── Base query riwayat (untuk filter) ──────────────────────────────
+        $riwayatQuery = RiwayatPenggunaan::with([
             'timbangan',
             'laporanKerusakan', // BARU — untuk cek status tombol laporkan rusak
         ]);
 
         if ($request->filled('tanggal_dari')) {
-            $query->whereDate('tanggal_pemakaian', '>=', $request->tanggal_dari);
+            $riwayatQuery->whereDate('tanggal_pemakaian', '>=', $request->tanggal_dari);
         }
         if ($request->filled('tanggal_sampai')) {
-            $query->whereDate('tanggal_pemakaian', '<=', $request->tanggal_sampai);
+            $riwayatQuery->whereDate('tanggal_pemakaian', '<=', $request->tanggal_sampai);
         }
         if ($request->filled('line_tujuan')) {
-            $query->where('line_tujuan', $request->line_tujuan);
+            $riwayatQuery->where('line_tujuan', $request->line_tujuan);
         }
         if ($request->filled('kode_asset')) {
-            $query->whereHas('timbangan', fn($q) =>
+            $riwayatQuery->whereHas('timbangan', fn($q) =>
                 $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%')
             );
         }
         if ($request->filled('kondisi')) {
-            $query->whereHas('timbangan', fn($q) =>
+            $riwayatQuery->whereHas('timbangan', fn($q) =>
                 $q->where('kondisi_saat_ini', $request->kondisi)
             );
         }
 
-        // Sorting
+        // ── Ambil daftar timbangan_id unik yang punya riwayat sesuai filter ──
+        // (urut berdasarkan tanggal_pemakaian terbaru per timbangan)
+        $idQuery = (clone $riwayatQuery)
+            ->select('timbangan_id')
+            ->selectRaw('MAX(tanggal_pemakaian) as terakhir_dipakai')
+            ->groupBy('timbangan_id');
+
         $sortBy  = $request->get('sort_by');
         $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'desc';
 
         if ($sortBy === 'kode_asset' || $sortBy === 'merk_tipe') {
-            // Sort berdasarkan kolom di tabel timbangan (requires join)
             $kolom = $sortBy === 'kode_asset' ? 'kode_asset' : 'merk_tipe_no_seri';
-            $query->join('timbangan', 'riwayat_penggunaan.timbangan_id', '=', 'timbangan.id')
-                  ->orderBy('timbangan.' . $kolom, $sortDir)
-                  ->select('riwayat_penggunaan.*');
-        } elseif ($sortBy === 'tanggal_pemakaian') {
-            $query->orderBy('tanggal_pemakaian', $sortDir);
+            $idQuery->join('timbangan', 'riwayat_penggunaan.timbangan_id', '=', 'timbangan.id')
+                    ->orderBy('timbangan.' . $kolom, $sortDir)
+                    ->addSelect('timbangan.' . $kolom);
         } else {
-            $query->orderBy('tanggal_pemakaian', 'desc')
-                  ->orderBy('created_at', 'desc');
+            // default & 'tanggal_pemakaian': urutkan berdasarkan pemakaian terakhir
+            $idQuery->orderBy('terakhir_dipakai', $sortDir === 'asc' ? 'asc' : 'desc');
         }
 
-        $penggunaan = $query->paginate(10);
+        $perPage     = 10;
+        $page        = $request->get('page', 1);
+        $allGrouped  = $idQuery->get();
+        $total       = $allGrouped->count();
+
+        $pagedIds = $allGrouped
+            ->slice(($page - 1) * $perPage, $perPage)
+            ->pluck('timbangan_id')
+            ->values();
+
+        // ── Ambil seluruh riwayat (sesuai filter) untuk timbangan-timbangan di halaman ini ──
+        $riwayatPerTimbangan = collect();
+        if ($pagedIds->isNotEmpty()) {
+            $riwayatPerTimbangan = (clone $riwayatQuery)
+                ->whereIn('timbangan_id', $pagedIds)
+                ->orderBy('tanggal_pemakaian', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('timbangan_id');
+        }
+
+        // ── Susun data per timbangan, urut sesuai $pagedIds ──────────────────
+        $groupedData = $pagedIds->map(function ($timbanganId) use ($riwayatPerTimbangan) {
+            $riwayatList = $riwayatPerTimbangan->get($timbanganId, collect());
+            return [
+                'timbangan' => $riwayatList->first()?->timbangan ?? Timbangan::find($timbanganId),
+                'riwayat'   => $riwayatList,
+                'jumlah'    => $riwayatList->count(),
+            ];
+        })->filter(fn($d) => $d['timbangan'] !== null)->values();
+
+        // ── Bungkus sebagai paginator agar bisa pakai komponen pagination ───
+        $penggunaan = new LengthAwarePaginator(
+            $groupedData,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path'  => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         $timbanganList = Timbangan::where('kondisi_saat_ini', 'Baik')
                                   ->orderBy('kode_asset')

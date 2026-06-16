@@ -29,13 +29,12 @@ Route::post('/login/rfid', [App\Http\Controllers\Auth\LoginController::class, 'l
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
-    // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/home', function () {
-        return redirect()->route('dashboard');
-    });
 
-    // Logout
+    // ── Dashboard ──────────────────────────────────────────────────────────
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/home', fn() => redirect()->route('dashboard'));
+
+    // ── Logout ─────────────────────────────────────────────────────────────
     Route::post('/logout', function () {
         Auth::logout();
         return redirect('/login');
@@ -43,142 +42,134 @@ Route::middleware(['auth'])->group(function () {
 
     // ==================== USER MANAGEMENT ====================
     Route::prefix('users')->group(function () {
-        Route::get('/', [UserController::class, 'index'])->name('users.index');
-        Route::get('/create', [UserController::class, 'create'])->name('users.create');
-        Route::post('/', [UserController::class, 'store'])->name('users.store');
-        Route::get('/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-        Route::put('/{id}', [UserController::class, 'update'])->name('users.update');
-        Route::put('/{id}/status', [UserController::class, 'updateStatus'])->name('users.update-status');
+        Route::get('/',              [UserController::class, 'index'])->name('users.index');
+        Route::get('/create',        [UserController::class, 'create'])->name('users.create');
+        Route::post('/',             [UserController::class, 'store'])->name('users.store');
+        Route::get('/{id}/edit',     [UserController::class, 'edit'])->name('users.edit');
+        Route::put('/{id}',          [UserController::class, 'update'])->name('users.update');
+        Route::put('/{id}/status',   [UserController::class, 'updateStatus'])->name('users.update-status');
         Route::put('/{id}/password', [UserController::class, 'changePassword'])->name('users.change-password');
-        Route::delete('/{id}', [UserController::class, 'destroy'])->name('users.destroy');
+        Route::delete('/{id}',       [UserController::class, 'destroy'])->name('users.destroy');
     });
 
+    // ==================== MASTER DATA: TIMBANGAN ====================
     Route::resource('timbangan', TimbanganController::class);
-    // ==================== MASTER DATA ====================
-    // Timbangan Routes - SEMUA ROUTE TIMBANGAN DI SINI
     Route::prefix('timbangan')->group(function () {
-        
-        Route::get('/', [TimbanganController::class, 'index'])->name('timbangan.index');
-        Route::get('/create', [TimbanganController::class, 'create'])->name('timbangan.create');
-        Route::post('/', [TimbanganController::class, 'store'])->name('timbangan.store');
-        Route::get('/{id}/edit', [TimbanganController::class, 'edit'])->name('timbangan.edit');
-        Route::put('/{id}', [TimbanganController::class, 'update'])->name('timbangan.update');
-        Route::delete('/{id}', [TimbanganController::class, 'destroy'])->name('timbangan.destroy');
-        Route::get('/{id}/riwayat', [TimbanganController::class, 'riwayat'])->name('timbangan.riwayat');
-        Route::post('/import', [TimbanganController::class, 'import'])->name('timbangan.import');
-        Route::get('/export', [TimbanganController::class, 'export'])->name('timbangan.export');
-        Route::get('/template', [TimbanganController::class, 'downloadTemplate'])->name('timbangan.download-template');
-        Route::post('/{id}/tandai-rusak', [TimbanganController::class, 'tandaiRusak'])->name('timbangan.tandai-rusak');
-
-
+        Route::get('/',                    [TimbanganController::class, 'index'])->name('timbangan.index');
+        Route::get('/create',              [TimbanganController::class, 'create'])->name('timbangan.create');
+        Route::post('/',                   [TimbanganController::class, 'store'])->name('timbangan.store');
+        Route::get('/{id}/edit',           [TimbanganController::class, 'edit'])->name('timbangan.edit');
+        Route::put('/{id}',                [TimbanganController::class, 'update'])->name('timbangan.update');
+        Route::delete('/{id}',             [TimbanganController::class, 'destroy'])->name('timbangan.destroy');
+        Route::get('/{id}/riwayat',        [TimbanganController::class, 'riwayat'])->name('timbangan.riwayat');
+        Route::post('/import',             [TimbanganController::class, 'import'])->name('timbangan.import');
+        Route::get('/export',              [TimbanganController::class, 'export'])->name('timbangan.export');
+        Route::get('/template',            [TimbanganController::class, 'downloadTemplate'])->name('timbangan.download-template');
+        Route::post('/{id}/tandai-rusak',  [TimbanganController::class, 'tandaiRusak'])->name('timbangan.tandai-rusak');
     });
 
-    // Line Routes
+    // ==================== MASTER DATA: LINE ====================
     Route::prefix('line')->group(function () {
-    Route::get('/', [LineController::class, 'index'])->name('line.index');
-    Route::post('/', [LineController::class, 'store'])->name('line.store');
-    Route::put('/{id}', [LineController::class, 'update'])->name('line.update');
-    Route::delete('/{id}', [LineController::class, 'destroy'])->name('line.destroy');
-    
-    // KOREKSI: Route untuk melihat timbangan di line
-    Route::get('/{id}/timbangan', [LineController::class, 'timbangan'])->name('line.timbangan');
+        Route::get('/',              [LineController::class, 'index'])->name('line.index');
+        Route::post('/',             [LineController::class, 'store'])->name('line.store');
+        Route::put('/{id}',          [LineController::class, 'update'])->name('line.update');
+        Route::delete('/{id}',       [LineController::class, 'destroy'])->name('line.destroy');
+        Route::get('/{id}/timbangan',[LineController::class, 'timbangan'])->name('line.timbangan');
     });
 
-    // ==================== OPERATIONS ====================
-    // Penggunaan Timbangan - SEMUA ROUTE PENGGUNAAN DI SINI
+    // ==================== MASTER: PIC ====================
+    Route::prefix('pic')->group(function () {
+        Route::get('/',           [PicController::class, 'index'])->name('pic.index');
+        Route::post('/',          [PicController::class, 'store'])->name('pic.store');
+        Route::put('/{id}',       [PicController::class, 'update'])->name('pic.update');
+        Route::delete('/{id}',    [PicController::class, 'destroy'])->name('pic.destroy');
+        Route::get('/list-aktif', [PicController::class, 'listAktif'])->name('pic.list-aktif');
+    });
+
+    // ==================== MASTER: KELUHAN ====================
+    Route::prefix('master/keluhan')->group(function () {
+        Route::get('/',        [App\Http\Controllers\MasterKeluhanController::class, 'index'])->name('master-keluhan.index');
+        Route::post('/',       [App\Http\Controllers\MasterKeluhanController::class, 'store'])->name('master-keluhan.store');
+        Route::get('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'edit'])->name('master-keluhan.edit');
+        Route::put('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'update'])->name('master-keluhan.update');
+        Route::delete('/{id}', [App\Http\Controllers\MasterKeluhanController::class, 'destroy'])->name('master-keluhan.destroy');
+    });
+
+    // ==================== MASTER: TINDAKAN ====================
+    Route::prefix('master/tindakan')->group(function () {
+        Route::get('/',        [App\Http\Controllers\MasterTindakanController::class, 'index'])->name('master-tindakan.index');
+        Route::post('/',       [App\Http\Controllers\MasterTindakanController::class, 'store'])->name('master-tindakan.store');
+        Route::get('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'edit'])->name('master-tindakan.edit');
+        Route::put('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'update'])->name('master-tindakan.update');
+        Route::delete('/{id}', [App\Http\Controllers\MasterTindakanController::class, 'destroy'])->name('master-tindakan.destroy');
+    });
+
+    // ==================== OPERATIONS: PENGGUNAAN ====================
     Route::prefix('penggunaan')->group(function () {
-        Route::get('/', [PenggunaanController::class, 'index'])->name('penggunaan.index');
-        Route::get('/create', [PenggunaanController::class, 'create'])->name('penggunaan.create');
+        Route::get('/',                      [PenggunaanController::class, 'index'])->name('penggunaan.index');
+        Route::get('/create',                [PenggunaanController::class, 'create'])->name('penggunaan.create');
         Route::get('/create/{timbangan_id}', [PenggunaanController::class, 'create'])->name('penggunaan.create.withId');
-        Route::post('/', [PenggunaanController::class, 'store'])->name('penggunaan.store');
+        Route::post('/',                     [PenggunaanController::class, 'store'])->name('penggunaan.store');
     });
+    Route::get('/penggunaan/{id}/laporan-data',
+        [PenggunaanController::class, 'getPenggunaanUntukLaporan']
+    )->name('penggunaan.laporan-data');
 
-    // Perbaikan Timbangan - SEMUA ROUTE PERBAIKAN DI SINI
+    // ==================== OPERATIONS: PERBAIKAN ====================
     Route::prefix('perbaikan')->group(function () {
-        Route::get('/', [PerbaikanController::class, 'index'])->name('perbaikan.index');
-        Route::get('/create', [PerbaikanController::class, 'create'])->name('perbaikan.create');
+        Route::get('/',                      [PerbaikanController::class, 'index'])->name('perbaikan.index');
+        Route::get('/create',                [PerbaikanController::class, 'create'])->name('perbaikan.create');
         Route::get('/create/{timbangan_id}', [PerbaikanController::class, 'create'])->name('perbaikan.create.withId');
-        Route::post('/', [PerbaikanController::class, 'store'])->name('perbaikan.store');
-        Route::put('/{id}/status', [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
-        // routes/web.php
-    Route::get('/perbaikan/timbangan/{id}', [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
+        Route::post('/',                     [PerbaikanController::class, 'store'])->name('perbaikan.store');
+        Route::put('/{id}/status',           [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
+        Route::get('/timbangan/{id}',        [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
+    });
+    Route::get('/perbaikan/{laporan_id}/proses',   [App\Http\Controllers\PerbaikanController::class, 'prosesModal'])->name('perbaikan.proses-modal');
+    Route::post('/perbaikan/{laporan_id}/proses',  [App\Http\Controllers\PerbaikanController::class, 'prosesStore'])->name('perbaikan.proses-store');
+    Route::get('/perbaikan/{laporan_id}/detail',   [App\Http\Controllers\PerbaikanController::class, 'detail'])->name('perbaikan.detail');
+
+    // ==================== OPERATIONS: LAPORAN KERUSAKAN ====================
+    Route::prefix('laporan-kerusakan')->group(function () {
+        Route::get('/{penggunaan_id}/create', [App\Http\Controllers\LaporanKerusakanController::class, 'create'])->name('laporan-kerusakan.create');
+        Route::post('/',                      [App\Http\Controllers\LaporanKerusakanController::class, 'store'])->name('laporan-kerusakan.store');
     });
 
     // ==================== MONITORING ====================
-    // Riwayat Routes
-    Route::get('/monitoring/riwayat', [RiwayatController::class, 'index'])->name('riwayat.index');
-    Route::get('/monitoring/riwayat/timeline', [RiwayatController::class, 'timeline'])->name('riwayat.timeline');
-    Route::get('/monitoring/riwayat/timbangan/{id}', [RiwayatController::class, 'timbangan'])->name('riwayat.timbangan');
+    Route::get('/monitoring/riwayat',              [RiwayatController::class, 'index'])->name('riwayat.index');
+    Route::get('/monitoring/riwayat/timeline',     [RiwayatController::class, 'timeline'])->name('riwayat.timeline');
+    Route::get('/monitoring/riwayat/timbangan/{id}',[RiwayatController::class, 'timbangan'])->name('riwayat.timbangan');
 
-    // ==================== REPORTS ===================
-
-    // Reports Routes
+    // ==================== REPORTS ====================
     Route::prefix('reports')->group(function () {
-    Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan.index');
-    Route::get('/laporan/statistik', [LaporanController::class, 'statistik'])->name('laporan.statistik');
-    Route::get('/laporan/export', [LaporanController::class, 'export'])->name('laporan.export');
-    Route::get('/laporan/template', [LaporanController::class, 'downloadTemplate'])->name('laporan.download-template');
+        Route::get('/laporan',           [LaporanController::class, 'index'])->name('laporan.index');
+        Route::get('/laporan/statistik', [LaporanController::class, 'statistik'])->name('laporan.statistik');
+        Route::get('/laporan/export',    [LaporanController::class, 'export'])->name('laporan.export');
+        Route::get('/laporan/template',  [LaporanController::class, 'downloadTemplate'])->name('laporan.download-template');
     });
 
+    // ==================== KALIBRASI ====================
+    // PENTING: route eksplisit harus SEBELUM Route::resource agar tidak konflik dengan /{id}
 
-    // Di dalam Route::middleware(['auth'])->group():
-    Route::prefix('pic')->group(function () {
-    Route::get('/',           [PicController::class, 'index'])->name('pic.index');
-    Route::post('/',          [PicController::class, 'store'])->name('pic.store');
-    Route::put('/{id}',       [PicController::class, 'update'])->name('pic.update');
-    Route::delete('/{id}',    [PicController::class, 'destroy'])->name('pic.destroy');
-    Route::get('/list-aktif', [PicController::class, 'listAktif'])->name('pic.list-aktif');
-    });
-    // Fallback route
+    // Sticker (GET dulu sebelum resource menangkap /{id})
+    Route::get('/kalibrasi/import-template', [KalibrasiController::class, 'importTemplate'])->name('kalibrasi.importTemplate');
+    Route::get('/kalibrasi/import-modal',    [KalibrasiController::class, 'importModal'])->name('kalibrasi.importModal');
+    Route::get('/kalibrasi/bulk',            [KalibrasiController::class, 'bulk'])->name('kalibrasi.bulk');
+    Route::get('/kalibrasi/{id}/sticker',    [KalibrasiController::class, 'sticker'])->name('kalibrasi.sticker');
+
+    // POST eksplisit
+    Route::post('/kalibrasi/sticker-batch', [KalibrasiController::class, 'stickerBatch'])->name('kalibrasi.sticker.batch');
+    Route::post('/kalibrasi/bulk',          [KalibrasiController::class, 'storeBulk'])->name('kalibrasi.storeBulk');
+    Route::post('/kalibrasi/import',        [KalibrasiController::class, 'import'])->name('kalibrasi.import');
+
+    // Resource (menangkap index, create, store, edit, update, destroy)
+    Route::resource('kalibrasi', KalibrasiController::class)->except(['show']);
+
+    // ==================== FALLBACK ====================
+    // HARUS paling bawah, setelah semua route didefinisikan
     Route::fallback(function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard');
-    }
-    return redirect('/login');
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+        return redirect('/login');
     });
-    // ==================== MASTER KELUHAN ====================
-Route::prefix('master/keluhan')->group(function () {
-    Route::get('/',        [App\Http\Controllers\MasterKeluhanController::class, 'index'])->name('master-keluhan.index');
-    Route::post('/',       [App\Http\Controllers\MasterKeluhanController::class, 'store'])->name('master-keluhan.store');
-    Route::get('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'edit'])->name('master-keluhan.edit');
-    Route::put('/{id}',    [App\Http\Controllers\MasterKeluhanController::class, 'update'])->name('master-keluhan.update');
-    Route::delete('/{id}', [App\Http\Controllers\MasterKeluhanController::class, 'destroy'])->name('master-keluhan.destroy');
 });
- 
-// ==================== MASTER TINDAKAN ====================
-Route::prefix('master/tindakan')->group(function () {
-    Route::get('/',        [App\Http\Controllers\MasterTindakanController::class, 'index'])->name('master-tindakan.index');
-    Route::post('/',       [App\Http\Controllers\MasterTindakanController::class, 'store'])->name('master-tindakan.store');
-    Route::get('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'edit'])->name('master-tindakan.edit');
-    Route::put('/{id}',    [App\Http\Controllers\MasterTindakanController::class, 'update'])->name('master-tindakan.update');
-    Route::delete('/{id}', [App\Http\Controllers\MasterTindakanController::class, 'destroy'])->name('master-tindakan.destroy');
-});
- 
-// ==================== LAPORAN KERUSAKAN ====================
-Route::prefix('laporan-kerusakan')->group(function () {
-    // Ambil HTML modal laporan rusak (dipanggil dari tabel penggunaan)
-    Route::get('/{penggunaan_id}/create', [App\Http\Controllers\LaporanKerusakanController::class, 'create'])->name('laporan-kerusakan.create');
-    // Simpan laporan kerusakan baru
-    Route::post('/',                      [App\Http\Controllers\LaporanKerusakanController::class, 'store'])->name('laporan-kerusakan.store');
-});
- 
-// ==================== PENGGUNAAN — data helper ====================
-// (tambahkan di dalam prefix('penggunaan') yang sudah ada jika belum ada)
-Route::get('/penggunaan/{id}/laporan-data', [App\Http\Controllers\PenggunaanController::class, 'getPenggunaanUntukLaporan'])
-    ->name('penggunaan.laporan-data');
- 
-// ==================== PERBAIKAN — route baru ====================
-// (tambahkan di dalam prefix('perbaikan') yang sudah ada)
-Route::get('/perbaikan/{laporan_id}/proses',  [App\Http\Controllers\PerbaikanController::class, 'prosesModal'])->name('perbaikan.proses-modal');
-Route::post('/perbaikan/{laporan_id}/proses', [App\Http\Controllers\PerbaikanController::class, 'prosesStore'])->name('perbaikan.proses-store');
-Route::get('/perbaikan/{laporan_id}/detail',  [App\Http\Controllers\PerbaikanController::class, 'detail'])->name('perbaikan.detail');
-
-Route::post('/kalibrasi/sticker-batch', [KalibrasiController::class, 'stickerBatch'])
-     ->name('kalibrasi.sticker.batch');
- 
-Route::get('/kalibrasi/{id}/sticker', [KalibrasiController::class, 'sticker'])
-     ->name('kalibrasi.sticker');
- 
-// Contoh lengkap jika kamu pakai resource:
-Route::resource('kalibrasi', KalibrasiController::class)->except(['show']);
-    });

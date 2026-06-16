@@ -86,16 +86,17 @@
                         </div>
                     </div>
 
-                    <!-- Data Table -->
+                    <!-- Data Table (grouped per timbangan, dropdown untuk riwayat) -->
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-striped" id="penggunaanTable">
+                        <table class="table table-bordered table-hover" id="penggunaanTable">
                             @php
                                 $sortBy  = request('sort_by');
                                 $sortDir = request('sort_dir', 'desc');
                             @endphp
                             <thead class="table-tmb" style="color:#4361EE;">
                                 <tr>
-                                    <th width="50">No</th>
+                                    <th width="40">No</th>
+                                    <th width="40"></th>
                                     @php
                                         $sortCols = [
                                             'kode_asset'       => 'Kode Asset',
@@ -114,8 +115,8 @@
                                         {!! $label !!} <i class="bi {{ $icon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
                                     </th>
                                     @endforeach
-                                    <th>Line Tujuan</th>
-                                    <th>PIC</th>
+                                    <th>Kondisi Saat Ini</th>
+                                    <th>Line Saat Ini</th>
                                     @php
                                         $isTglActive = $sortBy === 'tanggal_pemakaian';
                                         $tglNextDir  = ($isTglActive && $sortDir === 'asc') ? 'desc' : 'asc';
@@ -124,85 +125,55 @@
                                     <th class="sort-th {{ $isTglActive ? 'sort-active' : '' }}"
                                         onclick="doSort('tanggal_pemakaian', '{{ $tglNextDir }}')"
                                         style="cursor:pointer;user-select:none;white-space:nowrap;">
-                                        Tanggal Pemakaian <i class="bi {{ $tglIcon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
+                                        Terakhir Dipakai <i class="bi {{ $tglIcon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
                                     </th>
-                                    <th>Status</th>
-                                    <th>Kondisi Alat</th>
-                                    <th>Keterangan</th>
-                                    <th width="130" class="text-center">Aksi</th>
+                                    <th width="120" class="text-center">Jumlah Riwayat</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($penggunaan as $index => $item)
+                                @forelse($penggunaan as $index => $group)
                                 @php
-                                    $kondisi       = $item->timbangan->kondisi_saat_ini;
-                                    $badgeColor    = match($kondisi) {
+                                    $timbangan   = $group['timbangan'];
+                                    $riwayatList = $group['riwayat'];
+                                    $jumlah      = $group['jumlah'];
+                                    $latest      = $riwayatList->first();
+
+                                    $kondisi     = $timbangan->kondisi_saat_ini;
+                                    $badgeColor  = match($kondisi) {
                                         'Baik'            => 'success',
                                         'Rusak'           => 'danger',
                                         'Dalam Perbaikan' => 'warning',
                                         default           => 'secondary'
                                     };
-                                    $kondisiIcon   = match($kondisi) {
+                                    $kondisiIcon = match($kondisi) {
                                         'Baik'            => 'check-circle',
                                         'Rusak'           => 'exclamation-triangle',
                                         'Dalam Perbaikan' => 'tools',
                                         default           => 'question-circle'
                                     };
-                                    $statusColor   = match($item->status_penggunaan) {
-                                        'Masih Digunakan' => 'success',
-                                        'Dikembalikan'    => 'warning',
-                                        'Selesai'         => 'secondary',
-                                        default           => 'secondary'
-                                    };
-                                    $statusIcon    = match($item->status_penggunaan) {
-                                        'Masih Digunakan' => 'check-circle',
-                                        'Dikembalikan'    => 'arrow-return-left',
-                                        'Selesai'         => 'check',
-                                        default           => 'question-circle'
-                                    };
-                                    $statusTooltip = match($item->status_penggunaan) {
-                                        'Masih Digunakan' => 'Timbangan masih digunakan di ' . $item->line_tujuan,
-                                        'Dikembalikan'    => 'Timbangan dikembalikan karena ' . strtolower($kondisi),
-                                        'Selesai'         => $item->isSelesaiDipindahkan()
-                                            ? 'Penggunaan selesai - timbangan dipindahkan ke ' . $item->timbangan->status_line
-                                            : 'Penggunaan selesai - timbangan dalam kondisi baik',
-                                        default => 'Status penggunaan'
-                                    };
 
-                                    $bisaLaporkan    = $item->timbangan->bisaDilaporkanRusak();
-                                    $sudahDilaporkan = $item->sudahDilaporkanRusak();
-                                    $adaLaporan      = $item->laporanKerusakan !== null;
+                                    $rowId = 'riwayat-' . $timbangan->id;
                                 @endphp
-                                <tr>
+                                <tr class="timbangan-row" data-bs-toggle="collapse" data-bs-target="#{{ $rowId }}"
+                                    style="cursor:pointer;" aria-expanded="false">
                                     <td class="text-center">{{ $penggunaan->firstItem() + $index }}</td>
+                                    <td class="text-center">
+                                        <i class="bi bi-chevron-right toggle-icon" style="transition: transform .2s;"></i>
+                                    </td>
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
                                                 <i class="bi bi-speedometer text-white"></i>
                                             </div>
                                             <div>
-                                                <strong>{{ $item->timbangan->kode_asset }}</strong>
+                                                <strong>{{ $timbangan->kode_asset }}</strong>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="text-truncate" style="max-width:200px;"
-                                            title="{{ $item->timbangan->merk_tipe_no_seri }}">
-                                            {{ $item->timbangan->merk_tipe_no_seri }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ $item->line_tujuan }}</span>
-                                    </td>
-                                    <td>{{ $item->pic ?? '-' }}</td>
-                                    <td>
-                                        <i class="bi bi-calendar me-1 text-primary"></i>
-                                        {{ \Carbon\Carbon::parse($item->tanggal_pemakaian)->format('d/m/Y') }}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-{{ $statusColor }}"
-                                            data-bs-toggle="tooltip" title="{{ $statusTooltip }}">
-                                            <i class="bi bi-{{ $statusIcon }} me-1"></i>{{ $item->status_penggunaan }}
+                                        <span class="text-truncate d-inline-block" style="max-width:200px;"
+                                            title="{{ $timbangan->merk_tipe_no_seri }}">
+                                            {{ $timbangan->merk_tipe_no_seri }}
                                         </span>
                                     </td>
                                     <td>
@@ -210,34 +181,144 @@
                                             <i class="bi bi-{{ $kondisiIcon }} me-1"></i>{{ $kondisi }}
                                         </span>
                                     </td>
-                                    <td>{{ $item->keterangan ?? '-' }}</td>
-
-                                    <td class="text-center">
-                                        @if($sudahDilaporkan || $adaLaporan)
-                                            <span class="badge bg-danger py-2 px-2"
-                                                data-bs-toggle="tooltip"
-                                                title="Sudah ada laporan kerusakan aktif untuk alat ini">
-                                                <i class="bi bi-exclamation-triangle me-1"></i>Dilaporkan
-                                            </span>
-                                        @elseif($bisaLaporkan)
-                                            <button class="btn btn-sm btn-outline-danger"
-                                                onclick="showLaporkanRusakModal({{ $item->id }})"
-                                                data-bs-toggle="tooltip"
-                                                title="Laporkan timbangan ini rusak">
-                                                <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
-                                            </button>
-                                        @elseif($kondisi === 'Dalam Perbaikan')
-                                            <span class="badge bg-warning text-dark py-2 px-2"
-                                                data-bs-toggle="tooltip"
-                                                title="Alat sedang dalam proses perbaikan">
-                                                <i class="bi bi-tools me-1"></i>Diperbaiki
-                                            </span>
+                                    <td>
+                                        @if($timbangan->status_line)
+                                            <span class="badge bg-info">{{ $timbangan->status_line }}</span>
                                         @else
-                                            <span class="text-muted small">—</span>
+                                            <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    <td>
+                                        @if($latest)
+                                            <i class="bi bi-calendar me-1 text-primary"></i>
+                                            {{ \Carbon\Carbon::parse($latest->tanggal_pemakaian)->format('d/m/Y') }}
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ $jumlah }}</span>
+                                    </td>
                                 </tr>
-                                @endforeach
+
+                                <!-- Sub-table riwayat penggunaan untuk timbangan ini -->
+                                <tr class="riwayat-detail-row">
+                                    <td colspan="8" class="p-0 border-0">
+                                        <div class="collapse" id="{{ $rowId }}">
+                                            <div class="p-3" style="background-color:#f8f9fc;">
+                                                <table class="table table-sm table-bordered table-striped mb-0 bg-white">
+                                                    <thead style="background-color:#eef0fd; color:#4361EE;">
+                                                        <tr>
+                                                            <th width="40">#</th>
+                                                            <th>Line Tujuan</th>
+                                                            <th>PIC</th>
+                                                            <th>Tanggal Pemakaian</th>
+                                                            <th>Status</th>
+                                                            <th>Kondisi Alat</th>
+                                                            <th>Keterangan</th>
+                                                            <th width="130" class="text-center">Aksi</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($riwayatList as $i => $item)
+                                                        @php
+                                                            $itemKondisi   = $item->timbangan->kondisi_saat_ini;
+                                                            $itemBadge     = match($itemKondisi) {
+                                                                'Baik'            => 'success',
+                                                                'Rusak'           => 'danger',
+                                                                'Dalam Perbaikan' => 'warning',
+                                                                default           => 'secondary'
+                                                            };
+                                                            $itemIcon      = match($itemKondisi) {
+                                                                'Baik'            => 'check-circle',
+                                                                'Rusak'           => 'exclamation-triangle',
+                                                                'Dalam Perbaikan' => 'tools',
+                                                                default           => 'question-circle'
+                                                            };
+                                                            $statusColor   = match($item->status_penggunaan) {
+                                                                'Masih Digunakan' => 'success',
+                                                                'Dikembalikan'    => 'warning',
+                                                                'Selesai'         => 'secondary',
+                                                                default           => 'secondary'
+                                                            };
+                                                            $statusIcon    = match($item->status_penggunaan) {
+                                                                'Masih Digunakan' => 'check-circle',
+                                                                'Dikembalikan'    => 'arrow-return-left',
+                                                                'Selesai'         => 'check',
+                                                                default           => 'question-circle'
+                                                            };
+                                                            $statusTooltip = match($item->status_penggunaan) {
+                                                                'Masih Digunakan' => 'Timbangan masih digunakan di ' . $item->line_tujuan,
+                                                                'Dikembalikan'    => 'Timbangan dikembalikan karena ' . strtolower($itemKondisi),
+                                                                'Selesai'         => $item->isSelesaiDipindahkan()
+                                                                    ? 'Penggunaan selesai - timbangan dipindahkan ke ' . $item->timbangan->status_line
+                                                                    : 'Penggunaan selesai - timbangan dalam kondisi baik',
+                                                                default => 'Status penggunaan'
+                                                            };
+
+                                                            $bisaLaporkan    = $item->timbangan->bisaDilaporkanRusak();
+                                                            $sudahDilaporkan = $item->sudahDilaporkanRusak();
+                                                            $adaLaporan      = $item->laporanKerusakan !== null;
+                                                        @endphp
+                                                        <tr>
+                                                            <td class="text-center">{{ $i + 1 }}</td>
+                                                            <td><span class="badge bg-info">{{ $item->line_tujuan }}</span></td>
+                                                            <td>{{ $item->pic ?? '-' }}</td>
+                                                            <td>
+                                                                <i class="bi bi-calendar me-1 text-primary"></i>
+                                                                {{ \Carbon\Carbon::parse($item->tanggal_pemakaian)->format('d/m/Y') }}
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge bg-{{ $statusColor }}"
+                                                                    data-bs-toggle="tooltip" title="{{ $statusTooltip }}">
+                                                                    <i class="bi bi-{{ $statusIcon }} me-1"></i>{{ $item->status_penggunaan }}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <span class="badge bg-{{ $itemBadge }}">
+                                                                    <i class="bi bi-{{ $itemIcon }} me-1"></i>{{ $itemKondisi }}
+                                                                </span>
+                                                            </td>
+                                                            <td>{{ $item->keterangan ?? '-' }}</td>
+                                                            <td class="text-center">
+                                                                @if($sudahDilaporkan || $adaLaporan)
+                                                                    <span class="badge bg-danger py-2 px-2"
+                                                                        data-bs-toggle="tooltip"
+                                                                        title="Sudah ada laporan kerusakan aktif untuk alat ini">
+                                                                        <i class="bi bi-exclamation-triangle me-1"></i>Dilaporkan
+                                                                    </span>
+                                                                @elseif($bisaLaporkan)
+                                                                    <button class="btn btn-sm btn-outline-danger"
+                                                                        onclick="event.stopPropagation(); showLaporkanRusakModal({{ $item->id }})"
+                                                                        data-bs-toggle="tooltip"
+                                                                        title="Laporkan timbangan ini rusak">
+                                                                        <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
+                                                                    </button>
+                                                                @elseif($itemKondisi === 'Dalam Perbaikan')
+                                                                    <span class="badge bg-warning text-dark py-2 px-2"
+                                                                        data-bs-toggle="tooltip"
+                                                                        title="Alat sedang dalam proses perbaikan">
+                                                                        <i class="bi bi-tools me-1"></i>Diperbaiki
+                                                                    </span>
+                                                                @else
+                                                                    <span class="text-muted small">—</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        Tidak ada data riwayat penggunaan.
+                                    </td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -258,7 +339,7 @@
                         <div class="text-muted small">
                             Menampilkan <strong>{{ $penggunaan->firstItem() }}</strong>
                             hingga <strong>{{ $penggunaan->lastItem() }}</strong>
-                            dari <strong>{{ $penggunaan->total() }}</strong> riwayat penggunaan
+                            dari <strong>{{ $penggunaan->total() }}</strong> timbangan
                         </div>
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
@@ -322,6 +403,14 @@
 .card { border: none; border-radius: 12px; }
 .table th { font-weight: 600; background-color: #f8f9fa !important; }
 .badge { font-size: 0.75em; }
+
+/* ── Dropdown / expand row styling ── */
+.timbangan-row:hover { background-color: #f5f7ff; }
+.timbangan-row[aria-expanded="true"] { background-color: #eef0fd; }
+.timbangan-row[aria-expanded="true"] .toggle-icon { transform: rotate(90deg); }
+.timbangan-row.row-highlight { outline: 2px solid #4361EE; outline-offset: -2px; }
+.riwayat-detail-row > td { padding: 0 !important; }
+
 .pagination .page-item.active .page-link {
     background-color: #4361EE;
     border-color: #4361EE;
@@ -359,6 +448,15 @@ $(document).ready(function () {
 
     $('#dynamicModal').on('hidden.bs.modal', function () {
         $('#dynamicModalContent').html('');
+    });
+
+    // Toggle chevron/aria state on the timbangan summary row
+    $('.timbangan-row').on('click', function () {
+        const target = $($(this).data('bs-target'));
+        const row = $(this);
+        target.on('shown.bs.collapse hidden.bs.collapse', function (e) {
+            row.attr('aria-expanded', target.hasClass('show'));
+        });
     });
 });
 
