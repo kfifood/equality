@@ -281,29 +281,33 @@
                                                             </td>
                                                             <td>{{ $item->keterangan ?? '-' }}</td>
                                                             <td class="text-center">
-                                                                @if($sudahDilaporkan || $adaLaporan)
-                                                                    <span class="badge bg-danger py-2 px-2"
-                                                                        data-bs-toggle="tooltip"
-                                                                        title="Sudah ada laporan kerusakan aktif untuk alat ini">
-                                                                        <i class="bi bi-exclamation-triangle me-1"></i>Dilaporkan
-                                                                    </span>
-                                                                @elseif($bisaLaporkan)
-                                                                    <button class="btn btn-sm btn-outline-danger"
-                                                                        onclick="event.stopPropagation(); showLaporkanRusakModal({{ $item->id }})"
-                                                                        data-bs-toggle="tooltip"
-                                                                        title="Laporkan timbangan ini rusak">
-                                                                        <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
-                                                                    </button>
-                                                                @elseif($itemKondisi === 'Dalam Perbaikan')
-                                                                    <span class="badge bg-warning text-dark py-2 px-2"
-                                                                        data-bs-toggle="tooltip"
-                                                                        title="Alat sedang dalam proses perbaikan">
-                                                                        <i class="bi bi-tools me-1"></i>Diperbaiki
-                                                                    </span>
-                                                                @else
-                                                                    <span class="text-muted small">—</span>
-                                                                @endif
-                                                            </td>
+    @if($i === 0 && ($sudahDilaporkan || $adaLaporan))
+        {{-- Baris terbaru: sudah punya laporan aktif --}}
+        <span class="badge bg-danger py-2 px-2"
+            data-bs-toggle="tooltip"
+            title="Sudah ada laporan kerusakan aktif untuk alat ini">
+            <i class="bi bi-exclamation-triangle me-1"></i>Dilaporkan
+        </span>
+    @elseif($i === 0 && $bisaLaporkan)
+        {{-- Baris terbaru: boleh dilaporkan --}}
+        <button class="btn btn-sm btn-outline-danger"
+            onclick="event.stopPropagation(); showLaporkanRusakModal({{ $item->id }})"
+            data-bs-toggle="tooltip"
+            title="Laporkan timbangan ini rusak">
+            <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
+        </button>
+    @elseif($i === 0 && $itemKondisi === 'Dalam Perbaikan')
+        {{-- Baris terbaru: sedang diperbaiki --}}
+        <span class="badge bg-warning text-dark py-2 px-2"
+            data-bs-toggle="tooltip"
+            title="Alat sedang dalam proses perbaikan">
+            <i class="bi bi-tools me-1"></i>Diperbaiki
+        </span>
+    @else
+        {{-- Baris lama atau kondisi normal: tidak tampilkan aksi --}}
+        <span class="text-muted small">—</span>
+    @endif
+</td>
                                                         </tr>
                                                         @endforeach
                                                     </tbody>
