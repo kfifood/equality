@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DetailTindakanPerbaikan;
+use App\Models\Kalibrasi;
 use App\Models\LaporanKerusakan;
 use App\Models\MasterLine;
 use App\Models\MasterPic;
@@ -162,6 +163,10 @@ class PerbaikanController extends Controller
         if ($request->filled('tindakan_ids')) {
             $tanggalTindakan = $request->tanggal_tindakan ?? now()->toDateString();
 
+            // Cari id master_tindakan "Kalibrasi ulang" by nama (bukan hardcode id,
+            // supaya tidak rapuh kalau data master_tindakan diubah urutannya)
+            $idTindakanKalibrasi = MasterTindakan::where('nama_tindakan', 'Kalibrasi ulang')->value('id');
+
             foreach ($request->tindakan_ids as $tindakanId) {
                 // Hindari duplikat tindakan di hari yang sama
                 DetailTindakanPerbaikan::firstOrCreate([
@@ -171,6 +176,22 @@ class PerbaikanController extends Controller
                 ], [
                     'catatan' => $request->catatan_tindakan,
                 ]);
+
+                // ── BARU: kalau tindakannya "Kalibrasi ulang", catat juga
+                // sebagai data resmi di modul Kalibrasi, bukan cuma teks tindakan.
+                // KalibrasiObserver otomatis menyinkronkan timbangan.certificate_number
+                // begitu record ini tersimpan.
+                if ($idTindakanKalibrasi && $tindakanId == $idTindakanKalibrasi) {
+                    Kalibrasi::firstOrCreate([
+                        'timbangan_id'        => $timbangan->id,
+                        'tanggal_pelaksanaan' => $tanggalTindakan,
+                    ], [
+                        'dept_bagian' => $request->line_tujuan ?? $laporan->line_asal,
+                        'hasil'       => 'Lulus',
+                        'pelaksana'   => 'Lab Internal',
+                        'catatan'     => 'Otomatis tercatat dari proses perbaikan #' . $perbaikan->id,
+                    ]);
+                }
             }
         }
 

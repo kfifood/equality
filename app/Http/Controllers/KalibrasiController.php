@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Kalibrasi;
+use App\Models\MasterLine;
 use App\Models\Timbangan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +62,14 @@ class KalibrasiController extends Controller
     public function create()
     {
         $timbanganList = Timbangan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number']);
+                                  ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number', 'kapasitas', 'status_line', 'lokasi_asli']);
+
+        // Hitung dept_bagian yang akan dipakai kalau kalibrasi baru dibuat
+        // untuk masing-masing timbangan, supaya bisa ditampilkan sebagai
+        // auto-fill di form saat timbangan dipilih.
+        $timbanganList->each(function ($t) {
+            $t->dept_bagian_default = $this->resolveDeptBagian($t);
+        });
 
         return response()->json([
             'success' => true,
@@ -70,6 +78,38 @@ class KalibrasiController extends Controller
     }
 
     // ── STORE (single) ────────────────────────────────────────────────────────
+
+    /**
+     * Tentukan dept_bagian dari lokasi ASLI timbangan saat ini, bukan dari
+     * input manual — supaya tidak ada lagi celah orang mengetik nilai
+     * default/boilerplate yang tidak sesuai kondisi sebenarnya.
+     *
+     * Lokasi timbangan (nama_line) dicocokkan ke master_line untuk tahu
+     * departemennya:
+     * - department == 'Produksi'  → ditulis "Production Area"
+     *   (mengikuti istilah baku yang sudah dipakai di dokumen spesifikasi)
+     * - department lainnya (QC, Non Produksi, dst) → ditulis apa adanya
+     *   sesuai master_line, supaya konsisten dengan pengelompokan line yang
+     *   sudah ada, bukan nama line mentah satu-satu.
+     * - kalau lokasi timbangan tidak match ke master_line manapun (mis. 'Lab'
+     *   atau nama custom), fallback ke nama lokasi itu apa adanya.
+     */
+    protected function resolveDeptBagian(Timbangan $timbangan): ?string
+    {
+        $lokasi = $timbangan->status_line ?? $timbangan->lokasi_asli;
+
+        if (!$lokasi) {
+            return null;
+        }
+
+        $line = MasterLine::where('nama_line', $lokasi)->first();
+
+        if (!$line) {
+            return $lokasi;
+        }
+
+        return $line->department === 'Produksi' ? 'Production Area' : $line->department;
+    }
 
     public function store(Request $request)
     {
@@ -88,10 +128,19 @@ class KalibrasiController extends Controller
             'tanggal_pelaksanaan.required' => 'Tanggal pelaksanaan harus diisi.',
         ]);
 
+        $timbangan = Timbangan::findOrFail($request->timbangan_id);
+
+        // Form sudah auto-fill dept_bagian dari lokasi timbangan saat dipilih,
+        // tapi tetap bisa dioverride manual kalau memang perlu. Kalau dikosongkan,
+        // hitung ulang dari lokasi timbangan sebagai fallback.
         Kalibrasi::create($request->only([
             'timbangan_id', 'certificate_number', 'tanggal_pelaksanaan',
-            'dept_bagian', 'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
-        ]));
+            'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
+        ]) + [
+            'dept_bagian' => $request->filled('dept_bagian')
+                ? $request->dept_bagian
+                : $this->resolveDeptBagian($timbangan),
+        ]);
 
         return response()->json(['success' => true, 'message' => 'Data kalibrasi berhasil ditambahkan.']);
     }
@@ -124,24 +173,42 @@ class KalibrasiController extends Controller
         ]);
 
         $rows = $request->rows;
-        $now  = now();
 
-        $insertData = array_map(fn($r) => [
-            'timbangan_id'        => $r['timbangan_id'],
-            'certificate_number'  => $r['certificate_number']  ?? null,
-            'tanggal_pelaksanaan' => $r['tanggal_pelaksanaan'],
-            'dept_bagian'         => $r['dept_bagian']         ?? null,
-            'beda_maksimum'       => $r['beda_maksimum']       ?? null,
-            'hasil'               => $r['hasil']               ?: null,
-            'pelaksana'           => $r['pelaksana']           ?? null,
-            'catatan'             => $r['catatan']             ?? null,
-            'created_at'          => $now,
-            'updated_at'          => $now,
-        ], $rows);
+        // Ambil semua timbangan yang relevan sekaligus, biar tidak query per baris
+        $timbanganMap = Timbangan::whereIn('id', collect($rows)->pluck('timbangan_id'))
+            ->get()->keyBy('id');
+
+        $insertData = array_map(function ($r) use ($timbanganMap) {
+            $timbangan = $timbanganMap->get($r['timbangan_id']);
+
+            // Form sudah auto-fill dept_bagian per baris saat timbangan dipilih,
+            // tapi tetap bisa dioverride manual. Kalau dikosongkan, hitung ulang
+            // dari lokasi timbangan sebagai fallback.
+            $deptBagian = !empty($r['dept_bagian'])
+                ? $r['dept_bagian']
+                : ($timbangan ? $this->resolveDeptBagian($timbangan) : null);
+
+            return [
+                'timbangan_id'        => $r['timbangan_id'],
+                'certificate_number'  => $r['certificate_number']  ?? null,
+                'tanggal_pelaksanaan' => $r['tanggal_pelaksanaan'],
+                'dept_bagian'         => $deptBagian,
+                'beda_maksimum'       => $r['beda_maksimum']       ?? null,
+                'hasil'               => $r['hasil']               ?: null,
+                'pelaksana'           => $r['pelaksana']           ?? null,
+                'catatan'             => $r['catatan']             ?? null,
+            ];
+        }, $rows);
 
         DB::beginTransaction();
         try {
-            Kalibrasi::insert($insertData);
+            // Sengaja pakai create() di dalam loop, BUKAN Kalibrasi::insert($insertData).
+            // insert() adalah query mentah yang tidak memicu Eloquent model events,
+            // sehingga KalibrasiObserver (sinkron ke timbangan.certificate_number)
+            // tidak akan jalan kalau tetap pakai insert().
+            foreach ($insertData as $row) {
+                Kalibrasi::create($row);
+            }
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -217,7 +284,7 @@ class KalibrasiController extends Controller
 public function bulk()
 {
     $timbanganList = Timbangan::orderBy('kode_asset')
-                              ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number']);
+                              ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number', 'kapasitas', 'status_line', 'lokasi_asli']);
 
     // Siapkan data yang sudah di-map, bukan map di Blade
     $timbanganJson = $timbanganList->map(fn($t) => [
@@ -226,6 +293,8 @@ public function bulk()
         'merk'        => $t->merk_tipe_no_seri,
         'label'       => $t->kode_asset . ' — ' . $t->merk_tipe_no_seri,
         'certificate' => $t->certificate_number ?? '',
+        'kapasitas'   => $t->kapasitas ?? '',
+        'dept'        => $this->resolveDeptBagian($t) ?? '',
     ]);
 
     return response()->json([
@@ -372,8 +441,9 @@ public function bulk()
             return response()->json(['success' => false, 'message' => 'File kosong atau tidak ada data di bawah header.']);
         }
 
-        // Ambil semua kode_asset → id agar bisa lookup cepat
-        $kodeToId = Timbangan::pluck('id', 'kode_asset')->toArray();
+        // Ambil semua timbangan (bukan cuma id) agar dept_bagian bisa dihitung
+        // dari lokasi aslinya, bukan dari kolom Excel yang sering diisi asal.
+        $timbanganByKode = Timbangan::get()->keyBy('kode_asset');
 
         $validRows = [];
         $errors    = [];
@@ -394,10 +464,11 @@ public function bulk()
                 $errors[] = "Baris {$realLine}: kolom kode_asset kosong.";
                 continue;
             }
-            if (!isset($kodeToId[$kodeAsset])) {
+            if (!isset($timbanganByKode[$kodeAsset])) {
                 $errors[] = "Baris {$realLine}: kode_asset '{$kodeAsset}' tidak ditemukan di sistem.";
                 continue;
             }
+            $timbangan = $timbanganByKode[$kodeAsset];
 
             // Validasi tanggal
             if (!$tanggal) {
@@ -419,16 +490,18 @@ public function bulk()
             }
 
             $validRows[] = [
-                'timbangan_id'        => $kodeToId[$kodeAsset],
+                'timbangan_id'        => $timbangan->id,
                 'tanggal_pelaksanaan' => $tanggalFormatted,
                 'certificate_number'  => trim($certNo    ?? '') ?: null,
-                'dept_bagian'         => trim($dept       ?? '') ?: null,
+                // dept_bagian TIDAK diambil dari kolom Excel (kolom D) lagi —
+                // dihitung dari lokasi asli/terkini timbangan, supaya tidak ada
+                // lagi nilai boilerplate seperti "Production Area" yang tidak
+                // sesuai kondisi sebenarnya (ditemukan di 14/14 data lama).
+                'dept_bagian'         => $this->resolveDeptBagian($timbangan),
                 'beda_maksimum'       => trim($bedaMaks   ?? '') ?: null,
                 'hasil'               => $hasilVal                ?: null,
                 'pelaksana'           => trim($pelaksana  ?? '') ?: null,
                 'catatan'             => trim($catatan    ?? '') ?: null,
-                'created_at'          => now(),
-                'updated_at'          => now(),
             ];
         }
 
@@ -447,7 +520,11 @@ public function bulk()
 
         DB::beginTransaction();
         try {
-            Kalibrasi::insert($validRows);
+            // Sama seperti storeBulk() — pakai create() per baris supaya
+            // KalibrasiObserver ikut jalan dan timbangan.certificate_number tersinkron.
+            foreach ($validRows as $row) {
+                Kalibrasi::create($row);
+            }
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();

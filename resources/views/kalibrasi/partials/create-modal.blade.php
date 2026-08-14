@@ -79,7 +79,9 @@
                 <option value="">-- Pilih Timbangan --</option>
                 @foreach($timbanganList as $t)
                     <option value="{{ $t->id }}"
-                        data-certificate="{{ $t->certificate_number ?? '' }}">
+                        data-certificate="{{ $t->certificate_number ?? '' }}"
+                        data-kapasitas="{{ $t->kapasitas ?? '' }}"
+                        data-dept="{{ $t->dept_bagian_default ?? '' }}">
                         {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
                     </option>
                 @endforeach
@@ -127,16 +129,21 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label for="dept_bagian" class="form-label">Dept / Bagian</label>
+                    <label for="dept_bagian" class="form-label">
+                        Dept / Bagian
+                        <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
+                            auto dari lokasi timbangan
+                        </span>
+                    </label>
                     <input type="text" class="form-control" id="dept_bagian" name="dept_bagian"
-                           placeholder="Contoh: QC, Produksi, Lab">
+                           placeholder="Otomatis terisi saat pilih timbangan">
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="mb-3">
                     <label for="pelaksana" class="form-label">Pelaksana</label>
                     <input type="text" class="form-control" id="pelaksana" name="pelaksana"
-                           placeholder="Nama teknisi atau lembaga kalibrasi">
+                           value="Internal (default)">
                 </div>
             </div>
         </div>
@@ -159,10 +166,12 @@
                 <div class="mb-3">
                     <label for="beda_maksimum" class="form-label">
                         Beda Maksimum
-                        <span class="text-muted small">(opsional)</span>
+                        <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
+                            auto dari timbangan
+                        </span>
                     </label>
                     <input type="text" class="form-control" id="beda_maksimum"
-                           name="beda_maksimum" placeholder="Contoh: ±0.5 g">
+                           name="beda_maksimum" placeholder="Otomatis terisi saat pilih timbangan">
                 </div>
             </div>
         </div>
@@ -184,13 +193,15 @@
 
 <script>
 (function () {
-    var selectEl  = document.getElementById('timbangan_id');
-    var inputEl   = document.getElementById('c_input');
-    var dropdown  = document.getElementById('c_dropdown');
-    var searchEl  = document.getElementById('c_search');
-    var listEl    = document.getElementById('c_list');
-    var labelEl   = document.getElementById('c_label');
-    var certInput = document.getElementById('certificate_number');
+    var selectEl    = document.getElementById('timbangan_id');
+    var inputEl     = document.getElementById('c_input');
+    var dropdown    = document.getElementById('c_dropdown');
+    var searchEl    = document.getElementById('c_search');
+    var listEl      = document.getElementById('c_list');
+    var labelEl     = document.getElementById('c_label');
+    var certInput   = document.getElementById('certificate_number');
+    var deptInput   = document.getElementById('dept_bagian');
+    var bedaInput   = document.getElementById('beda_maksimum');
 
     // Ambil semua option dari select asli
     var options = [];
@@ -199,7 +210,9 @@
         options.push({
             value      : opt.value,
             text       : opt.text.trim(),
-            certificate: opt.getAttribute('data-certificate') || ''
+            certificate: opt.getAttribute('data-certificate') || '',
+            kapasitas  : opt.getAttribute('data-kapasitas')   || '',
+            dept       : opt.getAttribute('data-dept')        || ''
         });
     });
 
@@ -228,7 +241,14 @@
                 selectEl.value      = o.value;
                 labelEl.textContent = o.text;
                 labelEl.classList.remove('ts-placeholder');
-                certInput.value     = o.certificate;
+
+                // Selalu timpa dengan data timbangan yang BARU dipilih —
+                // supaya kalau user ganti pilihan, field lain ikut menyesuaikan
+                // (tidak nyangkut data dari timbangan yang dipilih sebelumnya).
+                certInput.value = o.certificate;
+                deptInput.value = o.dept;
+                bedaInput.value = o.kapasitas;
+
                 closeDropdown();
             });
             listEl.appendChild(div);

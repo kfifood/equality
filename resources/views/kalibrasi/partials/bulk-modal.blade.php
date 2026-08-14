@@ -122,13 +122,13 @@
                 <div class="col-md-3">
                     <label><i class="bi bi-building me-1"></i>Dept / Bagian</label>
                     <input type="text" class="form-control form-control-sm" id="shared_dept"
-                           placeholder="QC, Produksi, Lab...">
-                    <div class="form-text">Berlaku untuk semua baris (bisa dioverride per baris)</div>
+                           placeholder="QC, Production Area...">
+                    <div class="form-text">Fallback kalau baris tidak auto-terisi (bisa dioverride per baris)</div>
                 </div>
                 <div class="col-md-3">
                     <label><i class="bi bi-person me-1"></i>Pelaksana</label>
                     <input type="text" class="form-control form-control-sm" id="shared_pelaksana"
-                           placeholder="Nama teknisi / lembaga">
+                           value="Internal (default)">
                     <div class="form-text">Berlaku untuk semua baris (bisa dioverride)</div>
                 </div>
                 <div class="col-md-3">
@@ -225,9 +225,17 @@
         lbl.textContent = t.label;
         lbl.classList.remove('bts-placeholder');
 
-        // Auto-fill certificate_number jika kolom masih kosong
+        // Selalu timpa dengan data timbangan yang BARU dipilih — supaya kalau
+        // baris ini sebelumnya sudah terisi dari timbangan lain (lalu diganti),
+        // field-field ini ikut menyesuaikan, tidak nyangkut data lama.
         const certInput = row.querySelector('.col-cert');
-        if (certInput && !certInput.value) certInput.value = t.certificate;
+        if (certInput) certInput.value = t.certificate;
+
+        const deptInput = row.querySelector('.col-dept');
+        if (deptInput) deptInput.value = t.dept;
+
+        const bedaInput = row.querySelector('.col-beda');
+        if (bedaInput) bedaInput.value = t.kapasitas;
     }
 
     // ── Tutup dropdown yang terbuka ───────────────────────────────────────
@@ -279,7 +287,7 @@
             <td><input type="text" class="form-control col-cert" name="rows[${rid}][certificate_number]" placeholder="Opsional"></td>
 
             {{-- Beda Maksimum --}}
-            <td><input type="text" class="form-control" name="rows[${rid}][beda_maksimum]" placeholder="mis. ±0.5 g"></td>
+            <td><input type="text" class="form-control col-beda" name="rows[${rid}][beda_maksimum]" placeholder="mis. ±0.5 g"></td>
 
             {{-- Hasil --}}
             <td>
@@ -290,8 +298,8 @@
                 </select>
             </td>
 
-            {{-- Dept override --}}
-            <td><input type="text" class="form-control col-dept" name="rows[${rid}][dept_bagian]" placeholder="(gunakan default)"></td>
+            {{-- Dept auto dari lokasi timbangan (override) --}}
+            <td><input type="text" class="form-control col-dept" name="rows[${rid}][dept_bagian]" placeholder="Otomatis saat pilih timbangan"></td>
 
             {{-- Pelaksana override --}}
             <td><input type="text" class="form-control col-pelaksana" name="rows[${rid}][pelaksana]" placeholder="(gunakan default)"></td>
