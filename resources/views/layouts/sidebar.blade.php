@@ -4,6 +4,7 @@
         <span class="sidebar-brand-text">K-SQUID</span>
     </div>
     <ul class="sidebar-nav">
+        @unless(auth()->user()->isGuest())
         <li class="nav-item">
             <a href="{{ route('dashboard') }}" class="nav-link {{ Request::is('dashboard') ? 'active' : '' }}">
                 <i class="bi bi-speedometer2 nav-icon"></i>
@@ -23,16 +24,14 @@
             </a>
         </li>
 
-        @auth
-            @if(auth()->user()->role === 'superadmin')
-                <li class="nav-item">
-                    <a href="{{ route('users.index') }}" class="nav-link {{ Request::is('users*') ? 'active' : '' }}">
-                        <i class="bi bi-people nav-icon"></i>
-                        <span class="nav-text">Manajemen User</span>
-                    </a>
-                </li>
-            @endif
-        @endauth
+        @if(auth()->user()->role === 'superadmin')
+            <li class="nav-item">
+                <a href="{{ route('users.index') }}" class="nav-link {{ Request::is('users*') ? 'active' : '' }}">
+                    <i class="bi bi-people nav-icon"></i>
+                    <span class="nav-text">Manajemen User</span>
+                </a>
+            </li>
+        @endif
 
         <li class="nav-item">
             <a href="{{ route('line.index') }}" class="nav-link {{ Request::is('line*') ? 'active' : '' }}">
@@ -90,6 +89,7 @@
                 <span class="nav-text">Riwayat Lengkap</span>
             </a>
         </li>
+        @endunless
 
         <li class="nav-item">
     <a href="{{ route('kalibrasi.index') }}"
@@ -99,6 +99,7 @@
     </a>
 </li>
 
+        @unless(auth()->user()->isGuest())
         <!-- ── LAPORAN ─────────────────────────────────────── -->
         <li class="nav-section">
             <span class="nav-section-text">LAPORAN</span>
@@ -110,6 +111,7 @@
                 <span class="nav-text">Laporan Timbangan</span>
             </a>
         </li>
+        @endunless
     </ul>
 </div>
 

@@ -63,6 +63,7 @@
                                         <option value="supervisor" {{ old('role') == 'supervisor' ? 'selected' : '' }}>Supervisor</option>
                                         <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
                                         <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>
+                                        <option value="guest" {{ old('role') == 'guest' ? 'selected' : '' }}>Guest (cetak sticker saja)</option>
                                     </select>
                                     @error('role')
                                         <div class="invalid-feedback">{{ $message }}</div>

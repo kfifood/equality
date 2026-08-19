@@ -64,6 +64,7 @@
                                             'manager' => 'warning', 
                                             'supervisor' => 'info',
                                             'admin' => 'primary',
+                                            'guest' => 'dark',
                                             default => 'secondary'
                                         } }}">
                                             {{ $user->role }}
@@ -154,13 +155,11 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div class="text-muted">
-                            Menampilkan {{ $users->firstItem() }} hingga {{ $users->lastItem() }} dari {{ $users->total() }} user
+                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+                        <div class="text-muted small">
+                            Menampilkan {{ $users->firstItem() ?? 0 }} hingga {{ $users->lastItem() ?? 0 }} dari {{ $users->total() ?? 0 }} user
                         </div>
-                        <nav>
-                            {{ $users->links() }}
-                        </nav>
+                        {{ $users->onEachSide(1)->links('pagination::bootstrap-5') }}
                     </div>
                 </div>
             </div>

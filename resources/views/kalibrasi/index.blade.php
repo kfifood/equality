@@ -20,6 +20,7 @@
                             (<span id="jumlahDipilih">0</span>)
                         </button>
 
+                        @unless(auth()->user()->isGuest())
                         {{-- Import Excel --}}
                         <button class="btn btn-sm btn-outline-success" onclick="showImportModal()"
                             title="Import dari file Excel">
@@ -37,6 +38,7 @@
                             onclick="showCreateModal()">
                             <i class="bi bi-plus-circle me-1"></i>Tambah
                         </button>
+                        @endunless
                     </div>
                 </div>
 
@@ -203,6 +205,7 @@
                                                 onclick="cetakStickerSatu({{ $item->id }})">
                                                 <i class="bi bi-printer"></i>
                                             </button>
+                                            @unless(auth()->user()->isGuest())
                                             <button type="button" class="btn btn-warning" title="Edit"
                                                 onclick="showEditModal({{ $item->id }})">
                                                 <i class="bi bi-pencil"></i>
@@ -211,6 +214,7 @@
                                                 onclick="deleteKalibrasi({{ $item->id }})">
                                                 <i class="bi bi-trash"></i>
                                             </button>
+                                            @endunless
                                         </div>
                                     </td>
                                 </tr>

@@ -78,6 +78,11 @@ class User extends Authenticatable
         return $this->role === 'staff';
     }
 
+    public function isGuest()
+    {
+        return $this->role === 'guest';
+    }
+
     public function isActive()
     {
         return $this->is_active;

@@ -54,11 +54,20 @@ class LoginController extends Controller
         $user->login_at = Carbon::now();
         $user->save();
 
+        // Role 'guest' tidak boleh melihat dashboard — langsung diarahkan
+        // ke halaman data kalibrasi (satu-satunya halaman yang boleh diakses).
+        $redirectTo = $user->role === 'guest'
+            ? route('kalibrasi.index')
+            : $this->redirectTo;
+
+        // Simpan supaya dipakai juga oleh sendLoginResponse() di jalur non-AJAX
+        $this->redirectTo = $redirectTo;
+
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Login berhasil',
-                'redirect' => $this->redirectTo
+                'redirect' => $redirectTo
             ]);
         }
     }
@@ -138,10 +147,15 @@ class LoginController extends Controller
 
                 Log::info('=== RFID LOGIN SUCCESS ===');
 
+                // Role 'guest' langsung diarahkan ke halaman data kalibrasi
+                $redirectTo = $user->role === 'guest'
+                    ? route('kalibrasi.index')
+                    : $this->redirectTo;
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Login dengan RFID berhasil',
-                    'redirect' => $this->redirectTo
+                    'redirect' => $redirectTo
                 ]);
             }
 

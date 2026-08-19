@@ -28,7 +28,7 @@ Auth::routes(['register' => false]);
 Route::post('/login/rfid', [App\Http\Controllers\Auth\LoginController::class, 'loginWithRfid'])->name('login.rfid');
 
 // Authenticated Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->group(function () {
 
     // ── Dashboard ──────────────────────────────────────────────────────────
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -168,7 +168,9 @@ Route::middleware(['auth'])->group(function () {
     // HARUS paling bawah, setelah semua route didefinisikan
     Route::fallback(function () {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route(
+                Auth::user()->role === 'guest' ? 'kalibrasi.index' : 'dashboard'
+            );
         }
         return redirect('/login');
     });

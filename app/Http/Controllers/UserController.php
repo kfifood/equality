@@ -26,7 +26,7 @@ class UserController extends Controller
             'username' => 'required|unique:users,username',
             'password' => 'required|min:6',
             'full_name' => 'required',
-            'role' => 'required|in:superadmin,manager,staff,supervisor,admin',
+            'role' => 'required|in:superadmin,manager,staff,supervisor,admin,guest',
             'phone' => 'nullable',
             'department' => 'nullable',
             'rfid_code' => 'nullable|unique:users,rfid_code'
@@ -63,7 +63,7 @@ class UserController extends Controller
                 Rule::unique('users')->ignore($user->id)
             ],
             'full_name' => 'required',
-            'role' => 'required|in:superadmin,manager,staff,supervisor,admin',
+            'role' => 'required|in:superadmin,manager,staff,supervisor,admin,guest',
             'phone' => 'nullable',
             'department' => 'nullable',
             'rfid_code' => [
