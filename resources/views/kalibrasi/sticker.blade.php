@@ -1,6 +1,11 @@
 {{--
     resources/views/kalibrasi/sticker.blade.php
-    Cetak & Download sticker kalibrasi — transparan (siap cetak kertas emas)
+    Cetak & Download sticker kalibrasi — versi canvas (sama pola dengan
+    generator sticker Asset): sticker digambar ke <canvas>, dijadikan PNG,
+    lalu PNG itu yang ditampilkan/di-download/dicetak. Dengan begini hasil
+    cetak SELALU sama persis dengan preview di layar — tidak ada lagi
+    ketergantungan pada CSS @page / aspect-ratio yang kerap meleset saat
+    print di berbagai browser.
 --}}
 <!DOCTYPE html>
 <html lang="id">
@@ -10,16 +15,12 @@
     <title>Cetak Sticker Kalibrasi</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
     <style>
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
         :root {
-            --sticker-w: 720px;   /* ~180mm pada 96dpi — lebar preview layar */
-            --sticker-h: 390px;   /* ~100mm */
-            --col-left: 33%;
-            --border: 3px solid #000;
+            --sticker-w: 600px; /* lebar preview di layar, diikuti otomatis oleh img (aspect ratio asli 2:1) */
         }
 
         body {
@@ -58,6 +59,20 @@
         }
         .cp-btns { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
+        .cp-size-group { display: flex; align-items: center; gap: 8px; }
+        .cp-size-label { font-size: 0.78rem; font-weight: 700; color: #444; white-space: nowrap; }
+        .cp-size-select {
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: #333;
+            background: #fff;
+            cursor: pointer;
+        }
+
         .btn-cp {
             display: inline-flex;
             align-items: center;
@@ -77,8 +92,6 @@
         .btn-cp.success:hover  { background: #146c43; }
         .btn-cp.secondary { background: #f1f3f5; color: #444; }
         .btn-cp.secondary:hover { background: #dee2e6; }
-        .btn-cp.warning  { background: #f59e0b; color: #fff; }
-        .btn-cp.warning:hover { background: #d97706; }
 
         .info-badge {
             background: #e8f0fe;
@@ -98,15 +111,8 @@
             gap: 48px;
         }
 
-        /* Wrapper satu sticker */
-        .sticker-block {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 12px;
-        }
+        .sticker-block { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 
-        /* Label nomor sticker */
         .sticker-label {
             font-size: 0.78rem;
             font-weight: 700;
@@ -115,11 +121,7 @@
             text-transform: uppercase;
         }
 
-        /* Tombol aksi per sticker */
-        .sticker-actions {
-            display: flex;
-            gap: 8px;
-        }
+        .sticker-actions { display: flex; gap: 8px; }
         .sticker-actions button {
             display: inline-flex;
             align-items: center;
@@ -132,110 +134,28 @@
             cursor: pointer;
             border: none;
         }
-        .btn-dl-png  { background: #198754; color: #fff; }
-        .btn-dl-png:hover  { background: #146c43; }
-        .btn-dl-svg  { background: #6f42c1; color: #fff; }
-        .btn-dl-svg:hover  { background: #5a32a3; }
+        .btn-dl-png    { background: #198754; color: #fff; }
+        .btn-dl-png:hover    { background: #146c43; }
         .btn-print-one { background: #4361EE; color: #fff; }
         .btn-print-one:hover { background: #2d47c4; }
 
-        /* ── STICKER WRAPPER ────────────────────────────────────── */
+        /* ── STICKER WRAP (menampung <img> hasil canvas) ─────────── */
+        /* Pola kotak-kotak menandai area transparan pada PNG hasil cetak */
         .sticker-wrap {
             width: var(--sticker-w);
-            min-height: var(--sticker-h); /* min-height — bisa melebar ke bawah */
-            background: transparent;
-            padding: 16px;               /* gantikan inset di sticker-inner */
+            display: inline-block;
+            background-image:
+                linear-gradient(45deg,#bbb 25%,transparent 25%),
+                linear-gradient(-45deg,#bbb 25%,transparent 25%),
+                linear-gradient(45deg,transparent 75%,#bbb 75%),
+                linear-gradient(-45deg,transparent 75%,#bbb 75%);
+            background-size: 14px 14px;
+            background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+            padding: 6px;
+            border-radius: 4px;
             box-shadow: 0 0 0 1px #8899cc, 0 8px 32px rgba(0,0,0,.18);
-            border-radius: 3px;
         }
-
-        /* ── STICKER INNER ──────────────────────────────────────── */
-        .sticker-inner {
-            border: var(--border);
-            display: flex;
-            flex-direction: column;
-            background: transparent;
-        }
-
-        /* HEADER */
-        .s-header {
-            display: grid;
-            grid-template-columns: var(--col-left) 1fr;
-            border-bottom: var(--border);
-            flex-shrink: 0;
-        }
-        .s-logo-cell {
-            border-right: var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* padding: 8px 12px; */
-        }
-        .s-logo-cell img {
-            max-width: 100%;
-            max-height: 72px;
-            transform: scaleX(1.4);
-        }
-        .s-logo-placeholder {
-            font-size: 13pt;
-            font-weight: 900;
-            letter-spacing: 2px;
-            color: #000;
-        }
-        .s-title-cell {
-            display: flex;
-            flex-direction: column;
-        }
-        .s-title-main {
-            font-size: 18pt;
-            font-weight: 700;
-            text-align: center;
-            padding: 4px 8px;
-            border-bottom: 3px solid #000;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-        }
-        .s-title-nomor {
-            font-size: 16pt;
-            font-weight: 700;
-            padding: 6px 10px;
-            display: flex;
-            align-items: center;
-            flex: 1;
-        }
-
-        /* BODY */
-        .s-body {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        .s-row {
-            display: grid;
-            grid-template-columns: var(--col-left) 1fr;
-            border-bottom: 3px solid #000;
-        }
-        .s-row:last-child { border-bottom: none; }
-        .s-label {
-            font-size: 14pt;
-            font-weight: 700;
-            padding: 5px 10px;
-            border-right: 3px solid #000;
-            display: flex;
-            align-items: center;
-        }
-        .s-value {
-            font-size: 14pt;
-            font-weight: 600;
-            padding: 5px 10px;
-            display: flex;
-            align-items: center;
-            word-break: break-word;
-            line-height: 1.35;
-        }
+        .sticker-img { display: block; width: 100%; height: auto; border-radius: 3px; }
 
         /* ── LOADING OVERLAY ────────────────────────────────────── */
         #loadingOverlay {
@@ -262,37 +182,17 @@
             animation: spin 0.8s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* ── PRINT STYLES ───────────────────────────────────────── */
-        @media print {
-            @page { size: auto; margin: 8mm; }
-            body { background: transparent !important; }
-            .control-panel,
-            .sticker-label,
-            .sticker-actions { display: none !important; }
-            .preview-area { padding: 0 !important; gap: 0 !important; align-items: center; }
-            .sticker-wrap {
-                box-shadow: none !important;
-                width: 180mm !important;
-                min-height: 90mm !important;  /* min-height agar bisa melebar */
-                height: auto !important;
-                padding: 6mm !important;
-                margin: 5mm auto;
-                page-break-inside: avoid;
-                break-inside: avoid;
-                background: transparent !important;
-            }
-            .sticker-inner { background: transparent !important; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        }
     </style>
 </head>
 <body>
 
+{{-- Canvas "pabrik" tersembunyi — dipakai ulang untuk menggambar tiap sticker --}}
+<canvas id="factoryCanvas" style="display:none;"></canvas>
+
 {{-- ── LOADING OVERLAY ── --}}
 <div id="loadingOverlay">
     <div class="spinner"></div>
-    <div id="loadingText">Membuat PNG…</div>
+    <div id="loadingText">Memproses…</div>
 </div>
 
 {{-- ── CONTROL PANEL ── --}}
@@ -302,13 +202,22 @@
         <span class="info-badge">{{ $kalibrasiList->count() }} sticker</span>
     </h1>
     <div class="cp-btns">
+        <div class="cp-size-group">
+            <label for="stickerSize" class="cp-size-label">Ukuran Cetak</label>
+            <select id="stickerSize" class="cp-size-select">
+                <option value="300" selected>Kecil (30×60 mm)</option>
+                <option value="400">Standar (40×80 mm)</option>
+                <option value="500">Sedang (50×100 mm)</option>
+                <option value="600">Besar (60×120 mm)</option>
+            </select>
+        </div>
         <a href="{{ route('kalibrasi.index') }}" class="btn-cp secondary">← Kembali</a>
         @if($kalibrasiList->count() > 1)
             <button class="btn-cp success" onclick="downloadAllPng()">
                 ⬇ Download Semua PNG
             </button>
         @endif
-        <button class="btn-cp primary" onclick="window.print()">
+        <button class="btn-cp primary" onclick="printAll()">
             🖨️ Cetak Sekarang
         </button>
     </div>
@@ -332,66 +241,30 @@
     $filename  = 'sticker-' . str_replace(['/', ' '], '-', $kode) . '-' . str_replace('/', '-', $tgl);
 @endphp
 
-<div class="sticker-block">
+<div class="sticker-block"
+     data-id="{{ $item->id }}"
+     data-alat="{{ $alat }}"
+     data-merk="{{ $merk }}"
+     data-kapasitas="{{ $kapasitas }}"
+     data-kode="{{ $kode }}"
+     data-dept="{{ $dept }}"
+     data-tgl="{{ $tgl }}"
+     data-pelaksana="{{ $pelaksana }}"
+     data-beda="{{ $beda }}"
+     data-nomor="{{ $nomor }}"
+     data-filename="{{ $filename }}">
+
     <div class="sticker-label">Sticker #{{ $i + 1 }} — {{ $kode }}</div>
 
-    {{-- STICKER — elemen ini yang di-capture html2canvas --}}
-    <div class="sticker-wrap" id="sticker-{{ $item->id }}" data-filename="{{ $filename }}">
-        <div class="sticker-inner">
-
-            {{-- HEADER --}}
-            <div class="s-header">
-                <div class="s-logo-cell">
-                    <img src="{{ asset('images/logo.png') }}" alt="Logo"
-                         crossorigin="anonymous"
-                         onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-                    <div class="s-logo-placeholder" style="display:none;">LOGO</div>
-                </div>
-                <div class="s-title-cell">
-                    <div class="s-title-main">KALIBRASI ALAT UKUR</div>
-                    <div class="s-title-nomor">Nomor :&nbsp; {{ $nomor }}</div>
-                </div>
-            </div>
-
-            {{-- BODY --}}
-            <div class="s-body">
-                <div class="s-row">
-                    <div class="s-label">Alat Ukur</div>
-                    <div class="s-value">{{ $alat }}</div>
-                </div>
-                <div class="s-row">
-                    <div class="s-label">Merk / Kapasitas</div>
-                    <div class="s-value">{{ $merk }} / {{ $kapasitas }}</div>
-                </div>
-                <div class="s-row">
-                    <div class="s-label">Kode Alat</div>
-                    <div class="s-value">{{ $kode }}</div>
-                </div>
-                <div class="s-row">
-                    <div class="s-label">SBU / Dept / Bagian</div>
-                    <div class="s-value">{{ $dept }}</div>
-                </div>
-                <div class="s-row">
-                    <div class="s-label">Tanggal / Pelaksana</div>
-                    <div class="s-value">{{ $tgl }} / {{ $pelaksana }}</div>
-                </div>
-                <div class="s-row">
-                    <div class="s-label">Beda Maksimum</div>
-                    <div class="s-value">{{ $beda }}</div>
-                </div>
-            </div>
-
-        </div>
+    <div class="sticker-wrap">
+        <img class="sticker-img" alt="Sticker {{ $kode }}">
     </div>
 
-    {{-- TOMBOL PER STICKER --}}
     <div class="sticker-actions">
-        <button class="btn-dl-png"
-            onclick="downloadOnePng('sticker-{{ $item->id }}')">
+        <button class="btn-dl-png" onclick="downloadOnePng('{{ $item->id }}')">
             ⬇ Download PNG
         </button>
-        <button class="btn-print-one"
-            onclick="printOne('sticker-{{ $item->id }}')">
+        <button class="btn-print-one" onclick="printOne('{{ $item->id }}')">
             🖨 Cetak ini
         </button>
     </div>
@@ -401,8 +274,234 @@
 </div>{{-- end preview-area --}}
 
 <script>
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════
+   PENDEKATAN: gambar sticker ke <canvas> → jadikan PNG (dataURL) →
+   PNG itulah yang ditampilkan di layar, di-download, dan dicetak.
+   Ini pola yang sama seperti generator sticker Asset — hasil cetak jadi
+   WYSIWYG karena yang dicetak cuma satu gambar utuh, bukan HTML/CSS
+   kompleks yang layout-nya bisa berbeda antara render layar & render print.
+   ══════════════════════════════════════════════════════════════════════ */
 
+const factory = document.getElementById('factoryCanvas');
+const fctx    = factory.getContext('2d');
+
+// key = value <option> di dropdown "Ukuran Cetak" = tinggi canvas (px),
+// lebar selalu 2× tinggi (rasio fisik sticker = 2:1), dan 10px mewakili 1mm
+// (jadi H=300 → 30mm, H=400 → 40mm, dst) — dipakai juga untuk ukuran fisik
+// saat dicetak (mm).
+function currentSize() {
+    const base = parseInt(document.getElementById('stickerSize').value, 10);
+    const H = base + 5; 
+    const W = base * 2;
+    return { H, W, hmm: H / 10, wmm: W / 10 };
+}
+
+let logoImg = null;
+let logoLoadAttempted = false;
+function loadLogo(cb) {
+    if (logoLoadAttempted) return cb(logoImg);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload  = () => { logoImg = img; logoLoadAttempted = true; cb(logoImg); };
+    img.onerror = () => { logoImg = null; logoLoadAttempted = true; cb(null); };
+    img.src = "{{ asset('images/logo.png') }}" + '?_=' + Date.now();
+}
+
+function line(ctx, ax, ay, bx, by) {
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+}
+
+/**
+ * Gambar satu sticker kalibrasi ke factoryCanvas dan kembalikan dataURL PNG.
+ */
+function drawKalibrasiSticker(data, size, logo) {
+    const { H, W } = size;
+    factory.width  = W;
+    factory.height = H;
+    const ctx = fctx;
+    ctx.clearRect(0, 0, W, H);
+
+    const lw = Math.max(1, Math.round(H / 150));
+    const mg = Math.round(H * 0.05); // margin tepi ~5% dari tinggi
+    const x0 = mg, y0 = mg, x1 = W - mg, y1 = H - mg;
+    const iW = x1 - x0, iH = y1 - y0;
+
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle   = '#000';
+
+    // Border luar (dobel tebal)
+    ctx.lineWidth = lw * 1;
+    ctx.strokeRect(x0, y0, iW, iH);
+    ctx.lineWidth = lw;
+
+    const colX    = x0 + Math.round(iW * 0.33); // batas kolom kiri (label/logo) vs kanan (value/judul)
+    const headerH = Math.round(iH * 0.26);
+    const bodyY   = y0 + headerH;
+    const bodyH   = iH - headerH;
+
+    const rows = [
+        ['Alat Ukur',           data.alat],
+        ['Merk / Kapasitas',    data.merk + ' / ' + data.kapasitas],
+        ['Kode Alat',           data.kode],
+        ['SBU / Dept / Bagian', data.dept],
+        ['Tanggal / Pelaksana', data.tgl + ' / ' + data.pelaksana],
+        ['Beda Maksimum',       data.beda],
+    ];
+    const rowH = bodyH / rows.length;
+
+    // ── Garis-garis pembatas ──
+    line(ctx, x0, bodyY, x1, bodyY);   // pemisah header/body
+    line(ctx, colX, y0, colX, bodyY);  // pemisah logo | judul (header)
+    for (let i = 1; i < rows.length; i++) {
+        const ry = bodyY + rowH * i;
+        line(ctx, x0, ry, x1, ry);      // pemisah antar-row
+    }
+    for (let i = 0; i < rows.length; i++) {
+        const ry = bodyY + rowH * i;
+        line(ctx, colX, ry, colX, ry + rowH); // pemisah label | value tiap row
+    }
+
+    // ── Logo (sel kiri header) ──
+    if (logo) {
+        const pad   = Math.round(headerH * 0.12);
+        const areaW = colX - x0 - pad * 2;
+        const areaH = headerH - pad * 2;
+        const sc    = Math.min(areaW / logo.naturalWidth, areaH / logo.naturalHeight);
+        const lw2   = logo.naturalWidth  * sc * 1.3; // stretch lebar sedikit, sama seperti versi Asset
+        const lh2   = logo.naturalHeight * sc;
+        ctx.drawImage(logo, x0 + (colX - x0 - lw2) / 2, y0 + (headerH - lh2) / 2, lw2, lh2);
+    } else {
+        ctx.font = `900 ${Math.round(headerH * 0.18)}px Montserrat, Arial, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('LOGO', x0 + (colX - x0) / 2, y0 + headerH / 2);
+    }
+
+    // ── Judul & Nomor (sel kanan header, 2 baris) ──
+    const titleAreaX = colX, titleAreaW = x1 - colX;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+    let fsTitle = Math.round(headerH * 0.30);
+    ctx.font = `700 ${fsTitle}px Montserrat, Arial, sans-serif`;
+    const titleText = 'KALIBRASI ALAT UKUR';
+    while (ctx.measureText(titleText).width > titleAreaW - 16 && fsTitle > 8) {
+        fsTitle--; ctx.font = `700 ${fsTitle}px Montserrat, Arial, sans-serif`;
+    }
+    ctx.fillText(titleText, titleAreaX + titleAreaW / 2, y0 + headerH * 0.32);
+
+    line(ctx, titleAreaX, y0 + headerH * 0.58, x1, y0 + headerH * 0.58);
+
+    let fsNomor = Math.round(headerH * 0.24);
+    const nomorText = 'Nomor : ' + data.nomor;
+    ctx.font = `700 ${fsNomor}px Montserrat, Arial, sans-serif`;
+    while (ctx.measureText(nomorText).width > titleAreaW - 16 && fsNomor > 8) {
+        fsNomor--; ctx.font = `700 ${fsNomor}px Montserrat, Arial, sans-serif`;
+    }
+    ctx.fillText(nomorText, titleAreaX + titleAreaW / 2, y0 + headerH * 0.80);
+
+    // ── Baris body: label (kiri) + value (kanan, auto-shrink agar muat) ──
+    const padCell = Math.round(iW * 0.02);
+    const fs      = Math.round(rowH * 0.45);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+
+    // ── Helper: pecah teks jadi beberapa baris berdasarkan lebar maksimum ──
+function wrapWords(ctx, text, maxW) {
+    const words = String(text).split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        if (ctx.measureText(test).width > maxW && cur) {
+            lines.push(cur);
+            cur = w;
+        } else {
+            cur = test;
+        }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+
+// ── Helper: cari ukuran font terbesar yang muat, wrap ke maks 2 baris ──
+function fitValueLines(ctx, text, maxW, maxH, baseFs) {
+    const family = 'Montserrat, Arial, sans-serif';
+    const minFs  = Math.max(6, Math.round(baseFs * 0.55)); // jangan lebih kecil dari ini
+    let fs = baseFs;
+
+    while (fs >= minFs) {
+        ctx.font = `600 ${fs}px ${family}`;
+        if (ctx.measureText(text).width <= maxW) {
+            return { fs, lines: [text] }; // muat 1 baris, tidak perlu wrap
+        }
+        const lines = wrapWords(ctx, text, maxW);
+        const lineH = fs * 1.15;
+        const fitsWidth  = lines.every(l => ctx.measureText(l).width <= maxW);
+        const fitsHeight = lines.length * lineH <= maxH;
+        if (lines.length <= 2 && fitsWidth && fitsHeight) {
+            return { fs, lines };
+        }
+        fs -= 1; // belum muat → kecilkan font, coba lagi
+    }
+
+    // fallback: sudah di font terkecil, paksa 2 baris, potong sisa dgn "…"
+    ctx.font = `600 ${minFs}px ${family}`;
+    let lines = wrapWords(ctx, text, maxW);
+    if (lines.length > 2) {
+        let rest = lines.slice(1).join(' ');
+        while (ctx.measureText(rest).width > maxW && rest.length > 3) rest = rest.slice(0, -1);
+        lines = [lines[0], rest.slice(0, -1) + '…'];
+    }
+    return { fs: minFs, lines };
+}
+
+// ── Render baris body ──
+rows.forEach(([label, value], i) => {
+    const ry = bodyY + rowH * i;
+    const cy = ry + rowH / 2;
+
+    ctx.font = `700 ${fs}px Montserrat, Arial, sans-serif`;
+    ctx.fillText(label, x0 + padCell, cy);
+
+    const maxW = (x1 - colX) - padCell * 2;
+    const maxH = rowH * 0.88; // sedikit jarak dari garis atas/bawah row
+    const fitted = fitValueLines(ctx, String(value ?? '-'), maxW, maxH, fs);
+
+    ctx.font = `600 ${fitted.fs}px Montserrat, Arial, sans-serif`;
+    const lineH  = fitted.fs * 1.15;
+    const totalH = fitted.lines.length * lineH;
+    let ly = cy - totalH / 2 + lineH / 2;
+    fitted.lines.forEach(line => {
+        ctx.fillText(line, colX + padCell, ly);
+        ly += lineH;
+    });
+});
+
+    return factory.toDataURL('image/png');
+}
+
+/* ── Render ulang semua sticker (dipanggil saat load & saat ukuran diganti) ── */
+const stickerData = {}; // id -> { dataUrl, wmm, hmm, filename }
+
+function renderAll() {
+    const size = currentSize();
+    loadLogo(logo => {
+        document.querySelectorAll('.sticker-block').forEach(block => {
+            const id = block.dataset.id;
+            const data = {
+                alat: block.dataset.alat, merk: block.dataset.merk, kapasitas: block.dataset.kapasitas,
+                kode: block.dataset.kode, dept: block.dataset.dept, tgl: block.dataset.tgl,
+                pelaksana: block.dataset.pelaksana, beda: block.dataset.beda, nomor: block.dataset.nomor,
+            };
+            const dataUrl = drawKalibrasiSticker(data, size, logo);
+            stickerData[id] = { dataUrl, wmm: size.wmm, hmm: size.hmm, filename: block.dataset.filename };
+            block.querySelector('.sticker-img').src = dataUrl;
+        });
+    });
+}
+
+document.getElementById('stickerSize').addEventListener('change', renderAll);
+renderAll();
+
+/* ── Helpers loading overlay ── */
 function showLoading(text) {
     document.getElementById('loadingText').textContent = text || 'Memproses…';
     document.getElementById('loadingOverlay').classList.add('show');
@@ -411,103 +510,86 @@ function hideLoading() {
     document.getElementById('loadingOverlay').classList.remove('show');
 }
 
-/**
- * Capture satu elemen sticker menjadi PNG transparan dan trigger download.
- * Menggunakan scale 3× untuk resolusi tinggi (cocok untuk cetak).
- */
-async function capturePng(elementId) {
-    const el = document.getElementById(elementId);
-    if (!el) return null;
+/* ── Download PNG ── */
+function downloadOnePng(id) {
+    const d = stickerData[id];
+    if (!d) return;
+    const a = document.createElement('a');
+    a.download = d.filename + '.png';
+    a.href = d.dataUrl;
+    a.click();
+}
 
-    const scale = 3; // 3× = ~270 DPI pada layar 96dpi
-
-    const canvas = await html2canvas(el, {
-        scale          : scale,
-        useCORS        : true,
-        allowTaint     : false,
-        backgroundColor: null,   // ← transparan
-        logging        : false,
-        imageTimeout   : 8000,
+function downloadAllPng() {
+    const ids = Object.keys(stickerData);
+    if (ids.length === 0) return;
+    showLoading('Mempersiapkan ' + ids.length + ' sticker…');
+    ids.forEach((id, i) => {
+        setTimeout(() => {
+            downloadOnePng(id);
+            if (i === ids.length - 1) hideLoading();
+        }, i * 400);
     });
-
-    return canvas;
 }
 
-/**
- * Download PNG satu sticker.
- */
-async function downloadOnePng(elementId) {
-    showLoading('Membuat PNG…');
-    try {
-        const canvas = await capturePng(elementId);
-        if (!canvas) throw new Error('Element tidak ditemukan');
-
-        const el       = document.getElementById(elementId);
-        const filename = (el.dataset.filename || elementId) + '.png';
-
-        const link  = document.createElement('a');
-        link.href   = canvas.toDataURL('image/png');
-        link.download = filename;
-        link.click();
-    } catch (err) {
-        alert('Gagal membuat PNG: ' + err.message);
-        console.error(err);
-    } finally {
-        hideLoading();
+/* ── Cetak: buka window baru berisi PNG, ukuran halaman = ukuran fisik sticker (mm) ──
+   Ini kunci kenapa cetak jadi selalu benar: yang dicetak cuma <img>, bukan
+   HTML/CSS kompleks — jadi tidak ada lagi salah hitung tinggi/lebar. */
+function buildPrintWindow(items) {
+    if (!items.length) return;
+    const win = window.open('', '_blank');
+    if (!win) {
+        alert('Popup diblokir browser. Izinkan popup untuk situs ini agar bisa mencetak.');
+        return;
     }
+    const first = items[0];
+    const pages = items.map(it =>
+        `<div class="p"><img src="${it.dataUrl}" alt="sticker"></div>`
+    ).join('');
+
+    win.document.write(`<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Cetak Sticker Kalibrasi</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f5f5f5;display:flex;flex-direction:column;align-items:center;
+     padding:24px;font-family:Montserrat,Arial,sans-serif}
+.p{width:${first.wmm}mm;margin-bottom:14mm}
+.p img{display:block;width:100%;height:auto}
+.btns{display:flex;gap:10px;margin-bottom:16px}
+button{padding:10px 26px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:700}
+.bp{background:#4361EE;color:#fff}
+.bc{background:#6c757d;color:#fff}
+@media print{
+    body{background:transparent!important;padding:0}
+    .btns{display:none!important}
+    .p{margin:0!important;page-break-after:always;break-after:page}
+    .p:last-child{page-break-after:auto;break-after:auto}
+    @page{ size: ${first.wmm}mm ${first.hmm}mm; margin: 0; }
+}
+</style>
+</head>
+<body>
+<div class="btns">
+    <button class="bp" onclick="window.print()">🖨 Cetak Sekarang</button>
+    <button class="bc" onclick="window.close()">✕ Tutup</button>
+</div>
+${pages}
+</body></html>`);
+    win.document.close();
 }
 
-/**
- * Download semua sticker sekaligus (sequential, satu per satu).
- */
-async function downloadAllPng() {
-    const stickers = document.querySelectorAll('.sticker-wrap');
-    if (stickers.length === 0) return;
-
-    showLoading('Mempersiapkan ' + stickers.length + ' sticker…');
-
-    try {
-        for (let i = 0; i < stickers.length; i++) {
-            const el = stickers[i];
-            document.getElementById('loadingText').textContent =
-                'Membuat PNG ' + (i + 1) + ' / ' + stickers.length + '…';
-
-            const canvas   = await capturePng(el.id);
-            const filename = (el.dataset.filename || el.id) + '.png';
-
-            const link    = document.createElement('a');
-            link.href     = canvas.toDataURL('image/png');
-            link.download = filename;
-            link.click();
-
-            // Jeda singkat antar download agar browser tidak blokir
-            await new Promise(r => setTimeout(r, 600));
-        }
-    } catch (err) {
-        alert('Gagal membuat PNG: ' + err.message);
-        console.error(err);
-    } finally {
-        hideLoading();
-    }
+function printOne(id) {
+    const d = stickerData[id];
+    if (!d) return;
+    buildPrintWindow([{ dataUrl: d.dataUrl, wmm: d.wmm, hmm: d.hmm }]);
 }
 
-/**
- * Cetak satu sticker saja — sembunyikan yang lain sementara.
- */
-function printOne(elementId) {
-    // Tambah class print-only ke elemen yang mau dicetak
-    const allBlocks = document.querySelectorAll('.sticker-block');
-    const target    = document.getElementById(elementId)?.closest('.sticker-block');
-
-    allBlocks.forEach(b => b.style.display = 'none');
-    if (target) target.style.removeProperty('display');
-
-    window.print();
-
-    // Kembalikan semua setelah print dialog tutup
-    setTimeout(() => {
-        allBlocks.forEach(b => b.style.removeProperty('display'));
-    }, 1000);
+function printAll() {
+    const items = Object.values(stickerData).map(d => ({ dataUrl: d.dataUrl, wmm: d.wmm, hmm: d.hmm }));
+    buildPrintWindow(items);
 }
 </script>
 
