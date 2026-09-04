@@ -10,7 +10,7 @@
                     <div class="row align-items-center">
                         <div class="col-md-8">
                             <h3 class="card-title mb-2">Selamat Datang, {{ Auth::user()->full_name ?? 'User' }}! 👋</h3>
-                            <p class="card-text mb-2">K-LAB - Sistem Pelacakan Timbangan Digital</p>
+                            <p class="card-text mb-2">K-LAB - Sistem Pelacakan Peralatan QC</p>
                             <small>
                                 @if(Auth::user()->last_login_at && Auth::user()->last_login_at instanceof \Carbon\Carbon)
                                 Terakhir login: {{ Auth::user()->last_login_at->format('d M Y H:i') }}
@@ -30,15 +30,15 @@
 
     <!-- Statistics Cards -->
     <div class="row mb-4">
-        <!-- Total Timbangan -->
+        <!-- Total Peralatan -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stat-card border-start border-4 border-primary h-100">
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col">
-                            <h6 class="text-uppercase text-muted mb-2">Total Timbangan</h6>
-                            <h2 class="mb-0">{{ $stats['total_timbangan'] ?? 0 }}</h2>
-                            <small class="text-muted">{{ $stats['timbangan_baik'] ?? 0 }} dalam kondisi baik</small>
+                            <h6 class="text-uppercase text-muted mb-2">Total Peralatan</h6>
+                            <h2 class="mb-0">{{ $stats['total_peralatan'] ?? 0 }}</h2>
+                            <small class="text-muted">{{ $stats['peralatan_baik'] ?? 0 }} dalam kondisi baik</small>
                         </div>
                         <div class="col-auto">
                             <i class="bi bi-speedometer fa-2x text-primary opacity-75"></i>
@@ -48,15 +48,15 @@
             </div>
         </div>
 
-        <!-- Timbangan Baik -->
+        <!-- Peralatan Baik -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stat-card border-start border-4 border-success h-100">
                 <div class="card-body">
                     <div class="row align-items-center">
                         <div class="col">
-                            <h6 class="text-uppercase text-muted mb-2">Timbangan Baik</h6>
-                            <h2 class="mb-0">{{ $stats['timbangan_baik'] ?? 0 }}</h2>
-                            <small class="text-muted">{{ $stats['total_timbangan'] > 0 ? round(($stats['timbangan_baik'] / $stats['total_timbangan']) * 100, 1) : 0 }}% dari total</small>
+                            <h6 class="text-uppercase text-muted mb-2">Peralatan Baik</h6>
+                            <h2 class="mb-0">{{ $stats['peralatan_baik'] ?? 0 }}</h2>
+                            <small class="text-muted">{{ $stats['total_peralatan'] > 0 ? round(($stats['peralatan_baik'] / $stats['total_peralatan']) * 100, 1) : 0 }}% dari total</small>
                         </div>
                         <div class="col-auto">
                             <i class="bi bi-check-circle fa-2x text-success opacity-75"></i>
@@ -73,7 +73,7 @@
                     <div class="row align-items-center">
                         <div class="col">
                             <h6 class="text-uppercase text-muted mb-2">Dalam Perbaikan</h6>
-                            <h2 class="mb-0">{{ $stats['timbangan_perbaikan'] ?? 0 }}</h2>
+                            <h2 class="mb-0">{{ $stats['peralatan_perbaikan'] ?? 0 }}</h2>
                             <small class="text-muted">{{ $stats['perbaikan_aktif'] ?? 0 }} proses perbaikan aktif</small>
                         </div>
                         <div class="col-auto">
@@ -105,17 +105,17 @@
 
     <!-- Recent Activity and Quick Actions -->
     <div class="row">
-        <!-- Recent Timbangan -->
+        <!-- Recent Peralatan -->
         <div class="col-lg-8 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                     <h5 class="card-title mb-0 fw-bold">
-                        <i class="bi bi-speedometer me-2 text-primary"></i>Timbangan Terbaru
+                        <i class="bi bi-speedometer me-2 text-primary"></i>Peralatan Terbaru
                     </h5>
-                    <a href="{{ route('timbangan.index') }}" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
+                    <a href="{{ route('peralatan.index') }}" class="btn btn-sm btn-outline-primary">Lihat Semua</a>
                 </div>
                 <div class="card-body p-0">
-                    @if($recentTimbangan && $recentTimbangan->count() > 0)
+                    @if($recentPeralatan && $recentPeralatan->count() > 0)
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
@@ -128,20 +128,20 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($recentTimbangan as $timbangan)
+                                @foreach($recentPeralatan as $item)
                                 <tr>
-                                    <td class="ps-3 fw-medium">{{ $timbangan->kode_asset ?? 'N/A' }}</td>
-                                    <td>{{ Str::limit($timbangan->merk_tipe_no_seri, 20) ?? 'N/A' }}</td>
+                                    <td class="ps-3 fw-medium">{{ $item->kode_asset ?? 'N/A' }}</td>
+                                    <td>{{ Str::limit($item->merk_tipe_lengkap, 20) ?? 'N/A' }}</td>
                                     <td>
-                                        @if($timbangan->status_line)
-                                            <span class="badge bg-info">{{ $timbangan->status_line }}</span>
+                                        @if($item->status_line)
+                                            <span class="badge bg-info">{{ $item->status_line }}</span>
                                         @else
                                             <span class="badge bg-secondary">Lab</span>
                                         @endif
                                     </td>
                                     <td>
                                         @php
-                                            $kondisi = $timbangan->kondisi_saat_ini ?? 'Baik';
+                                            $kondisi = $item->kondisi_saat_ini ?? 'Baik';
                                             $badgeColor = match($kondisi) {
                                                 'Baik' => 'success',
                                                 'Rusak' => 'danger',
@@ -154,7 +154,7 @@
                                         </span>
                                     </td>
                                     <td class="pe-3">
-                                        {{ $timbangan->updated_at ? $timbangan->updated_at->format('d/m/Y') : 'N/A' }}
+                                        {{ $item->updated_at ? $item->updated_at->format('d/m/Y') : 'N/A' }}
                                     </td>
                                 </tr>
                                 @endforeach
@@ -164,8 +164,8 @@
                     @else
                     <div class="text-center py-5">
                         <i class="bi bi-speedometer fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Tidak ada data timbangan</p>
-                        <a href="{{ route('timbangan.create') }}" class="btn btn-primary btn-sm">Tambah Timbangan</a>
+                        <p class="text-muted">Tidak ada data peralatan</p>
+                        <a href="{{ route('peralatan.index') }}" class="btn btn-primary btn-sm">Tambah Peralatan</a>
                     </div>
                     @endif
                 </div>
@@ -174,7 +174,7 @@
 
         <!-- Ganti section Quick Actions dengan ini: -->
 
-<!-- Kondisi Timbangan & Alert -->
+<!-- Kondisi Peralatan & Alert -->
 <div class="col-lg-4 mb-4">
     <!-- Ringkasan Kondisi -->
     <div class="card mb-4">
@@ -199,19 +199,19 @@
             <div class="row text-center">
                 <div class="col-4">
                     <div class="border-end">
-                        <div class="fw-bold text-success">{{ $stats['timbangan_baik'] }}</div>
+                        <div class="fw-bold text-success">{{ $stats['peralatan_baik'] }}</div>
                         <small class="text-muted">Baik</small>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="border-end">
-                        <div class="fw-bold text-warning">{{ $stats['timbangan_perbaikan'] }}</div>
+                        <div class="fw-bold text-warning">{{ $stats['peralatan_perbaikan'] }}</div>
                         <small class="text-muted">Perbaikan</small>
                     </div>
                 </div>
                 <div class="col-4">
                     <div>
-                        <div class="fw-bold text-danger">{{ $stats['timbangan_rusak'] }}</div>
+                        <div class="fw-bold text-danger">{{ $stats['peralatan_rusak'] }}</div>
                         <small class="text-muted">Rusak</small>
                     </div>
                 </div>
@@ -227,33 +227,33 @@
             </h5>
         </div>
         <div class="card-body">
-            @if($timbanganPerhatian->count() > 0)
+            @if($peralatanPerhatian->count() > 0)
                 <div class="alert alert-warning mb-3">
                     <div class="d-flex">
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         <div>
-                            <strong>{{ $timbanganPerhatian->count() }} timbangan</strong> perlu perhatian
+                            <strong>{{ $peralatanPerhatian->count() }} peralatan</strong> perlu perhatian
                         </div>
                     </div>
                 </div>
 
-                @foreach($timbanganPerhatian as $timbangan)
+                @foreach($peralatanPerhatian as $item)
                 <div class="alert alert-light border mb-2">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
-                            <strong class="d-block">{{ $timbangan->kode_asset }}</strong>
+                            <strong class="d-block">{{ $item->kode_asset }}</strong>
                             <small class="text-muted">
-                                {{ $timbangan->kondisi_saat_ini }}
-                                @if($timbangan->status_line)
-                                    • {{ $timbangan->status_line }}
+                                {{ $item->kondisi_saat_ini }}
+                                @if($item->status_line)
+                                    • {{ $item->status_line }}
                                 @else
                                     • Lab
                                 @endif
                             </small>
                         </div>
-                        <a href="{{ route('perbaikan.create.withId', $timbangan->id) }}" 
+                        <a href="{{ route('perbaikan.create.withId', $item->id) }}" 
                            class="btn btn-sm btn-outline-warning" 
-                           onclick="showCreatePerbaikanModal({{ $timbangan->id }})">
+                           onclick="showCreatePerbaikanModal({{ $item->id }})">
                             <i class="bi bi-tools"></i>
                         </a>
                     </div>
@@ -262,7 +262,7 @@
             @else
                 <div class="text-center py-3">
                     <i class="bi bi-check-circle text-success fa-2x mb-2"></i>
-                    <p class="text-muted mb-0">Semua timbangan dalam kondisi baik</p>
+                    <p class="text-muted mb-0">Semua peralatan dalam kondisi baik</p>
                 </div>
             @endif
 
@@ -309,7 +309,7 @@
                             <tbody>
                                 @foreach($recentPerbaikan as $perbaikan)
                                 <tr>
-                                    <td class="ps-3 fw-medium">{{ $perbaikan->timbangan->kode_asset ?? 'N/A' }}</td>
+                                    <td class="ps-3 fw-medium">{{ $perbaikan->peralatan->kode_asset ?? 'N/A' }}</td>
                                     <td>{{ $perbaikan->line_sebelumnya ?? 'N/A' }}</td>
                                     <td>
                                         @php
@@ -369,7 +369,7 @@
                             <tbody>
                                 @foreach($recentPenggunaan as $penggunaan)
                                 <tr>
-                                    <td class="ps-3 fw-medium">{{ $penggunaan->timbangan->kode_asset ?? 'N/A' }}</td>
+                                    <td class="ps-3 fw-medium">{{ $penggunaan->peralatan->kode_asset ?? 'N/A' }}</td>
                                     <td>
                                         <span class="badge bg-info">{{ $penggunaan->line_tujuan ?? 'N/A' }}</span>
                                     </td>
@@ -460,7 +460,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-// Pie Chart untuk Kondisi Timbangan
+// Pie Chart untuk Kondisi Peralatan
 document.addEventListener('DOMContentLoaded', function() {
     const ctx = document.getElementById('kondisiChart').getContext('2d');
     const kondisiChart = new Chart(ctx, {
@@ -469,9 +469,9 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: ['Baik', 'Dalam Perbaikan', 'Rusak'],
             datasets: [{
                 data: [
-                    {{ $stats['timbangan_baik'] }},
-                    {{ $stats['timbangan_perbaikan'] }},
-                    {{ $stats['timbangan_rusak'] }}
+                    {{ $stats['peralatan_baik'] }},
+                    {{ $stats['peralatan_perbaikan'] }},
+                    {{ $stats['peralatan_rusak'] }}
                 ],
                 backgroundColor: [
                     '#28a745', // Hijau untuk Baik
@@ -494,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         label: function(context) {
                             const label = context.label || '';
                             const value = context.raw || 0;
-                            const total = {{ $stats['total_timbangan'] }};
+                            const total = {{ $stats['total_peralatan'] }};
                             const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
                             return `${label}: ${value} (${percentage}%)`;
                         }
@@ -506,10 +506,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Function untuk modal perbaikan (jika belum ada)
-function showCreatePerbaikanModal(timbanganId = null) {
+function showCreatePerbaikanModal(peralatanId = null) {
     let url = '{{ route("perbaikan.create") }}';
-    if (timbanganId) {
-        url = '{{ url("perbaikan/create") }}/' + timbanganId;
+    if (peralatanId) {
+        url = '{{ url("perbaikan/create") }}/' + peralatanId;
     }
 
     Swal.fire({

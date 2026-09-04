@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Kalibrasi;
 use App\Models\MasterLine;
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -22,10 +22,10 @@ class KalibrasiController extends Controller
 
     public function index(Request $request)
     {
-        $query = Kalibrasi::with('timbangan');
+        $query = Kalibrasi::with('peralatan');
 
-        if ($request->filled('timbangan_id')) {
-            $query->where('timbangan_id', $request->timbangan_id);
+        if ($request->filled('peralatan_id')) {
+            $query->where('peralatan_id', $request->peralatan_id);
         }
         if ($request->filled('hasil')) {
             $query->where('hasil', $request->hasil);
@@ -39,9 +39,11 @@ class KalibrasiController extends Controller
                 $q->where('certificate_number', 'like', '%' . $search . '%')
                   ->orWhere('pelaksana', 'like', '%' . $search . '%')
                   ->orWhere('dept_bagian', 'like', '%' . $search . '%')
-                  ->orWhereHas('timbangan', fn($q2) =>
+                  ->orWhereHas('peralatan', fn($q2) =>
                       $q2->where('kode_asset', 'like', '%' . $search . '%')
-                         ->orWhere('merk_tipe_no_seri', 'like', '%' . $search . '%')
+                         ->orWhere('merk', 'like', '%' . $search . '%')
+                         ->orWhere('type', 'like', '%' . $search . '%')
+                         ->orWhere('serial_number', 'like', '%' . $search . '%')
                   );
             });
         }
@@ -51,52 +53,52 @@ class KalibrasiController extends Controller
                            ->paginate($perPage)
                            ->withQueryString();
 
-        $timbanganList = Timbangan::orderBy('kode_asset')->get(['id', 'kode_asset', 'merk_tipe_no_seri']);
+        $peralatanList = Peralatan::orderBy('kode_asset')->get(['id', 'kode_asset', 'merk', 'type', 'serial_number']);
         $deptList      = Kalibrasi::whereNotNull('dept_bagian')->distinct()->orderBy('dept_bagian')->pluck('dept_bagian');
 
-        return view('kalibrasi.index', compact('kalibrasi', 'timbanganList', 'deptList'));
+        return view('kalibrasi.index', compact('kalibrasi', 'peralatanList', 'deptList'));
     }
 
     // ── CREATE (single) ───────────────────────────────────────────────────────
 
     public function create()
     {
-        $timbanganList = Timbangan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number', 'kapasitas', 'status_line', 'lokasi_asli']);
+        $peralatanList = Peralatan::orderBy('kode_asset')
+                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
 
         // Hitung dept_bagian yang akan dipakai kalau kalibrasi baru dibuat
-        // untuk masing-masing timbangan, supaya bisa ditampilkan sebagai
-        // auto-fill di form saat timbangan dipilih.
-        $timbanganList->each(function ($t) {
-            $t->dept_bagian_default = $this->resolveDeptBagian($t);
+        // untuk masing-masing peralatan, supaya bisa ditampilkan sebagai
+        // auto-fill di form saat peralatan dipilih.
+        $peralatanList->each(function ($p) {
+            $p->dept_bagian_default = $this->resolveDeptBagian($p);
         });
 
         return response()->json([
             'success' => true,
-            'html'    => view('kalibrasi.partials.create-modal', compact('timbanganList'))->render(),
+            'html'    => view('kalibrasi.partials.create-modal', compact('peralatanList'))->render(),
         ]);
     }
 
     // ── STORE (single) ────────────────────────────────────────────────────────
 
     /**
-     * Tentukan dept_bagian dari lokasi ASLI timbangan saat ini, bukan dari
+     * Tentukan dept_bagian dari lokasi ASLI peralatan saat ini, bukan dari
      * input manual — supaya tidak ada lagi celah orang mengetik nilai
      * default/boilerplate yang tidak sesuai kondisi sebenarnya.
      *
-     * Lokasi timbangan (nama_line) dicocokkan ke master_line untuk tahu
+     * Lokasi peralatan (nama_line) dicocokkan ke master_line untuk tahu
      * departemennya:
      * - department == 'Produksi'  → ditulis "Production Area"
      *   (mengikuti istilah baku yang sudah dipakai di dokumen spesifikasi)
      * - department lainnya (QC, Non Produksi, dst) → ditulis apa adanya
      *   sesuai master_line, supaya konsisten dengan pengelompokan line yang
      *   sudah ada, bukan nama line mentah satu-satu.
-     * - kalau lokasi timbangan tidak match ke master_line manapun (mis. 'Lab'
+     * - kalau lokasi peralatan tidak match ke master_line manapun (mis. 'Lab'
      *   atau nama custom), fallback ke nama lokasi itu apa adanya.
      */
-    protected function resolveDeptBagian(Timbangan $timbangan): ?string
+    protected function resolveDeptBagian(Peralatan $peralatan): ?string
     {
-        $lokasi = $timbangan->status_line ?? $timbangan->lokasi_asli;
+        $lokasi = $peralatan->status_line ?? $peralatan->lokasi_asli;
 
         if (!$lokasi) {
             return null;
@@ -114,7 +116,7 @@ class KalibrasiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'timbangan_id'        => 'required|exists:timbangan,id',
+            'peralatan_id'        => 'required|exists:peralatan,id',
             'tanggal_pelaksanaan' => 'required|date',
             'certificate_number'  => 'nullable|string|max:255',
             'dept_bagian'         => 'nullable|string|max:255',
@@ -123,23 +125,23 @@ class KalibrasiController extends Controller
             'pelaksana'           => 'nullable|string|max:255',
             'catatan'             => 'nullable|string',
         ], [
-            'timbangan_id.required'        => 'Timbangan harus dipilih.',
-            'timbangan_id.exists'          => 'Timbangan tidak ditemukan.',
+            'peralatan_id.required'        => 'Peralatan harus dipilih.',
+            'peralatan_id.exists'          => 'Peralatan tidak ditemukan.',
             'tanggal_pelaksanaan.required' => 'Tanggal pelaksanaan harus diisi.',
         ]);
 
-        $timbangan = Timbangan::findOrFail($request->timbangan_id);
+        $peralatan = Peralatan::findOrFail($request->peralatan_id);
 
-        // Form sudah auto-fill dept_bagian dari lokasi timbangan saat dipilih,
+        // Form sudah auto-fill dept_bagian dari lokasi peralatan saat dipilih,
         // tapi tetap bisa dioverride manual kalau memang perlu. Kalau dikosongkan,
-        // hitung ulang dari lokasi timbangan sebagai fallback.
+        // hitung ulang dari lokasi peralatan sebagai fallback.
         Kalibrasi::create($request->only([
-            'timbangan_id', 'certificate_number', 'tanggal_pelaksanaan',
+            'peralatan_id', 'certificate_number', 'tanggal_pelaksanaan',
             'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
         ]) + [
             'dept_bagian' => $request->filled('dept_bagian')
                 ? $request->dept_bagian
-                : $this->resolveDeptBagian($timbangan),
+                : $this->resolveDeptBagian($peralatan),
         ]);
 
         return response()->json(['success' => true, 'message' => 'Data kalibrasi berhasil ditambahkan.']);
@@ -151,13 +153,13 @@ class KalibrasiController extends Controller
      * Simpan banyak data kalibrasi sekaligus (dari form bulk / input massal).
      *
      * Route: POST /kalibrasi/bulk
-     * Body JSON: { rows: [ { timbangan_id, tanggal_pelaksanaan, ... } ] }
+     * Body JSON: { rows: [ { peralatan_id, tanggal_pelaksanaan, ... } ] }
      */
     public function storeBulk(Request $request)
     {
         $request->validate([
             'rows'                              => 'required|array|min:1|max:100',
-            'rows.*.timbangan_id'               => 'required|exists:timbangan,id',
+            'rows.*.peralatan_id'               => 'required|exists:peralatan,id',
             'rows.*.tanggal_pelaksanaan'        => 'required|date',
             'rows.*.certificate_number'         => 'nullable|string|max:255',
             'rows.*.dept_bagian'                => 'nullable|string|max:255',
@@ -167,29 +169,29 @@ class KalibrasiController extends Controller
             'rows.*.catatan'                    => 'nullable|string',
         ], [
             'rows.required'                      => 'Tidak ada data yang dikirim.',
-            'rows.*.timbangan_id.required'       => 'Setiap baris harus memilih timbangan.',
-            'rows.*.timbangan_id.exists'         => 'Timbangan pada salah satu baris tidak ditemukan.',
+            'rows.*.peralatan_id.required'       => 'Setiap baris harus memilih peralatan.',
+            'rows.*.peralatan_id.exists'         => 'Peralatan pada salah satu baris tidak ditemukan.',
             'rows.*.tanggal_pelaksanaan.required'=> 'Tanggal pelaksanaan wajib diisi.',
         ]);
 
         $rows = $request->rows;
 
-        // Ambil semua timbangan yang relevan sekaligus, biar tidak query per baris
-        $timbanganMap = Timbangan::whereIn('id', collect($rows)->pluck('timbangan_id'))
+        // Ambil semua peralatan yang relevan sekaligus, biar tidak query per baris
+        $peralatanMap = Peralatan::whereIn('id', collect($rows)->pluck('peralatan_id'))
             ->get()->keyBy('id');
 
-        $insertData = array_map(function ($r) use ($timbanganMap) {
-            $timbangan = $timbanganMap->get($r['timbangan_id']);
+        $insertData = array_map(function ($r) use ($peralatanMap) {
+            $peralatan = $peralatanMap->get($r['peralatan_id']);
 
-            // Form sudah auto-fill dept_bagian per baris saat timbangan dipilih,
+            // Form sudah auto-fill dept_bagian per baris saat peralatan dipilih,
             // tapi tetap bisa dioverride manual. Kalau dikosongkan, hitung ulang
-            // dari lokasi timbangan sebagai fallback.
+            // dari lokasi peralatan sebagai fallback.
             $deptBagian = !empty($r['dept_bagian'])
                 ? $r['dept_bagian']
-                : ($timbangan ? $this->resolveDeptBagian($timbangan) : null);
+                : ($peralatan ? $this->resolveDeptBagian($peralatan) : null);
 
             return [
-                'timbangan_id'        => $r['timbangan_id'],
+                'peralatan_id'        => $r['peralatan_id'],
                 'certificate_number'  => $r['certificate_number']  ?? null,
                 'tanggal_pelaksanaan' => $r['tanggal_pelaksanaan'],
                 'dept_bagian'         => $deptBagian,
@@ -204,7 +206,7 @@ class KalibrasiController extends Controller
         try {
             // Sengaja pakai create() di dalam loop, BUKAN Kalibrasi::insert($insertData).
             // insert() adalah query mentah yang tidak memicu Eloquent model events,
-            // sehingga KalibrasiObserver (sinkron ke timbangan.certificate_number)
+            // sehingga KalibrasiObserver (sinkron ke peralatan.certificate_number)
             // tidak akan jalan kalau tetap pakai insert().
             foreach ($insertData as $row) {
                 Kalibrasi::create($row);
@@ -225,13 +227,13 @@ class KalibrasiController extends Controller
 
     public function edit($id)
     {
-        $kalibrasi     = Kalibrasi::with('timbangan')->findOrFail($id);
-        $timbanganList = Timbangan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number']);
+        $kalibrasi     = Kalibrasi::with('peralatan')->findOrFail($id);
+        $peralatanList = Peralatan::orderBy('kode_asset')
+                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number']);
 
         return response()->json([
             'success' => true,
-            'html'    => view('kalibrasi.partials.edit-modal', compact('kalibrasi', 'timbanganList'))->render(),
+            'html'    => view('kalibrasi.partials.edit-modal', compact('kalibrasi', 'peralatanList'))->render(),
         ]);
     }
 
@@ -242,7 +244,7 @@ class KalibrasiController extends Controller
         $kalibrasi = Kalibrasi::findOrFail($id);
 
         $request->validate([
-            'timbangan_id'        => 'required|exists:timbangan,id',
+            'peralatan_id'        => 'required|exists:peralatan,id',
             'tanggal_pelaksanaan' => 'required|date',
             'certificate_number'  => 'nullable|string|max:255',
             'dept_bagian'         => 'nullable|string|max:255',
@@ -251,13 +253,13 @@ class KalibrasiController extends Controller
             'pelaksana'           => 'nullable|string|max:255',
             'catatan'             => 'nullable|string',
         ], [
-            'timbangan_id.required'        => 'Timbangan harus dipilih.',
-            'timbangan_id.exists'          => 'Timbangan tidak ditemukan.',
+            'peralatan_id.required'        => 'Peralatan harus dipilih.',
+            'peralatan_id.exists'          => 'Peralatan tidak ditemukan.',
             'tanggal_pelaksanaan.required' => 'Tanggal pelaksanaan harus diisi.',
         ]);
 
         $kalibrasi->update($request->only([
-            'timbangan_id', 'certificate_number', 'tanggal_pelaksanaan',
+            'peralatan_id', 'certificate_number', 'tanggal_pelaksanaan',
             'dept_bagian', 'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
         ]));
 
@@ -281,27 +283,27 @@ class KalibrasiController extends Controller
      * Route: GET /kalibrasi/bulk
      * Name:  kalibrasi.bulk
      */
-public function bulk()
-{
-    $timbanganList = Timbangan::orderBy('kode_asset')
-                              ->get(['id', 'kode_asset', 'merk_tipe_no_seri', 'certificate_number', 'kapasitas', 'status_line', 'lokasi_asli']);
+    public function bulk()
+    {
+        $peralatanList = Peralatan::orderBy('kode_asset')
+                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
 
-    // Siapkan data yang sudah di-map, bukan map di Blade
-    $timbanganJson = $timbanganList->map(fn($t) => [
-        'id'          => $t->id,
-        'kode_asset'  => $t->kode_asset,
-        'merk'        => $t->merk_tipe_no_seri,
-        'label'       => $t->kode_asset . ' — ' . $t->merk_tipe_no_seri,
-        'certificate' => $t->certificate_number ?? '',
-        'kapasitas'   => $t->kapasitas ?? '',
-        'dept'        => $this->resolveDeptBagian($t) ?? '',
-    ]);
+        // Siapkan data yang sudah di-map, bukan map di Blade
+        $peralatanJson = $peralatanList->map(fn($p) => [
+            'id'          => $p->id,
+            'kode_asset'  => $p->kode_asset,
+            'merk'        => $p->merk_tipe_lengkap,
+            'label'       => $p->kode_asset . ' — ' . $p->merk_tipe_lengkap,
+            'certificate' => $p->certificate_number ?? '',
+            'spesifikasi' => $p->spesifikasi_ringkas,
+            'dept'        => $this->resolveDeptBagian($p) ?? '',
+        ]);
 
-    return response()->json([
-        'success' => true,
-        'html'    => view('kalibrasi.partials.bulk-modal', compact('timbanganList', 'timbanganJson'))->render(),
-    ]);
-}
+        return response()->json([
+            'success' => true,
+            'html'    => view('kalibrasi.partials.bulk-modal', compact('peralatanList', 'peralatanJson'))->render(),
+        ]);
+    }
 
     // ── MODAL IMPORT EXCEL ────────────────────────────────────────────────────
 
@@ -384,18 +386,21 @@ public function bulk()
         $sheet2->setTitle('Daftar Kode Asset');
         $sheet2->setCellValue('A1', 'kode_asset');
         $sheet2->setCellValue('B1', 'merk_tipe_no_seri');
+        $sheet2->setCellValue('C1', 'spesifikasi');
 
-        $timbanganList = Timbangan::orderBy('kode_asset')->get(['kode_asset', 'merk_tipe_no_seri']);
-        foreach ($timbanganList as $i => $t) {
-            $sheet2->setCellValue('A' . ($i + 2), $t->kode_asset);
-            $sheet2->setCellValue('B' . ($i + 2), $t->merk_tipe_no_seri);
+        $peralatanList = Peralatan::orderBy('kode_asset')->get(['kode_asset', 'merk', 'type', 'serial_number', 'spesifikasi']);
+        foreach ($peralatanList as $i => $p) {
+            $sheet2->setCellValue('A' . ($i + 2), $p->kode_asset);
+            $sheet2->setCellValue('B' . ($i + 2), $p->merk_tipe_lengkap);
+            $sheet2->setCellValue('C' . ($i + 2), $p->spesifikasi_ringkas);
         }
-        $sheet2->getStyle('A1:B1')->applyFromArray([
+        $sheet2->getStyle('A1:C1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['argb' => 'FFEEF0FD']],
         ]);
         $sheet2->getColumnDimension('A')->setAutoSize(true);
         $sheet2->getColumnDimension('B')->setAutoSize(true);
+        $sheet2->getColumnDimension('C')->setAutoSize(true);
 
         // Kembali ke sheet pertama
         $spreadsheet->setActiveSheetIndex(0);
@@ -441,9 +446,9 @@ public function bulk()
             return response()->json(['success' => false, 'message' => 'File kosong atau tidak ada data di bawah header.']);
         }
 
-        // Ambil semua timbangan (bukan cuma id) agar dept_bagian bisa dihitung
+        // Ambil semua peralatan (bukan cuma id) agar dept_bagian bisa dihitung
         // dari lokasi aslinya, bukan dari kolom Excel yang sering diisi asal.
-        $timbanganByKode = Timbangan::get()->keyBy('kode_asset');
+        $peralatanByKode = Peralatan::get()->keyBy('kode_asset');
 
         $validRows = [];
         $errors    = [];
@@ -464,11 +469,11 @@ public function bulk()
                 $errors[] = "Baris {$realLine}: kolom kode_asset kosong.";
                 continue;
             }
-            if (!isset($timbanganByKode[$kodeAsset])) {
+            if (!isset($peralatanByKode[$kodeAsset])) {
                 $errors[] = "Baris {$realLine}: kode_asset '{$kodeAsset}' tidak ditemukan di sistem.";
                 continue;
             }
-            $timbangan = $timbanganByKode[$kodeAsset];
+            $peralatan = $peralatanByKode[$kodeAsset];
 
             // Validasi tanggal
             if (!$tanggal) {
@@ -490,14 +495,14 @@ public function bulk()
             }
 
             $validRows[] = [
-                'timbangan_id'        => $timbangan->id,
+                'peralatan_id'        => $peralatan->id,
                 'tanggal_pelaksanaan' => $tanggalFormatted,
                 'certificate_number'  => trim($certNo    ?? '') ?: null,
                 // dept_bagian TIDAK diambil dari kolom Excel (kolom D) lagi —
-                // dihitung dari lokasi asli/terkini timbangan, supaya tidak ada
+                // dihitung dari lokasi asli/terkini peralatan, supaya tidak ada
                 // lagi nilai boilerplate seperti "Production Area" yang tidak
                 // sesuai kondisi sebenarnya (ditemukan di 14/14 data lama).
-                'dept_bagian'         => $this->resolveDeptBagian($timbangan),
+                'dept_bagian'         => $this->resolveDeptBagian($peralatan),
                 'beda_maksimum'       => trim($bedaMaks   ?? '') ?: null,
                 'hasil'               => $hasilVal                ?: null,
                 'pelaksana'           => trim($pelaksana  ?? '') ?: null,
@@ -521,7 +526,7 @@ public function bulk()
         DB::beginTransaction();
         try {
             // Sama seperti storeBulk() — pakai create() per baris supaya
-            // KalibrasiObserver ikut jalan dan timbangan.certificate_number tersinkron.
+            // KalibrasiObserver ikut jalan dan peralatan.certificate_number tersinkron.
             foreach ($validRows as $row) {
                 Kalibrasi::create($row);
             }
@@ -541,7 +546,7 @@ public function bulk()
 
     public function sticker($id)
     {
-        $item          = Kalibrasi::with('timbangan')->findOrFail($id);
+        $item          = Kalibrasi::with('peralatan.kategoriAlat')->findOrFail($id);
         $kalibrasiList = collect([$item]);
         return view('kalibrasi.sticker', compact('kalibrasiList'));
     }
@@ -556,7 +561,7 @@ public function bulk()
             'ids.min'      => 'Pilih minimal satu data kalibrasi.',
         ]);
 
-        $kalibrasiList = Kalibrasi::with('timbangan')
+        $kalibrasiList = Kalibrasi::with('peralatan.kategoriAlat')
                                    ->whereIn('id', $request->ids)
                                    ->orderBy('tanggal_pelaksanaan', 'desc')
                                    ->get();

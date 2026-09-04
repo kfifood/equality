@@ -11,14 +11,6 @@
                         <i class="bi bi-speedometer me-2"></i>Data Peralatan
                     </h5>
                     <div>
-                        <!--<button class="btn btn-sm me-2" data-bs-toggle="modal" data-bs-target="#importModal"
-                            style="background-color:#4361EE; color:white;">
-                            <i class="bi bi-upload me-1"></i>Import
-                        </button>
-                        <a href="{{ route('timbangan.export') }}" class="btn btn-sm me-2"
-                            style="background-color:#4361EE; color:white;">
-                            <i class="bi bi-download me-1"></i>Export
-                        </a>-->
                         <button class="btn btn-sm" style="background-color:#4361EE; color:white;"
                             onclick="showCreateModal()">
                             <i class="bi bi-plus-circle me-1"></i>Tambah
@@ -38,7 +30,7 @@
                     <!-- Filter Section -->
                     <div class="card mb-4">
                         <div class="card-body">
-                            <form action="{{ route('timbangan.index') }}" method="GET" id="filterForm">
+                            <form action="{{ route('peralatan.index') }}" method="GET" id="filterForm">
                                 <input type="hidden" name="sort_by"  id="sortBy"  value="{{ request('sort_by') }}">
                                 <input type="hidden" name="sort_dir" id="sortDir" value="{{ request('sort_dir', 'asc') }}">
                                 <div class="row g-3">
@@ -58,11 +50,16 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Jenis Alat Ukur</label>
-                                        <select name="jenis_alat_ukur" class="form-select"
+                                        <label class="form-label">Kategori Alat</label>
+                                        <select name="kategori_alat_id" class="form-select"
                                             onchange="document.getElementById('filterForm').submit()">
-                                            <option value="">Semua Jenis</option>
-                                            <option value="Timbangan" {{ request('jenis_alat_ukur') == 'Timbangan' ? 'selected' : '' }}>Timbangan</option>
+                                            <option value="">Semua Kategori</option>
+                                            @foreach($kategoriList as $kategori)
+                                            <option value="{{ $kategori->id }}"
+                                                {{ request('kategori_alat_id') == $kategori->id ? 'selected' : '' }}>
+                                                {{ $kategori->nama_kategori }}
+                                            </option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="col-md-2">
@@ -104,8 +101,8 @@
                                             <button class="btn btn-outline-primary" type="submit">
                                                 <i class="bi bi-search"></i>
                                             </button>
-                                            @if(request()->anyFilled(['kondisi', 'jenis_alat_ukur', 'lokasi_asli', 'status_line', 'search']))
-                                            <a href="{{ route('timbangan.index') }}" class="btn btn-outline-danger">
+                                            @if(request()->anyFilled(['kondisi', 'kategori_alat_id', 'lokasi_asli', 'status_line', 'search']))
+                                            <a href="{{ route('peralatan.index') }}" class="btn btn-outline-danger">
                                                 <i class="bi bi-x-circle"></i>
                                             </a>
                                             @endif
@@ -118,7 +115,7 @@
 
                     <!-- Data Table -->
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-striped" id="timbanganTable">
+                        <table class="table table-bordered table-hover table-striped" id="peralatanTable">
                             @php
                                 $sortBy  = request('sort_by');
                                 $sortDir = request('sort_dir', 'asc');
@@ -141,8 +138,10 @@
                                 <tr>
                                     <th width="50">No</th>
                                     {!! thSort('kode_asset', 'Kode Asset', $sortBy, $sortDir) !!}
-                                    {!! thSort('merk_tipe', 'Merk &amp; Seri', $sortBy, $sortDir) !!}
-                                    <th class="d-none d-md-table-cell">Jenis &amp; Kapasitas</th>
+                                    {!! thSort('merk_tipe', 'Merk', $sortBy, $sortDir) !!}
+                                    <th class="d-none d-md-table-cell">Type</th>
+                                    <th class="d-none d-lg-table-cell">No. Seri</th>
+                                    <th class="d-none d-md-table-cell">Kategori &amp; Spesifikasi</th>
                                     <th class="d-none d-lg-table-cell">Certificate No.</th>
                                     {!! thSort('tanggal_datang', 'Tanggal Datang', $sortBy, $sortDir) !!}
                                     <th>Lokasi Asli</th>
@@ -153,9 +152,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($timbangan as $index => $item)
+                                @forelse($peralatan as $index => $item)
                                 <tr>
-                                    <td class="text-center">{{ $timbangan->firstItem() + $index }}</td>
+                                    <td class="text-center">{{ $peralatan->firstItem() + $index }}</td>
 
                                     {{-- Kode Asset --}}
                                     <td>
@@ -169,28 +168,43 @@
                                         </div>
                                     </td>
 
-                                    {{-- Merk & Seri --}}
+                                    {{-- Merk --}}
                                     <td>
-                                        <span class="text-truncate" style="max-width: 200px;"
-                                            title="{{ $item->merk_tipe_no_seri }}">
-                                            {{ $item->merk_tipe_no_seri }}
+                                        <span class="text-truncate d-inline-block" style="max-width: 150px;"
+                                            title="{{ $item->merk ?? '-' }}">
+                                            {{ $item->merk ?? '-' }}
                                         </span>
                                     </td>
 
-                                    {{-- Jenis & Kapasitas — sembunyikan di mobile (< md) --}}
+                                    {{-- Type — sembunyikan di mobile (< md) --}}
                                     <td class="d-none d-md-table-cell">
-                                        @if($item->jenis_alat_ukur || $item->kapasitas)
-                                            @if($item->jenis_alat_ukur)
-                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mb-1">
-                                                    <i class="bi bi-rulers me-1"></i>{{ $item->jenis_alat_ukur }}
-                                                </span><br>
-                                            @endif
-                                            @if($item->kapasitas)
-                                                <small class="text-muted">
-                                                    <i class="bi bi-speedometer2 me-1"></i>{{ $item->kapasitas }}
-                                                </small>
-                                            @endif
-                                        @else
+                                        <span class="text-truncate d-inline-block" style="max-width: 150px;"
+                                            title="{{ $item->type ?? '-' }}">
+                                            {{ $item->type ?? '-' }}
+                                        </span>
+                                    </td>
+
+                                    {{-- No. Seri — sembunyikan sampai layar besar (< lg) --}}
+                                    <td class="d-none d-lg-table-cell">{{ $item->serial_number ?? '-' }}</td>
+
+                                    {{-- Kategori & Spesifikasi — sembunyikan di mobile (< md) --}}
+                                    <td class="d-none d-md-table-cell">
+                                        @if($item->kategoriAlat)
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 mb-1">
+                                                <i class="bi bi-tag me-1"></i>{{ $item->kategoriAlat->nama_kategori }}
+                                            </span><br>
+                                        @endif
+                                        @if(!empty($item->spesifikasi))
+                                            @php $firstSpek = collect($item->spesifikasi)->first(); $firstKey = array_key_first($item->spesifikasi); @endphp
+                                            <small class="text-muted" data-bs-toggle="tooltip"
+                                                title="{{ collect($item->spesifikasi)->map(fn($v,$k) => "$k: $v")->join(', ') }}">
+                                                <i class="bi bi-list-check me-1"></i>{{ $firstKey }}: {{ $firstSpek }}
+                                                @if(count($item->spesifikasi) > 1)
+                                                    <span class="text-primary">+{{ count($item->spesifikasi) - 1 }}</span>
+                                                @endif
+                                            </small>
+                                        @endif
+                                        @if(!$item->kategoriAlat && empty($item->spesifikasi))
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
@@ -279,7 +293,7 @@
                                             'Baik'            => $item->status_line
                                                                     ? 'Sedang digunakan di ' . $item->status_line
                                                                     : 'Siap digunakan (di Lab)',
-                                            'Rusak'           => 'Timbangan rusak - perlu perbaikan',
+                                            'Rusak'           => 'Peralatan rusak - perlu perbaikan',
                                             'Dalam Perbaikan' => 'Sedang dalam proses perbaikan',
                                             default           => 'Status tidak diketahui'
                                         };
@@ -293,6 +307,10 @@
                                     {{-- Aksi --}}
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
+                                            <button type="button" class="btn btn-primary" title="Detail"
+                                                onclick="showDetailModal({{ $item->id }})">
+                                                <i class="bi bi-info-circle"></i>
+                                            </button>
                                             <button type="button" class="btn btn-info" title="Riwayat"
                                                 onclick="showRiwayatModal({{ $item->id }})">
                                                 <i class="bi bi-clock-history"></i>
@@ -301,22 +319,18 @@
                                                 onclick="showEditModal({{ $item->id }})">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-
-                                           <!-- @if($item->kondisi_saat_ini === 'Baik' && !empty($item->status_line) && $item->status_line !== 'Lab')
-                                            <button type="button" class="btn btn-secondary" title="Tandai Rusak"
-                                                onclick="tandaiRusak({{ $item->id }})">
-                                                <i class="bi bi-exclamation-triangle"></i>
-                                            </button>
-                                            @endif-->
-
                                             <button type="button" class="btn btn-danger" title="Hapus"
-                                                onclick="deleteTimbangan({{ $item->id }})">
+                                                onclick="deletePeralatan({{ $item->id }})">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                                @endforeach
+                                @empty
+                                <tr>
+                                    <td colspan="12" class="text-center text-muted py-4">Belum ada data peralatan.</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
                     </div>
@@ -324,28 +338,28 @@
                     <!-- Pagination -->
                     <div class="d-flex justify-content-between align-items-center mt-4">
                         <div class="text-muted">
-                            Menampilkan {{ $timbangan->firstItem() ?? 0 }} hingga {{ $timbangan->lastItem() ?? 0 }}
-                            dari {{ $timbangan->total() ?? 0 }} timbangan
+                            Menampilkan {{ $peralatan->firstItem() ?? 0 }} hingga {{ $peralatan->lastItem() ?? 0 }}
+                            dari {{ $peralatan->total() ?? 0 }} peralatan
                         </div>
 
-                        @if($timbangan->hasPages())
+                        @if($peralatan->hasPages())
                         <nav>
                             <ul class="pagination mb-0">
                                 {{-- Previous Page Link --}}
-                                @if($timbangan->onFirstPage())
+                                @if($peralatan->onFirstPage())
                                 <li class="page-item disabled">
                                     <span class="page-link">&laquo;</span>
                                 </li>
                                 @else
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ $timbangan->previousPageUrl() }}" rel="prev">&laquo;</a>
+                                    <a class="page-link" href="{{ $peralatan->previousPageUrl() }}" rel="prev">&laquo;</a>
                                 </li>
                                 @endif
 
                                 {{-- Pagination Elements --}}
                                 @php
-                                    $current = $timbangan->currentPage();
-                                    $last    = $timbangan->lastPage();
+                                    $current = $peralatan->currentPage();
+                                    $last    = $peralatan->lastPage();
                                     $start   = max(1, $current - 2);
                                     $end     = min($last, $current + 2);
 
@@ -361,7 +375,7 @@
                                 {{-- First Page Link --}}
                                 @if($start > 1)
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ $timbangan->url(1) }}">1</a>
+                                    <a class="page-link" href="{{ $peralatan->url(1) }}">1</a>
                                 </li>
                                 @if($start > 2)
                                 <li class="page-item disabled">
@@ -376,7 +390,7 @@
                                     @if($i == $current)
                                     <span class="page-link">{{ $i }}</span>
                                     @else
-                                    <a class="page-link" href="{{ $timbangan->url($i) }}">{{ $i }}</a>
+                                    <a class="page-link" href="{{ $peralatan->url($i) }}">{{ $i }}</a>
                                     @endif
                                 </li>
                                 @endfor
@@ -389,14 +403,14 @@
                                 </li>
                                 @endif
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ $timbangan->url($last) }}">{{ $last }}</a>
+                                    <a class="page-link" href="{{ $peralatan->url($last) }}">{{ $last }}</a>
                                 </li>
                                 @endif
 
                                 {{-- Next Page Link --}}
-                                @if($timbangan->hasMorePages())
+                                @if($peralatan->hasMorePages())
                                 <li class="page-item">
-                                    <a class="page-link" href="{{ $timbangan->nextPageUrl() }}" rel="next">&raquo;</a>
+                                    <a class="page-link" href="{{ $peralatan->nextPageUrl() }}" rel="next">&raquo;</a>
                                 </li>
                                 @else
                                 <li class="page-item disabled">
@@ -418,11 +432,11 @@
 <div class="modal fade" id="importModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{{ route('timbangan.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('peralatan.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header" style="background-color:white; color:#4361EE;">
                     <h5 class="modal-title">
-                        <i class="bi bi-upload me-2"></i>Import Data Timbangan
+                        <i class="bi bi-upload me-2"></i>Import Data Peralatan
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -432,7 +446,7 @@
                         <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls,.csv" required>
                         <div class="form-text">
                             Format file: .xlsx, .xls, atau .csv.
-                            <a href="{{ route('timbangan.download-template') }}" class="text-decoration-none">
+                            <a href="{{ route('peralatan.download-template') }}" class="text-decoration-none">
                                 <i class="bi bi-download me-1"></i>Download template
                             </a>
                         </div>
@@ -440,10 +454,10 @@
                     <div class="alert alert-info">
                         <h6 class="alert-heading">Petunjuk Import:</h6>
                         <ul class="mb-0 small">
-                            <li>Kolom wajib: kode_asset, merk_tipe_no_seri, tanggal_datang, lokasi_saat_ini</li>
-                            <li>Kolom opsional: tanggal_pemakaian, tanggal_kerusakan, keluhan, perbaikan,
-                                perbaikan_eksternal, tanggal_rilis, status_line</li>
-                            <li>Kondisi: Baik, Rusak, atau Dalam Perbaikan</li>
+                            <li>Kolom wajib: kode_kategori, kode_asset, merk, tanggal_datang, lokasi_asli (type &amp; serial_number opsional)</li>
+                            <li>Kolom opsional: certificate_number</li>
+                            <li>Kolom lain di luar daftar wajib akan otomatis dianggap sebagai spesifikasi (label = nama kolom)</li>
+                            <li>kode_kategori harus sudah terdaftar di Master Kategori Alat</li>
                         </ul>
                     </div>
                 </div>
@@ -604,7 +618,7 @@ function doSort(col, dir) {
 
 function showCreateModal() {
     $.ajax({
-        url: '{{ route("timbangan.create") }}',
+        url: '{{ route("peralatan.create") }}',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -624,7 +638,7 @@ function showCreateModal() {
 
 function showEditModal(id) {
     $.ajax({
-        url: '{{ url("timbangan") }}/' + id + '/edit',
+        url: '{{ url("peralatan") }}/' + id + '/edit',
         type: 'GET',
         success: function(response) {
             if (response.success) {
@@ -642,6 +656,60 @@ function showEditModal(id) {
     });
 }
 
+function showDetailModal(id) {
+    Swal.fire({
+        title: 'Memuat data...',
+        text: 'Sedang mengambil data detail',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+    });
+
+    $('#dynamicModalContent').html('');
+
+    $.ajax({
+        url: '{{ url("peralatan") }}/' + id + '/detail',
+        type: 'GET',
+        dataType: 'json',
+        timeout: 10000,
+        success: function(response) {
+            Swal.close();
+
+            if (response && response.success) {
+                $('#dynamicModalContent').html(response.html);
+                $('#dynamicModal').modal('show');
+            } else {
+                let errorMsg = (response && response.message) ? response.message : 'Gagal memuat data detail';
+                Swal.fire({ icon: 'error', title: 'Error', text: errorMsg });
+            }
+        },
+        error: function(xhr, status, error) {
+            Swal.close();
+            console.error('AJAX Error:', { status: xhr.status, statusText: xhr.statusText, responseText: xhr.responseText, error: error });
+
+            let errorMessage = 'Gagal memuat data detail';
+
+            if (xhr.responseText && xhr.responseText.trim().startsWith('<!DOCTYPE html>')) {
+                errorMessage = 'Terjadi error di server. Cek log Laravel untuk detailnya.';
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            } else if (xhr.status === 500) {
+                errorMessage = 'Internal Server Error - Cek log server';
+            } else if (xhr.status === 404) {
+                errorMessage = 'Data tidak ditemukan';
+            } else if (xhr.status === 0) {
+                errorMessage = 'Koneksi terputus atau timeout';
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error ' + xhr.status,
+                text: errorMessage,
+                footer: '<small>Periksa console browser untuk detail lebih lanjut</small>'
+            });
+        }
+    });
+}
+
 function showRiwayatModal(id) {
     console.log('Loading riwayat for ID:', id);
 
@@ -655,7 +723,7 @@ function showRiwayatModal(id) {
     $('#dynamicModalContent').html('');
 
     $.ajax({
-        url: '{{ url("timbangan") }}/' + id + '/riwayat',
+        url: '{{ url("peralatan") }}/' + id + '/riwayat',
         type: 'GET',
         dataType: 'json',
         timeout: 10000,
@@ -705,61 +773,10 @@ function showRiwayatModal(id) {
     });
 }
 
-function tandaiRusak(id) {
-    Swal.fire({
-        title: 'Tandai Timbangan Rusak?',
-        text: "Timbangan akan ditandai rusak dan bisa dicatat di menu Perbaikan",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Ya, Tandai Rusak!',
-        cancelButtonText: 'Batal'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Memproses...',
-                text: 'Sedang menandai timbangan rusak',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
-
-            $.ajax({
-                url: '{{ url("timbangan") }}/' + id + '/tandai-rusak',
-                type: 'POST',
-                data: { _token: '{{ csrf_token() }}' },
-                success: function(response) {
-                    Swal.close();
-                    if (response.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Berhasil',
-                            text: response.message,
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => { location.reload(); });
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Error', text: response.message || 'Gagal menandai timbangan rusak' });
-                    }
-                },
-                error: function(xhr) {
-                    Swal.close();
-                    console.error('Error:', xhr);
-                    let errorMessage = 'Gagal menandai timbangan rusak';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    Swal.fire({ icon: 'error', title: 'Error', text: errorMessage });
-                }
-            });
-        }
-    });
-}
-
-function deleteTimbangan(id) {
+function deletePeralatan(id) {
     Swal.fire({
         title: 'Apakah Anda yakin?',
-        text: "Data timbangan akan dihapus permanen!",
+        text: "Data peralatan akan dihapus permanen!",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -776,7 +793,7 @@ function deleteTimbangan(id) {
             });
 
             $.ajax({
-                url: '{{ url("timbangan") }}/' + id,
+                url: '{{ url("peralatan") }}/' + id,
                 type: 'DELETE',
                 data: { _token: '{{ csrf_token() }}' },
                 success: function(response) {

@@ -5,15 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Timbangan extends Model
+class Peralatan extends Model
 {
     use HasFactory;
 
-    protected $table = 'timbangan';
+    protected $table = 'peralatan';
 
     protected $fillable = [
+        'kategori_alat_id',
         'kode_asset',
-        'merk_tipe_no_seri',
+        'merk',
+        'type',
+        'serial_number',
         'tanggal_datang',
         'lokasi_asli',
         'status_line',
@@ -21,27 +24,32 @@ class Timbangan extends Model
         'kondisi_saat_ini',
         'catatan',
         'certificate_number',
-        'jenis_alat_ukur',
-        'kapasitas',
+        'spesifikasi',
     ];
 
     protected $casts = [
         'tanggal_datang'            => 'date',
         'tanggal_selesai_perbaikan' => 'date',
+        'spesifikasi'               => 'array',
         'created_at'                => 'datetime',
         'updated_at'                => 'datetime',
     ];
 
     // ── Relasi ────────────────────────────────────────────────────────────────
 
+    public function kategoriAlat()
+    {
+        return $this->belongsTo(MasterKategoriAlat::class, 'kategori_alat_id');
+    }
+
     public function riwayatPerbaikan()
     {
-        return $this->hasMany(RiwayatPerbaikan::class, 'timbangan_id');
+        return $this->hasMany(RiwayatPerbaikan::class, 'peralatan_id');
     }
 
     public function riwayatPenggunaan()
     {
-        return $this->hasMany(RiwayatPenggunaan::class, 'timbangan_id');
+        return $this->hasMany(RiwayatPenggunaan::class, 'peralatan_id');
     }
 
     public function masterLine()
@@ -50,31 +58,42 @@ class Timbangan extends Model
     }
 
     /**
-     * BARU — semua laporan kerusakan timbangan ini
+     * Semua laporan kerusakan peralatan ini
      */
     public function laporanKerusakan()
     {
-        return $this->hasMany(LaporanKerusakan::class, 'timbangan_id');
+        return $this->hasMany(LaporanKerusakan::class, 'peralatan_id');
     }
 
     /**
-     * BARU — laporan kerusakan yang masih aktif (belum selesai)
+     * Laporan kerusakan yang masih aktif (belum selesai)
      */
     public function laporanKerusakanAktif()
     {
-        return $this->hasOne(LaporanKerusakan::class, 'timbangan_id')
+        return $this->hasOne(LaporanKerusakan::class, 'peralatan_id')
                     ->whereIn('status', ['Menunggu', 'Diproses'])
                     ->latest();
     }
 
     /**
-     * BARU — penggunaan aktif saat ini (timbangan masih di line ini)
+     * Penggunaan aktif saat ini (peralatan masih di line ini)
      */
     public function penggunaanAktif()
     {
-        return $this->hasOne(RiwayatPenggunaan::class, 'timbangan_id')
-                    ->whereColumn('line_tujuan', 'timbangan.status_line')
+        return $this->hasOne(RiwayatPenggunaan::class, 'peralatan_id')
+                    ->whereColumn('line_tujuan', 'peralatan.status_line')
                     ->latest('tanggal_pemakaian');
+    }
+
+    public function kalibrasi()
+    {
+        return $this->hasMany(Kalibrasi::class, 'peralatan_id');
+    }
+
+    public function kalibrasiTerakhir()
+    {
+        return $this->hasOne(Kalibrasi::class, 'peralatan_id')
+                    ->latest('tanggal_pelaksanaan');
     }
 
     // ── Scopes ────────────────────────────────────────────────────────────────
@@ -82,6 +101,11 @@ class Timbangan extends Model
     public function scopeByKodeAsset($query, $kodeAsset)
     {
         return $query->where('kode_asset', $kodeAsset);
+    }
+
+    public function scopeKategori($query, $kategoriAlatId)
+    {
+        return $query->where('kategori_alat_id', $kategoriAlatId);
     }
 
     public function scopeBaik($query)
@@ -116,6 +140,26 @@ class Timbangan extends Model
         return $this->kode_asset;
     }
 
+    public function getNamaKategoriAttribute(): string
+    {
+        return $this->kategoriAlat ? $this->kategoriAlat->nama_kategori : '-';
+    }
+
+    /**
+     * Gabungan Merk, Type, dan No. Seri untuk tampilan ringkas
+     * (dipakai di tabel list, riwayat, dsb — bukan di form input).
+     */
+    public function getMerkTipeLengkapAttribute(): string
+    {
+        $bagian = trim(implode(' ', array_filter([$this->merk, $this->type])));
+
+        if (!empty($this->serial_number)) {
+            $bagian .= ($bagian ? ' ' : '') . 'No. ' . $this->serial_number;
+        }
+
+        return $bagian !== '' ? $bagian : '-';
+    }
+
     public function getStatusAttribute(): string
     {
         if ($this->kondisi_saat_ini === 'Baik' && $this->status_line) {
@@ -140,6 +184,32 @@ class Timbangan extends Model
         } else {
             return $this->kondisi_saat_ini;
         }
+    }
+
+    /**
+     * Ringkasan spesifikasi (JSON key-value) jadi satu baris teks,
+     * misal "Kapasitas: 3000gr/0.2gr" atau "Range: -20°C – 100°C".
+     * Generik — mengikuti apa pun field yang diisi per kategori alat,
+     * bukan hardcode nama field seperti 'kapasitas' saja.
+     * Dipakai di modul Kalibrasi (create/bulk modal, template Excel)
+     * supaya tidak bergantung pada satu jenis alat.
+     */
+    public function getSpesifikasiRingkasAttribute(): string
+    {
+        if (empty($this->spesifikasi) || !is_array($this->spesifikasi)) {
+            return '-';
+        }
+
+        $bagian = [];
+        foreach ($this->spesifikasi as $label => $nilai) {
+            $nilai = trim((string) $nilai);
+            if ($nilai === '') {
+                continue;
+            }
+            $bagian[] = ucfirst($label) . ': ' . $nilai;
+        }
+
+        return $bagian ? implode(', ', $bagian) : '-';
     }
 
     public function getStatusLokasiAttribute(): string
@@ -213,7 +283,7 @@ class Timbangan extends Model
     }
 
     /**
-     * BARU — apakah timbangan ini bisa dilaporkan rusak
+     * Apakah peralatan ini bisa dilaporkan rusak
      * (harus Baik, sedang di Line, dan belum ada laporan aktif)
      */
     public function bisaDilaporkanRusak(): bool
@@ -221,15 +291,4 @@ class Timbangan extends Model
         return $this->kondisi_saat_ini === 'Baik'
             && $this->status_line !== null;
     }
-
-    public function kalibrasi()
-{
-    return $this->hasMany(\App\Models\Kalibrasi::class, 'timbangan_id');
-}
- 
-public function kalibrasiterakhir()
-{
-    return $this->hasOne(\App\Models\Kalibrasi::class, 'timbangan_id')
-                ->latest('tanggal_pelaksanaan');
-}
 }

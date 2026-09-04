@@ -1,7 +1,7 @@
 {{--
     Partial: perbaikan/partials/detail-modal.blade.php
     Di-render via AJAX oleh PerbaikanController@detail
-    Variabel: $laporan (LaporanKerusakan with timbangan, keluhanList, riwayatPenggunaan, riwayatPerbaikan.detailTindakan.masterTindakan)
+    Variabel: $laporan (LaporanKerusakan with peralatan, keluhanList, riwayatPenggunaan, riwayatPerbaikan.detailTindakan.masterTindakan)
 --}}
 
 @php
@@ -42,17 +42,17 @@
                 <div class="col-sm-4">
                     <div class="small text-muted mb-1">Kode Asset</div>
                     <div class="fw-bold text-primary fs-6">
-                        {{ $laporan->timbangan->kode_asset }}
+                        {{ $laporan->peralatan->kode_asset }}
                     </div>
                 </div>
                 <div class="col-sm-4">
                     <div class="small text-muted mb-1">Merk / Tipe</div>
-                    <div class="fw-semibold small">{{ $laporan->timbangan->merk_tipe_no_seri }}</div>
+                    <div class="fw-semibold small">{{ $laporan->peralatan->merk_tipe_lengkap }}</div>
                 </div>
                 <div class="col-sm-4">
                     <div class="small text-muted mb-1">Kondisi Saat Ini</div>
                     @php
-                        $kondisiColor = match($laporan->timbangan->kondisi_saat_ini) {
+                        $kondisiColor = match($laporan->peralatan->kondisi_saat_ini) {
                             'Baik'            => 'success',
                             'Rusak'           => 'danger',
                             'Dalam Perbaikan' => 'warning',
@@ -60,7 +60,7 @@
                         };
                     @endphp
                     <span class="badge bg-{{ $kondisiColor }}">
-                        {{ $laporan->timbangan->kondisi_saat_ini }}
+                        {{ $laporan->peralatan->kondisi_saat_ini }}
                     </span>
                 </div>
             </div>

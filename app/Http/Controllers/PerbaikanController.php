@@ -10,7 +10,6 @@ use App\Models\MasterPic;
 use App\Models\MasterTindakan;
 use App\Models\RiwayatPenggunaan;
 use App\Models\RiwayatPerbaikan;
-use App\Models\Timbangan;
 use Illuminate\Http\Request;
 
 class PerbaikanController extends Controller
@@ -21,7 +20,7 @@ class PerbaikanController extends Controller
     {
         // Tabel utama sekarang adalah laporan_kerusakan
         $query = LaporanKerusakan::with([
-            'timbangan',
+            'peralatan',
             'keluhanList',
             'riwayatPerbaikan' => fn($q) => $q->latest(),
         ]);
@@ -41,7 +40,7 @@ class PerbaikanController extends Controller
 
         // Filter kode asset
         if ($request->filled('kode_asset')) {
-            $query->whereHas('timbangan', fn($q) =>
+            $query->whereHas('peralatan', fn($q) =>
                 $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%')
             );
         }
@@ -59,7 +58,7 @@ class PerbaikanController extends Controller
     public function prosesModal($laporan_id)
     {
         $laporan = LaporanKerusakan::with([
-            'timbangan',
+            'peralatan',
             'keluhanList',
             'riwayatPenggunaan',
             'riwayatPerbaikan.detailTindakan.masterTindakan',
@@ -108,7 +107,7 @@ class PerbaikanController extends Controller
         if ($request->status_perbaikan === 'Selesai' && empty($request->line_tujuan)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Pilih lokasi tujuan timbangan setelah perbaikan selesai.',
+                'message' => 'Pilih lokasi tujuan peralatan setelah perbaikan selesai.',
             ], 422);
         }
 
@@ -127,12 +126,12 @@ class PerbaikanController extends Controller
             && empty($request->pic_penerima)) {
             return response()->json([
                 'success' => false,
-                'message' => 'PIC penerima harus diisi saat timbangan dikirim ke line.',
+                'message' => 'PIC penerima harus diisi saat peralatan dikirim ke line.',
             ], 422);
         }
 
-        $laporan   = LaporanKerusakan::with('timbangan')->findOrFail($laporan_id);
-        $timbangan = $laporan->timbangan;
+        $laporan   = LaporanKerusakan::with('peralatan')->findOrFail($laporan_id);
+        $peralatan = $laporan->peralatan;
 
         if ($laporan->isSelesai()) {
             return response()->json([
@@ -146,7 +145,7 @@ class PerbaikanController extends Controller
 
         $perbaikan->fill([
             'laporan_kerusakan_id'      => $laporan->id,
-            'timbangan_id'              => $timbangan->id,
+            'peralatan_id'              => $peralatan->id,
             'line_sebelumnya'           => $laporan->line_asal,
             'tanggal_masuk_lab'         => $request->tanggal_masuk_lab,
             'status_perbaikan'          => $request->status_perbaikan,
@@ -179,11 +178,11 @@ class PerbaikanController extends Controller
 
                 // ── BARU: kalau tindakannya "Kalibrasi ulang", catat juga
                 // sebagai data resmi di modul Kalibrasi, bukan cuma teks tindakan.
-                // KalibrasiObserver otomatis menyinkronkan timbangan.certificate_number
+                // KalibrasiObserver otomatis menyinkronkan peralatan.certificate_number
                 // begitu record ini tersimpan.
                 if ($idTindakanKalibrasi && $tindakanId == $idTindakanKalibrasi) {
                     Kalibrasi::firstOrCreate([
-                        'timbangan_id'        => $timbangan->id,
+                        'peralatan_id'        => $peralatan->id,
                         'tanggal_pelaksanaan' => $tanggalTindakan,
                     ], [
                         'dept_bagian' => $request->line_tujuan ?? $laporan->line_asal,
@@ -195,7 +194,7 @@ class PerbaikanController extends Controller
             }
         }
 
-        // ── Update status laporan & timbangan berdasarkan status perbaikan ────
+        // ── Update status laporan & peralatan berdasarkan status perbaikan ────
         switch ($request->status_perbaikan) {
 
             case 'Selesai':
@@ -204,8 +203,8 @@ class PerbaikanController extends Controller
                 // Update laporan → Selesai
                 $laporan->update(['status' => 'Selesai']);
 
-                // Update timbangan
-                $timbangan->update([
+                // Update peralatan
+                $peralatan->update([
                     'kondisi_saat_ini'          => 'Baik',
                     'status_line'               => $statusLine,
                     'tanggal_selesai_perbaikan' => $request->tanggal_selesai_perbaikan,
@@ -214,7 +213,7 @@ class PerbaikanController extends Controller
                 // Jika dikirim ke Line, otomatis buat riwayat penggunaan baru
                 if ($statusLine !== null) {
                     RiwayatPenggunaan::create([
-                        'timbangan_id'      => $timbangan->id,
+                        'peralatan_id'      => $peralatan->id,
                         'line_tujuan'       => $statusLine,
                         'tanggal_pemakaian' => $request->tanggal_selesai_perbaikan ?? now()->toDateString(),
                         'pic'               => $request->pic_penerima ?? '-',
@@ -229,8 +228,8 @@ class PerbaikanController extends Controller
                 // Update laporan → Diproses
                 $laporan->update(['status' => 'Diproses']);
 
-                // Timbangan masuk lab, kondisi Dalam Perbaikan
-                $timbangan->update([
+                // Peralatan masuk lab, kondisi Dalam Perbaikan
+                $peralatan->update([
                     'kondisi_saat_ini' => 'Dalam Perbaikan',
                     'status_line'      => null,
                 ]);
@@ -238,13 +237,13 @@ class PerbaikanController extends Controller
 
             default: // Menunggu Penanganan
                 $laporan->update(['status' => 'Diproses']);
-                // Timbangan tetap di line dengan kondisi Rusak
+                // Peralatan tetap di line dengan kondisi Rusak
                 break;
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Status perbaikan ' . $timbangan->kode_asset . ' berhasil diperbarui ke "' .
+            'message' => 'Status perbaikan ' . $peralatan->kode_asset . ' berhasil diperbarui ke "' .
                          $request->status_perbaikan . '".',
         ]);
     }
@@ -255,7 +254,7 @@ class PerbaikanController extends Controller
     {
         try {
             $laporan = LaporanKerusakan::with([
-                'timbangan',
+                'peralatan',
                 'keluhanList',
                 'riwayatPenggunaan',
                 'riwayatPerbaikan.detailTindakan.masterTindakan',
@@ -273,29 +272,7 @@ class PerbaikanController extends Controller
         }
     }
 
-    // ── LEGACY: create & store lama (dipertahankan agar route lama tidak error) ─
-
-    /**
-     * @deprecated Gunakan prosesModal() dan prosesStore() untuk alur baru.
-     *             Method ini dipertahankan untuk kompatibilitas jika ada route lama.
-     */
-    public function create($timbangan_id = null)
-    {
-        $timbangan = Timbangan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
-            ->whereNotNull('status_line')
-            ->orderBy('kode_asset')
-            ->get();
-
-        $lines             = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
-        $selectedTimbangan = $timbangan_id ? Timbangan::find($timbangan_id) : null;
-
-        return response()->json([
-            'success' => true,
-            'html'    => view('perbaikan.partials.create-modal', compact(
-                'timbangan', 'lines', 'selectedTimbangan'
-            ))->render(),
-        ]);
-    }
+    // ── LEGACY: dipertahankan agar route lama tidak error ─────────────────────
 
     /**
      * @deprecated Gunakan prosesStore() untuk alur baru.
@@ -324,35 +301,5 @@ class PerbaikanController extends Controller
         }
 
         return $this->prosesStore($request, $riwayat->laporan_kerusakan_id);
-    }
-
-    // ── GET TIMBANGAN DATA (AJAX — dipertahankan untuk form lama) ────────────
-
-    public function getTimbanganData($id)
-    {
-        try {
-            $timbangan = Timbangan::with(['riwayatPenggunaan' => function ($query) {
-                $query->orderBy('tanggal_pemakaian', 'desc')->limit(1);
-            }])->findOrFail($id);
-
-            $penggunaanTerakhir = $timbangan->riwayatPenggunaan->first();
-
-            return response()->json([
-                'success' => true,
-                'data'    => [
-                    'line_sebelumnya'     => $timbangan->status_line ?: 'Lab',
-                    'penggunaan_terakhir' => $penggunaanTerakhir ? $penggunaanTerakhir->pic : '-',
-                    'kondisi'             => $timbangan->kondisi_saat_ini,
-                    'lokasi_sekarang'     => $timbangan->status_line ?: 'Lab',
-                    'kode_asset'          => $timbangan->kode_asset,
-                    'merk_tipe'           => $timbangan->merk_tipe_no_seri,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data timbangan tidak ditemukan.',
-            ], 404);
-        }
     }
 }

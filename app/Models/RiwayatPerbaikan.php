@@ -12,8 +12,8 @@ class RiwayatPerbaikan extends Model
     protected $table = 'riwayat_perbaikan';
 
     protected $fillable = [
-        'laporan_kerusakan_id',   // BARU — relasi ke laporan_kerusakan
-        'timbangan_id',
+        'laporan_kerusakan_id',
+        'peralatan_id',
         'line_sebelumnya',
         'penggunaan_terakhir',    // dipertahankan untuk kompatibilitas data lama
         'deskripsi_keluhan',      // dipertahankan untuk kompatibilitas data lama
@@ -23,7 +23,7 @@ class RiwayatPerbaikan extends Model
         'tanggal_selesai_perbaikan',
         'line_tujuan',
         'status_perbaikan',
-        'catatan',                // BARU — catatan proses perbaikan
+        'catatan',
         'jenis_perbaikan',
         'pic_teknik',
     ];
@@ -37,9 +37,9 @@ class RiwayatPerbaikan extends Model
 
     // ── Relasi ────────────────────────────────────────────────────────────────
 
-    public function timbangan()
+    public function peralatan()
     {
-        return $this->belongsTo(Timbangan::class, 'timbangan_id');
+        return $this->belongsTo(Peralatan::class, 'peralatan_id');
     }
 
     /**
@@ -64,17 +64,17 @@ class RiwayatPerbaikan extends Model
 
     public function getKodeAssetLengkapAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->kode_asset : '-';
+        return $this->peralatan ? $this->peralatan->kode_asset : '-';
     }
 
     public function getMerkLengkapAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->merk_tipe_no_seri : '-';
+        return $this->peralatan ? $this->peralatan->merk_tipe_no_seri : '-';
     }
 
-    public function getKondisiTimbanganAttribute(): string
+    public function getKondisiPeralatanAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->kondisi_saat_ini : '-';
+        return $this->peralatan ? $this->peralatan->kondisi_saat_ini : '-';
     }
 
     /** Durasi perbaikan dalam hari */

@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\MasterLine;
 use App\Models\MasterPic;
 use App\Models\RiwayatPenggunaan;
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -17,8 +17,8 @@ class PenggunaanController extends Controller
     {
         // ── Base query riwayat (untuk filter) ──────────────────────────────
         $riwayatQuery = RiwayatPenggunaan::with([
-            'timbangan',
-            'laporanKerusakan', // BARU — untuk cek status tombol laporkan rusak
+            'peralatan',
+            'laporanKerusakan', // untuk cek status tombol laporkan rusak
         ]);
 
         if ($request->filled('tanggal_dari')) {
@@ -31,31 +31,31 @@ class PenggunaanController extends Controller
             $riwayatQuery->where('line_tujuan', $request->line_tujuan);
         }
         if ($request->filled('kode_asset')) {
-            $riwayatQuery->whereHas('timbangan', fn($q) =>
+            $riwayatQuery->whereHas('peralatan', fn($q) =>
                 $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%')
             );
         }
         if ($request->filled('kondisi')) {
-            $riwayatQuery->whereHas('timbangan', fn($q) =>
+            $riwayatQuery->whereHas('peralatan', fn($q) =>
                 $q->where('kondisi_saat_ini', $request->kondisi)
             );
         }
 
-        // ── Ambil daftar timbangan_id unik yang punya riwayat sesuai filter ──
-        // (urut berdasarkan tanggal_pemakaian terbaru per timbangan)
+        // ── Ambil daftar peralatan_id unik yang punya riwayat sesuai filter ──
+        // (urut berdasarkan tanggal_pemakaian terbaru per peralatan)
         $idQuery = (clone $riwayatQuery)
-            ->select('timbangan_id')
+            ->select('peralatan_id')
             ->selectRaw('MAX(tanggal_pemakaian) as terakhir_dipakai')
-            ->groupBy('timbangan_id');
+            ->groupBy('peralatan_id');
 
         $sortBy  = $request->get('sort_by');
         $sortDir = in_array($request->get('sort_dir'), ['asc', 'desc']) ? $request->get('sort_dir') : 'desc';
 
         if ($sortBy === 'kode_asset' || $sortBy === 'merk_tipe') {
-            $kolom = $sortBy === 'kode_asset' ? 'kode_asset' : 'merk_tipe_no_seri';
-            $idQuery->join('timbangan', 'riwayat_penggunaan.timbangan_id', '=', 'timbangan.id')
-                    ->orderBy('timbangan.' . $kolom, $sortDir)
-                    ->addSelect('timbangan.' . $kolom);
+            $kolom = $sortBy === 'kode_asset' ? 'kode_asset' : 'merk';
+            $idQuery->join('peralatan', 'riwayat_penggunaan.peralatan_id', '=', 'peralatan.id')
+                    ->orderBy('peralatan.' . $kolom, $sortDir)
+                    ->addSelect('peralatan.' . $kolom);
         } else {
             // default & 'tanggal_pemakaian': urutkan berdasarkan pemakaian terakhir
             $idQuery->orderBy('terakhir_dipakai', $sortDir === 'asc' ? 'asc' : 'desc');
@@ -68,29 +68,29 @@ class PenggunaanController extends Controller
 
         $pagedIds = $allGrouped
             ->slice(($page - 1) * $perPage, $perPage)
-            ->pluck('timbangan_id')
+            ->pluck('peralatan_id')
             ->values();
 
-        // ── Ambil seluruh riwayat (sesuai filter) untuk timbangan-timbangan di halaman ini ──
-        $riwayatPerTimbangan = collect();
+        // ── Ambil seluruh riwayat (sesuai filter) untuk peralatan-peralatan di halaman ini ──
+        $riwayatPerPeralatan = collect();
         if ($pagedIds->isNotEmpty()) {
-            $riwayatPerTimbangan = (clone $riwayatQuery)
-                ->whereIn('timbangan_id', $pagedIds)
+            $riwayatPerPeralatan = (clone $riwayatQuery)
+                ->whereIn('peralatan_id', $pagedIds)
                 ->orderBy('tanggal_pemakaian', 'desc')
                 ->orderBy('created_at', 'desc')
                 ->get()
-                ->groupBy('timbangan_id');
+                ->groupBy('peralatan_id');
         }
 
-        // ── Susun data per timbangan, urut sesuai $pagedIds ──────────────────
-        $groupedData = $pagedIds->map(function ($timbanganId) use ($riwayatPerTimbangan) {
-            $riwayatList = $riwayatPerTimbangan->get($timbanganId, collect());
+        // ── Susun data per peralatan, urut sesuai $pagedIds ──────────────────
+        $groupedData = $pagedIds->map(function ($peralatanId) use ($riwayatPerPeralatan) {
+            $riwayatList = $riwayatPerPeralatan->get($peralatanId, collect());
             return [
-                'timbangan' => $riwayatList->first()?->timbangan ?? Timbangan::find($timbanganId),
+                'peralatan' => $riwayatList->first()?->peralatan ?? Peralatan::find($peralatanId),
                 'riwayat'   => $riwayatList,
                 'jumlah'    => $riwayatList->count(),
             ];
-        })->filter(fn($d) => $d['timbangan'] !== null)->values();
+        })->filter(fn($d) => $d['peralatan'] !== null)->values();
 
         // ── Bungkus sebagai paginator agar bisa pakai komponen pagination ───
         $penggunaan = new LengthAwarePaginator(
@@ -104,20 +104,20 @@ class PenggunaanController extends Controller
             ]
         );
 
-        $timbanganList = Timbangan::where('kondisi_saat_ini', 'Baik')
+        $peralatanList = Peralatan::where('kondisi_saat_ini', 'Baik')
                                   ->orderBy('kode_asset')
                                   ->get();
 
         $lineList = MasterLine::where('status_aktif', true)->orderBy('nama_line')->get();
 
-        return view('penggunaan.index', compact('penggunaan', 'timbanganList', 'lineList'));
+        return view('penggunaan.index', compact('penggunaan', 'peralatanList', 'lineList'));
     }
 
     // ── CREATE MODAL (AJAX) ───────────────────────────────────────────────────
 
-    public function create($timbangan_id = null)
+    public function create($peralatan_id = null)
     {
-        $timbangan = Timbangan::where('kondisi_saat_ini', 'Baik')
+        $peralatan = Peralatan::where('kondisi_saat_ini', 'Baik')
                               ->orderBy('kode_asset')
                               ->get();
 
@@ -125,13 +125,13 @@ class PenggunaanController extends Controller
 
         $picList = MasterPic::with('line')->aktif()->orderBy('nama_pic')->get();
 
-        $selectedTimbangan = $timbangan_id ? Timbangan::find($timbangan_id) : null;
+        $selectedPeralatan = $peralatan_id ? Peralatan::find($peralatan_id) : null;
 
         return response()->json([
             'success' => true,
             'html'    => view(
                 'penggunaan.partials.create-modal',
-                compact('timbangan', 'lines', 'picList', 'selectedTimbangan')
+                compact('peralatan', 'lines', 'picList', 'selectedPeralatan')
             )->render(),
         ]);
     }
@@ -141,36 +141,36 @@ class PenggunaanController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'timbangan_id'      => 'required|exists:timbangan,id',
+            'peralatan_id'      => 'required|exists:peralatan,id',
             'line_tujuan'       => 'required|string',
             'tanggal_pemakaian' => 'required|date',
             'pic'               => 'required|string|max:255',
             'keterangan'        => 'nullable|string',
         ]);
 
-        $timbangan = Timbangan::findOrFail($request->timbangan_id);
+        $peralatan = Peralatan::findOrFail($request->peralatan_id);
 
-        if ($timbangan->kondisi_saat_ini !== 'Baik') {
+        if ($peralatan->kondisi_saat_ini !== 'Baik') {
             return response()->json([
                 'success' => false,
-                'message' => 'Timbangan tidak dalam kondisi baik. Tidak bisa digunakan.',
+                'message' => 'Peralatan tidak dalam kondisi baik. Tidak bisa digunakan.',
             ], 422);
         }
 
-        $lineSebelumnya = $timbangan->status_line;
+        $lineSebelumnya = $peralatan->status_line;
 
         RiwayatPenggunaan::create([
-            'timbangan_id'      => $request->timbangan_id,
+            'peralatan_id'      => $request->peralatan_id,
             'line_tujuan'       => $request->line_tujuan,
             'tanggal_pemakaian' => $request->tanggal_pemakaian,
             'pic'               => $request->pic,
             'keterangan'        => $request->keterangan,
         ]);
 
-        $timbangan->update(['status_line' => $request->line_tujuan]);
+        $peralatan->update(['status_line' => $request->line_tujuan]);
 
-        $message  = 'Penggunaan timbangan ' . $timbangan->kode_asset . ' berhasil dicatat. ';
-        $message .= 'Timbangan dipindahkan dari '
+        $message  = 'Penggunaan peralatan ' . $peralatan->kode_asset . ' berhasil dicatat. ';
+        $message .= 'Peralatan dipindahkan dari '
                   . ($lineSebelumnya ?? 'Lab')
                   . ' ke ' . $request->line_tujuan;
 
@@ -189,20 +189,20 @@ class PenggunaanController extends Controller
     public function getPenggunaanUntukLaporan($id)
     {
         try {
-            $penggunaan = RiwayatPenggunaan::with('timbangan')->findOrFail($id);
-            $timbangan  = $penggunaan->timbangan;
+            $penggunaan = RiwayatPenggunaan::with('peralatan')->findOrFail($id);
+            $peralatan  = $penggunaan->peralatan;
 
             return response()->json([
                 'success' => true,
                 'data'    => [
-                    'penggunaan_id'  => $penggunaan->id,
-                    'timbangan_id'   => $timbangan->id,
-                    'kode_asset'     => $timbangan->kode_asset,
-                    'merk_tipe'      => $timbangan->merk_tipe_no_seri,
-                    'line_asal'      => $penggunaan->line_tujuan,
-                    'pic_pelapor'    => $penggunaan->pic,
-                    'kondisi'        => $timbangan->kondisi_saat_ini,
-                    'bisa_dilaporkan'=> $timbangan->bisaDilaporkanRusak(),
+                    'penggunaan_id'   => $penggunaan->id,
+                    'peralatan_id'    => $peralatan->id,
+                    'kode_asset'      => $peralatan->kode_asset,
+                    'merk_tipe'       => $peralatan->merk_tipe_lengkap,
+                    'line_asal'       => $penggunaan->line_tujuan,
+                    'pic_pelapor'     => $penggunaan->pic,
+                    'kondisi'         => $peralatan->kondisi_saat_ini,
+                    'bisa_dilaporkan' => $peralatan->bisaDilaporkanRusak(),
                 ],
             ]);
         } catch (\Exception $e) {

@@ -18,9 +18,17 @@
         </li>
 
         <li class="nav-item">
-            <a href="{{ route('timbangan.index') }}" class="nav-link {{ Request::is('timbangan*') ? 'active' : '' }}">
+            <a href="{{ route('peralatan.index') }}" class="nav-link {{ Request::is('peralatan*') ? 'active' : '' }}">
                 <i class="bi bi-speedometer nav-icon"></i>
                 <span class="nav-text">Data Peralatan</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a href="{{ route('master-kategori-alat.index') }}"
+               class="nav-link {{ Request::is('master/kategori-alat*') ? 'active' : '' }}">
+                <i class="bi bi-tags nav-icon"></i>
+                <span class="nav-text">Master Kategori Alat</span>
             </a>
         </li>
 
@@ -47,7 +55,7 @@
             </a>
         </li>
 
-        {{-- ── MASTER KELUHAN & TINDAKAN (baru) ── --}}
+        {{-- ── MASTER KELUHAN & TINDAKAN ── --}}
         <li class="nav-item">
             <a href="{{ route('master-keluhan.index') }}"
                class="nav-link {{ Request::is('master/keluhan*') ? 'active' : '' }}">
@@ -108,7 +116,7 @@
         <li class="nav-item">
             <a href="{{ route('laporan.index') }}" class="nav-link {{ Request::is('reports*') ? 'active' : '' }}">
                 <i class="bi bi-graph-up nav-icon"></i>
-                <span class="nav-text">Laporan Timbangan</span>
+                <span class="nav-text">Laporan Peralatan</span>
             </a>
         </li>
         @endunless

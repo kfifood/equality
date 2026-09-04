@@ -12,7 +12,7 @@
                         <h5 class="card-title mb-0">
                             <i class="bi bi-arrow-right-circle me-2"></i>Riwayat Penggunaan Alat
                         </h5>
-                        <small class="text-muted">Termasuk timbangan yang baru selesai perbaikan</small>
+                        <small class="text-muted">Termasuk peralatan yang baru selesai perbaikan</small>
                     </div>
                     <button class="btn btn-sm" style="background-color:#4361EE; color:white;"
                         onclick="showCreatePenggunaanModal()">
@@ -86,7 +86,7 @@
                         </div>
                     </div>
 
-                    <!-- Data Table (grouped per timbangan, dropdown untuk riwayat) -->
+                    <!-- Data Table (grouped per peralatan, dropdown untuk riwayat) -->
                     <div class="table-responsive">
                         <table class="table table-bordered table-hover" id="penggunaanTable">
                             @php
@@ -100,7 +100,7 @@
                                     @php
                                         $sortCols = [
                                             'kode_asset'       => 'Kode Asset',
-                                            'merk_tipe'        => 'Merk &amp; Tipe',
+                                            'merk_tipe'        => 'Merk',
                                         ];
                                     @endphp
                                     @foreach($sortCols as $col => $label)
@@ -115,6 +115,8 @@
                                         {!! $label !!} <i class="bi {{ $icon }} ms-1 sort-icon" style="font-size:0.8em;"></i>
                                     </th>
                                     @endforeach
+                                    <th>Type</th>
+                                    <th>No. Seri</th>
                                     <th>Kondisi Saat Ini</th>
                                     <th>Line Saat Ini</th>
                                     @php
@@ -133,12 +135,12 @@
                             <tbody>
                                 @forelse($penggunaan as $index => $group)
                                 @php
-                                    $timbangan   = $group['timbangan'];
+                                    $peralatan   = $group['peralatan'];
                                     $riwayatList = $group['riwayat'];
                                     $jumlah      = $group['jumlah'];
                                     $latest      = $riwayatList->first();
 
-                                    $kondisi     = $timbangan->kondisi_saat_ini;
+                                    $kondisi     = $peralatan->kondisi_saat_ini;
                                     $badgeColor  = match($kondisi) {
                                         'Baik'            => 'success',
                                         'Rusak'           => 'danger',
@@ -152,9 +154,9 @@
                                         default           => 'question-circle'
                                     };
 
-                                    $rowId = 'riwayat-' . $timbangan->id;
+                                    $rowId = 'riwayat-' . $peralatan->id;
                                 @endphp
-                                <tr class="timbangan-row" data-bs-toggle="collapse" data-bs-target="#{{ $rowId }}"
+                                <tr class="peralatan-row" data-bs-toggle="collapse" data-bs-target="#{{ $rowId }}"
                                     style="cursor:pointer;" aria-expanded="false">
                                     <td class="text-center">{{ $penggunaan->firstItem() + $index }}</td>
                                     <td class="text-center">
@@ -166,24 +168,21 @@
                                                 <i class="bi bi-speedometer text-white"></i>
                                             </div>
                                             <div>
-                                                <strong>{{ $timbangan->kode_asset }}</strong>
+                                                <strong>{{ $peralatan->kode_asset }}</strong>
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
-                                        <span class="text-truncate d-inline-block" style="max-width:200px;"
-                                            title="{{ $timbangan->merk_tipe_no_seri }}">
-                                            {{ $timbangan->merk_tipe_no_seri }}
-                                        </span>
-                                    </td>
+                                    <td>{{ $peralatan->merk ?? '-' }}</td>
+                                    <td>{{ $peralatan->type ?? '-' }}</td>
+                                    <td>{{ $peralatan->serial_number ?? '-' }}</td>
                                     <td>
                                         <span class="badge bg-{{ $badgeColor }}">
                                             <i class="bi bi-{{ $kondisiIcon }} me-1"></i>{{ $kondisi }}
                                         </span>
                                     </td>
                                     <td>
-                                        @if($timbangan->status_line)
-                                            <span class="badge bg-info">{{ $timbangan->status_line }}</span>
+                                        @if($peralatan->status_line)
+                                            <span class="badge bg-info">{{ $peralatan->status_line }}</span>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
@@ -201,9 +200,9 @@
                                     </td>
                                 </tr>
 
-                                <!-- Sub-table riwayat penggunaan untuk timbangan ini -->
+                                <!-- Sub-table riwayat penggunaan untuk peralatan ini -->
                                 <tr class="riwayat-detail-row">
-                                    <td colspan="8" class="p-0 border-0">
+                                    <td colspan="10" class="p-0 border-0">
                                         <div class="collapse" id="{{ $rowId }}">
                                             <div class="p-3" style="background-color:#f8f9fc;">
                                                 <table class="table table-sm table-bordered table-striped mb-0 bg-white">
@@ -222,7 +221,7 @@
                                                     <tbody>
                                                         @foreach($riwayatList as $i => $item)
                                                         @php
-                                                            $itemKondisi   = $item->timbangan->kondisi_saat_ini;
+                                                            $itemKondisi   = $item->peralatan->kondisi_saat_ini;
                                                             $itemBadge     = match($itemKondisi) {
                                                                 'Baik'            => 'success',
                                                                 'Rusak'           => 'danger',
@@ -248,15 +247,15 @@
                                                                 default           => 'question-circle'
                                                             };
                                                             $statusTooltip = match($item->status_penggunaan) {
-                                                                'Masih Digunakan' => 'Timbangan masih digunakan di ' . $item->line_tujuan,
-                                                                'Dikembalikan'    => 'Timbangan dikembalikan karena ' . strtolower($itemKondisi),
+                                                                'Masih Digunakan' => 'Peralatan masih digunakan di ' . $item->line_tujuan,
+                                                                'Dikembalikan'    => 'Peralatan dikembalikan karena ' . strtolower($itemKondisi),
                                                                 'Selesai'         => $item->isSelesaiDipindahkan()
-                                                                    ? 'Penggunaan selesai - timbangan dipindahkan ke ' . $item->timbangan->status_line
-                                                                    : 'Penggunaan selesai - timbangan dalam kondisi baik',
+                                                                    ? 'Penggunaan selesai - peralatan dipindahkan ke ' . $item->peralatan->status_line
+                                                                    : 'Penggunaan selesai - peralatan dalam kondisi baik',
                                                                 default => 'Status penggunaan'
                                                             };
 
-                                                            $bisaLaporkan    = $item->timbangan->bisaDilaporkanRusak();
+                                                            $bisaLaporkan    = $item->peralatan->bisaDilaporkanRusak();
                                                             $sudahDilaporkan = $item->sudahDilaporkanRusak();
                                                             $adaLaporan      = $item->laporanKerusakan !== null;
                                                         @endphp
@@ -293,7 +292,7 @@
         <button class="btn btn-sm btn-outline-danger"
             onclick="event.stopPropagation(); showLaporkanRusakModal({{ $item->id }})"
             data-bs-toggle="tooltip"
-            title="Laporkan timbangan ini rusak">
+            title="Laporkan peralatan ini rusak">
             <i class="bi bi-exclamation-triangle me-1"></i>Laporkan Rusak
         </button>
     @elseif($i === 0 && $itemKondisi === 'Dalam Perbaikan')
@@ -318,7 +317,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         Tidak ada data riwayat penggunaan.
                                     </td>
                                 </tr>
@@ -343,7 +342,7 @@
                         <div class="text-muted small">
                             Menampilkan <strong>{{ $penggunaan->firstItem() }}</strong>
                             hingga <strong>{{ $penggunaan->lastItem() }}</strong>
-                            dari <strong>{{ $penggunaan->total() }}</strong> timbangan
+                            dari <strong>{{ $penggunaan->total() }}</strong> peralatan
                         </div>
                         <nav>
                             <ul class="pagination pagination-sm mb-0">
@@ -409,10 +408,10 @@
 .badge { font-size: 0.75em; }
 
 /* ── Dropdown / expand row styling ── */
-.timbangan-row:hover { background-color: #f5f7ff; }
-.timbangan-row[aria-expanded="true"] { background-color: #eef0fd; }
-.timbangan-row[aria-expanded="true"] .toggle-icon { transform: rotate(90deg); }
-.timbangan-row.row-highlight { outline: 2px solid #4361EE; outline-offset: -2px; }
+.peralatan-row:hover { background-color: #f5f7ff; }
+.peralatan-row[aria-expanded="true"] { background-color: #eef0fd; }
+.peralatan-row[aria-expanded="true"] .toggle-icon { transform: rotate(90deg); }
+.peralatan-row.row-highlight { outline: 2px solid #4361EE; outline-offset: -2px; }
 .riwayat-detail-row > td { padding: 0 !important; }
 
 .pagination .page-item.active .page-link {
@@ -454,8 +453,8 @@ $(document).ready(function () {
         $('#dynamicModalContent').html('');
     });
 
-    // Toggle chevron/aria state on the timbangan summary row
-    $('.timbangan-row').on('click', function () {
+    // Toggle chevron/aria state on the peralatan summary row
+    $('.peralatan-row').on('click', function () {
         const target = $($(this).data('bs-target'));
         const row = $(this);
         target.on('shown.bs.collapse hidden.bs.collapse', function (e) {
@@ -470,9 +469,9 @@ function doSort(col, dir) {
     $('#filterForm').submit();
 }
 
-function showCreatePenggunaanModal(timbanganId = null) {
+function showCreatePenggunaanModal(peralatanId = null) {
     let url = '{{ route("penggunaan.create") }}';
-    if (timbanganId) url = '{{ url("penggunaan/create") }}/' + timbanganId;
+    if (peralatanId) url = '{{ url("penggunaan/create") }}/' + peralatanId;
 
     Swal.fire({ title: 'Memuat form...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
 
@@ -519,13 +518,13 @@ function showLaporkanRusakModal(penggunaanId) {
 $(document).on('submit', '#createPenggunaanForm', function (e) {
     e.preventDefault();
     const form          = $(this);
-    const lokasiSaatIni = form.find('#timbanganSelect option:selected').data('lokasi');
+    const lokasiSaatIni = form.find('#peralatanSelect option:selected').data('lokasi');
     const lineTujuan    = form.find('[name="line_tujuan"]').val();
 
     if (lokasiSaatIni !== 'Lab' && lokasiSaatIni !== lineTujuan) {
         Swal.fire({
-            title: 'Pindahkan Timbangan?',
-            html: `Timbangan ini sedang digunakan di <strong>${lokasiSaatIni}</strong>.<br>Apakah Anda yakin ingin memindahkan ke <strong>${lineTujuan}</strong>?`,
+            title: 'Pindahkan Peralatan?',
+            html: `Peralatan ini sedang digunakan di <strong>${lokasiSaatIni}</strong>.<br>Apakah Anda yakin ingin memindahkan ke <strong>${lineTujuan}</strong>?`,
             icon: 'warning', showCancelButton: true,
             confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, Pindahkan!', cancelButtonText: 'Batal'

@@ -70,19 +70,19 @@
     @csrf
     <div class="modal-body">
 
-        {{-- Timbangan --}}
+        {{-- Peralatan --}}
         <div class="mb-3">
-            <label class="form-label">Timbangan <span class="text-danger">*</span></label>
+            <label class="form-label">Peralatan <span class="text-danger">*</span></label>
 
             {{-- Select asli (hidden) — tetap dipakai untuk submit --}}
-            <select id="timbangan_id" name="timbangan_id" required style="display:none;">
-                <option value="">-- Pilih Timbangan --</option>
-                @foreach($timbanganList as $t)
-                    <option value="{{ $t->id }}"
-                        data-certificate="{{ $t->certificate_number ?? '' }}"
-                        data-kapasitas="{{ $t->kapasitas ?? '' }}"
-                        data-dept="{{ $t->dept_bagian_default ?? '' }}">
-                        {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
+            <select id="peralatan_id" name="peralatan_id" required style="display:none;">
+                <option value="">-- Pilih Peralatan --</option>
+                @foreach($peralatanList as $p)
+                    <option value="{{ $p->id }}"
+                        data-certificate="{{ $p->certificate_number ?? '' }}"
+                        data-spesifikasi="{{ $p->spesifikasi_ringkas ?? '' }}"
+                        data-dept="{{ $p->dept_bagian_default ?? '' }}">
+                        {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                     </option>
                 @endforeach
             </select>
@@ -90,13 +90,13 @@
             {{-- Custom dropdown --}}
             <div class="ts-wrap" id="c_wrap">
                 <div class="ts-input" id="c_input" tabindex="0">
-                    <span id="c_label" class="ts-placeholder">-- Pilih Timbangan --</span>
+                    <span id="c_label" class="ts-placeholder">-- Pilih Peralatan --</span>
                     <span class="ts-arrow">▼</span>
                 </div>
                 <div class="ts-dropdown" id="c_dropdown">
                     <div class="ts-search-box">
                         <input type="text" id="c_search"
-                               placeholder="🔍 Cari kode / merk timbangan..."
+                               placeholder="🔍 Cari kode / merk peralatan..."
                                autocomplete="off">
                     </div>
                     <div class="ts-list" id="c_list"></div>
@@ -132,11 +132,11 @@
                     <label for="dept_bagian" class="form-label">
                         Dept / Bagian
                         <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
-                            auto dari lokasi timbangan
+                            auto dari lokasi peralatan
                         </span>
                     </label>
                     <input type="text" class="form-control" id="dept_bagian" name="dept_bagian"
-                           placeholder="Otomatis terisi saat pilih timbangan">
+                           placeholder="Otomatis terisi saat pilih peralatan">
                 </div>
             </div>
             <div class="col-md-6">
@@ -154,12 +154,12 @@
                     <label for="certificate_number" class="form-label">
                         Certificate Number
                         <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
-                            auto dari timbangan
+                            auto dari peralatan
                         </span>
                     </label>
                     <input type="text" class="form-control" id="certificate_number"
                            name="certificate_number"
-                           placeholder="Otomatis terisi saat pilih timbangan">
+                           placeholder="Otomatis terisi saat pilih peralatan">
                 </div>
             </div>
             <div class="col-md-6">
@@ -167,11 +167,11 @@
                     <label for="beda_maksimum" class="form-label">
                         Beda Maksimum
                         <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
-                            auto dari timbangan
+                            auto dari peralatan
                         </span>
                     </label>
                     <input type="text" class="form-control" id="beda_maksimum"
-                           name="beda_maksimum" placeholder="Otomatis terisi saat pilih timbangan">
+                           name="beda_maksimum" placeholder="Otomatis terisi saat pilih peralatan">
                 </div>
             </div>
         </div>
@@ -193,7 +193,7 @@
 
 <script>
 (function () {
-    var selectEl    = document.getElementById('timbangan_id');
+    var selectEl    = document.getElementById('peralatan_id');
     var inputEl     = document.getElementById('c_input');
     var dropdown    = document.getElementById('c_dropdown');
     var searchEl    = document.getElementById('c_search');
@@ -211,7 +211,7 @@
             value      : opt.value,
             text       : opt.text.trim(),
             certificate: opt.getAttribute('data-certificate') || '',
-            kapasitas  : opt.getAttribute('data-kapasitas')   || '',
+            spesifikasi: opt.getAttribute('data-spesifikasi') || '',
             dept       : opt.getAttribute('data-dept')        || ''
         });
     });
@@ -242,12 +242,12 @@
                 labelEl.textContent = o.text;
                 labelEl.classList.remove('ts-placeholder');
 
-                // Selalu timpa dengan data timbangan yang BARU dipilih —
+                // Selalu timpa dengan data peralatan yang BARU dipilih —
                 // supaya kalau user ganti pilihan, field lain ikut menyesuaikan
-                // (tidak nyangkut data dari timbangan yang dipilih sebelumnya).
+                // (tidak nyangkut data dari peralatan yang dipilih sebelumnya).
                 certInput.value = o.certificate;
                 deptInput.value = o.dept;
-                bedaInput.value = o.kapasitas;
+                bedaInput.value = o.spesifikasi;
 
                 closeDropdown();
             });

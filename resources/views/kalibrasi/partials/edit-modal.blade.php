@@ -71,18 +71,18 @@
     @method('PUT')
     <div class="modal-body">
 
-        {{-- Timbangan --}}
+        {{-- Peralatan --}}
         <div class="mb-3">
-            <label class="form-label">Timbangan <span class="text-danger">*</span></label>
+            <label class="form-label">Peralatan <span class="text-danger">*</span></label>
 
             {{-- Select asli (hidden) — tetap dipakai untuk submit --}}
-            <select id="timbangan_id" name="timbangan_id" required style="display:none;">
-                <option value="">-- Pilih Timbangan --</option>
-                @foreach($timbanganList as $t)
-                    <option value="{{ $t->id }}"
-                        data-certificate="{{ $t->certificate_number ?? '' }}"
-                        {{ old('timbangan_id', $kalibrasi->timbangan_id) == $t->id ? 'selected' : '' }}>
-                        {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
+            <select id="peralatan_id" name="peralatan_id" required style="display:none;">
+                <option value="">-- Pilih Peralatan --</option>
+                @foreach($peralatanList as $p)
+                    <option value="{{ $p->id }}"
+                        data-certificate="{{ $p->certificate_number ?? '' }}"
+                        {{ old('peralatan_id', $kalibrasi->peralatan_id) == $p->id ? 'selected' : '' }}>
+                        {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                     </option>
                 @endforeach
             </select>
@@ -90,13 +90,13 @@
             {{-- Custom dropdown --}}
             <div class="ts-wrap" id="e_wrap">
                 <div class="ts-input" id="e_input" tabindex="0">
-                    <span id="e_label" class="ts-placeholder">-- Pilih Timbangan --</span>
+                    <span id="e_label" class="ts-placeholder">-- Pilih Peralatan --</span>
                     <span class="ts-arrow">▼</span>
                 </div>
                 <div class="ts-dropdown" id="e_dropdown">
                     <div class="ts-search-box">
                         <input type="text" id="e_search"
-                               placeholder="🔍 Cari kode / merk timbangan..."
+                               placeholder="🔍 Cari kode / merk peralatan..."
                                autocomplete="off">
                     </div>
                     <div class="ts-list" id="e_list"></div>
@@ -201,7 +201,7 @@
 
 <script>
 (function () {
-    var selectEl  = document.getElementById('timbangan_id');
+    var selectEl  = document.getElementById('peralatan_id');
     var inputEl   = document.getElementById('e_input');
     var dropdown  = document.getElementById('e_dropdown');
     var searchEl  = document.getElementById('e_search');

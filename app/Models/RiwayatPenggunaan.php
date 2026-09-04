@@ -12,7 +12,7 @@ class RiwayatPenggunaan extends Model
     protected $table = 'riwayat_penggunaan';
 
     protected $fillable = [
-        'timbangan_id',
+        'peralatan_id',
         'line_tujuan',
         'tanggal_pemakaian',
         'pic',
@@ -27,13 +27,13 @@ class RiwayatPenggunaan extends Model
 
     // ── Relasi ────────────────────────────────────────────────────────────────
 
-    public function timbangan()
+    public function peralatan()
     {
-        return $this->belongsTo(Timbangan::class, 'timbangan_id');
+        return $this->belongsTo(Peralatan::class, 'peralatan_id');
     }
 
     /**
-     * BARU — laporan kerusakan yang berasal dari penggunaan ini
+     * Laporan kerusakan yang berasal dari penggunaan ini
      */
     public function laporanKerusakan()
     {
@@ -44,14 +44,14 @@ class RiwayatPenggunaan extends Model
 
     public function scopeAktif($query)
     {
-        return $query->whereHas('timbangan', function ($q) {
+        return $query->whereHas('peralatan', function ($q) {
             $q->whereColumn('status_line', 'riwayat_penggunaan.line_tujuan');
         });
     }
 
     public function scopeSelesai($query)
     {
-        return $query->whereHas('timbangan', function ($q) {
+        return $query->whereHas('peralatan', function ($q) {
             $q->where(function ($inner) {
                 $inner->whereColumn('status_line', '!=', 'riwayat_penggunaan.line_tujuan')
                       ->orWhereNull('status_line');
@@ -72,7 +72,7 @@ class RiwayatPenggunaan extends Model
 
     public function scopeDenganKodeAsset($query, $kodeAsset)
     {
-        return $query->whereHas('timbangan', function ($q) use ($kodeAsset) {
+        return $query->whereHas('peralatan', function ($q) use ($kodeAsset) {
             $q->where('kode_asset', 'like', '%' . $kodeAsset . '%');
         });
     }
@@ -81,17 +81,17 @@ class RiwayatPenggunaan extends Model
 
     public function getKodeAssetLengkapAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->kode_asset : '-';
+        return $this->peralatan ? $this->peralatan->kode_asset : '-';
     }
 
     public function getMerkLengkapAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->merk_tipe_no_seri : '-';
+        return $this->peralatan ? $this->peralatan->merk_tipe_lengkap : '-';
     }
 
     public function getKondisiAttribute(): string
     {
-        return $this->timbangan ? $this->timbangan->kondisi_saat_ini : 'Baik';
+        return $this->peralatan ? $this->peralatan->kondisi_saat_ini : 'Baik';
     }
 
     public function getTanggalPemakaianFormattedAttribute(): string
@@ -103,16 +103,16 @@ class RiwayatPenggunaan extends Model
 
     public function getStatusPenggunaanAttribute(): string
     {
-        if (!$this->timbangan) {
+        if (!$this->peralatan) {
             return 'Selesai';
         }
 
-        if ($this->timbangan->status_line === $this->line_tujuan
-            && $this->timbangan->kondisi_saat_ini === 'Baik') {
+        if ($this->peralatan->status_line === $this->line_tujuan
+            && $this->peralatan->kondisi_saat_ini === 'Baik') {
             return 'Masih Digunakan';
         }
 
-        if (in_array($this->timbangan->kondisi_saat_ini, ['Dalam Perbaikan', 'Rusak'])) {
+        if (in_array($this->peralatan->kondisi_saat_ini, ['Dalam Perbaikan', 'Rusak'])) {
             return 'Dikembalikan';
         }
 
@@ -123,34 +123,34 @@ class RiwayatPenggunaan extends Model
 
     public function isAktif(): bool
     {
-        return $this->timbangan
-            && $this->timbangan->status_line === $this->line_tujuan
-            && $this->timbangan->kondisi_saat_ini === 'Baik';
+        return $this->peralatan
+            && $this->peralatan->status_line === $this->line_tujuan
+            && $this->peralatan->kondisi_saat_ini === 'Baik';
     }
 
     public function isDikembalikan(): bool
     {
-        return $this->timbangan
-            && in_array($this->timbangan->kondisi_saat_ini, ['Dalam Perbaikan', 'Rusak']);
+        return $this->peralatan
+            && in_array($this->peralatan->kondisi_saat_ini, ['Dalam Perbaikan', 'Rusak']);
     }
 
     public function isSelesaiDipindahkan(): bool
     {
-        return $this->timbangan
-            && $this->timbangan->kondisi_saat_ini === 'Baik'
-            && $this->timbangan->status_line !== $this->line_tujuan;
+        return $this->peralatan
+            && $this->peralatan->kondisi_saat_ini === 'Baik'
+            && $this->peralatan->status_line !== $this->line_tujuan;
     }
 
     /**
-     * BARU — apakah penggunaan ini sudah punya laporan kerusakan aktif
+     * Apakah penggunaan ini sudah punya laporan kerusakan aktif
      */
-public function sudahDilaporkanRusak(): bool
-{
-    // Jika timbangan sudah kembali Baik, anggap laporan lama tidak relevan lagi
-    if ($this->timbangan && $this->timbangan->kondisi_saat_ini === 'Baik') {
-        return false;
-    }
+    public function sudahDilaporkanRusak(): bool
+    {
+        // Jika peralatan sudah kembali Baik, anggap laporan lama tidak relevan lagi
+        if ($this->peralatan && $this->peralatan->kondisi_saat_ini === 'Baik') {
+            return false;
+        }
 
-    return $this->laporanKerusakan()->whereIn('status', ['Menunggu', 'Diproses'])->exists();
-}
+        return $this->laporanKerusakan()->whereIn('status', ['Menunggu', 'Diproses'])->exists();
+    }
 }

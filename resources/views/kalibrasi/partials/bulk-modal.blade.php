@@ -149,7 +149,7 @@
                 <thead>
                     <tr>
                         <th width="34" class="text-center">#</th>
-                        <th style="min-width:210px;">Timbangan <span class="text-danger">*</span></th>
+                        <th style="min-width:210px;">Peralatan <span class="text-danger">*</span></th>
                         <th style="min-width:140px;">Certificate No.</th>
                         <th style="min-width:100px;">Beda Maks.</th>
                         <th style="min-width:90px;">Hasil</th>
@@ -186,8 +186,8 @@
 
 <script>
 (function () {
-    // ── Data timbangan dari server ──────────────────────────────────────────
-    const TIMBANGAN = @json($timbanganJson);
+    // ── Data peralatan dari server ──────────────────────────────────────────
+    const PERALATAN = @json($peralatanJson);
     let rowIdx = 0;
     let openDropdown = null; // track dropdown yang sedang terbuka
 
@@ -195,47 +195,47 @@
     function renderDropdownOptions(listEl, kw, selectedId, rowId) {
         const keyword  = (kw || '').toLowerCase();
         const filtered = keyword
-            ? TIMBANGAN.filter(t => t.label.toLowerCase().includes(keyword))
-            : TIMBANGAN;
+            ? PERALATAN.filter(p => p.label.toLowerCase().includes(keyword))
+            : PERALATAN;
 
         listEl.innerHTML = '';
         if (!filtered.length) {
             listEl.innerHTML = '<div class="bts-no-result">Tidak ditemukan</div>';
             return;
         }
-        filtered.forEach(t => {
+        filtered.forEach(p => {
             const div  = document.createElement('div');
-            div.className = 'bts-option' + (String(t.id) === String(selectedId) ? ' active' : '');
-            div.textContent = t.label;
+            div.className = 'bts-option' + (String(p.id) === String(selectedId) ? ' active' : '');
+            div.textContent = p.label;
             div.addEventListener('mousedown', e => {
                 e.preventDefault();
-                pickTimbangan(rowId, t);
+                pickPeralatan(rowId, p);
                 closeOpenDropdown();
             });
             listEl.appendChild(div);
         });
     }
 
-    // ── Pilih timbangan untuk baris tertentu ───────────────────────────────
-    function pickTimbangan(rowId, t) {
+    // ── Pilih peralatan untuk baris tertentu ───────────────────────────────
+    function pickPeralatan(rowId, p) {
         const row    = document.getElementById('row-' + rowId);
         if (!row) return;
-        row.querySelector('.bts-hidden-id').value   = t.id;
+        row.querySelector('.bts-hidden-id').value   = p.id;
         const lbl = row.querySelector('.bts-label-text');
-        lbl.textContent = t.label;
+        lbl.textContent = p.label;
         lbl.classList.remove('bts-placeholder');
 
-        // Selalu timpa dengan data timbangan yang BARU dipilih — supaya kalau
-        // baris ini sebelumnya sudah terisi dari timbangan lain (lalu diganti),
+        // Selalu timpa dengan data peralatan yang BARU dipilih — supaya kalau
+        // baris ini sebelumnya sudah terisi dari peralatan lain (lalu diganti),
         // field-field ini ikut menyesuaikan, tidak nyangkut data lama.
         const certInput = row.querySelector('.col-cert');
-        if (certInput) certInput.value = t.certificate;
+        if (certInput) certInput.value = p.certificate;
 
         const deptInput = row.querySelector('.col-dept');
-        if (deptInput) deptInput.value = t.dept;
+        if (deptInput) deptInput.value = p.dept;
 
         const bedaInput = row.querySelector('.col-beda');
-        if (bedaInput) bedaInput.value = t.kapasitas;
+        if (bedaInput) bedaInput.value = p.spesifikasi;
     }
 
     // ── Tutup dropdown yang terbuka ───────────────────────────────────────
@@ -266,9 +266,9 @@
         tr.innerHTML = `
             <td class="text-center text-muted" style="font-size:.8rem;">${rowIdx}</td>
 
-            {{-- Searchable select timbangan --}}
+            {{-- Searchable select peralatan --}}
             <td>
-                <input type="hidden" class="bts-hidden-id" name="rows[${rid}][timbangan_id]">
+                <input type="hidden" class="bts-hidden-id" name="rows[${rid}][peralatan_id]">
                 <div class="bts-wrap">
                     <div class="bts-trigger" tabindex="0" data-rid="${rid}">
                         <span class="bts-label-text bts-placeholder">-- Pilih --</span>
@@ -298,8 +298,8 @@
                 </select>
             </td>
 
-            {{-- Dept auto dari lokasi timbangan (override) --}}
-            <td><input type="text" class="form-control col-dept" name="rows[${rid}][dept_bagian]" placeholder="Otomatis saat pilih timbangan"></td>
+            {{-- Dept auto dari lokasi peralatan (override) --}}
+            <td><input type="text" class="form-control col-dept" name="rows[${rid}][dept_bagian]" placeholder="Otomatis saat pilih peralatan"></td>
 
             {{-- Pelaksana override --}}
             <td><input type="text" class="form-control col-pelaksana" name="rows[${rid}][pelaksana]" placeholder="(gunakan default)"></td>
@@ -315,7 +315,7 @@
             </td>
         `;
 
-        // Render daftar timbangan
+        // Render daftar peralatan
         const listEl = tr.querySelector('#bts-list-' + rid);
         renderDropdownOptions(listEl, '', null, rid);
 
@@ -416,8 +416,8 @@
         let hasError = false;
 
         document.querySelectorAll('#bulkTableBody tr').forEach((tr, i) => {
-            const tid = tr.querySelector('.bts-hidden-id')?.value;
-            if (!tid) {
+            const pid = tr.querySelector('.bts-hidden-id')?.value;
+            if (!pid) {
                 tr.classList.add('row-error');
                 hasError = true;
                 return;
@@ -425,7 +425,7 @@
             tr.classList.remove('row-error');
 
             rows.push({
-                timbangan_id:        tid,
+                peralatan_id:        pid,
                 tanggal_pelaksanaan: sharedTgl,
                 dept_bagian:         tr.querySelector('[name$="[dept_bagian]"]')?.value.trim() || sharedDept,
                 pelaksana:           tr.querySelector('[name$="[pelaksana]"]')?.value.trim()   || sharedPel,
@@ -437,7 +437,7 @@
         });
 
         if (hasError) {
-            Swal.fire({ icon: 'warning', title: 'Ada baris kosong', text: 'Pilih timbangan untuk setiap baris yang diisi (baris merah).' });
+            Swal.fire({ icon: 'warning', title: 'Ada baris kosong', text: 'Pilih peralatan untuk setiap baris yang diisi (baris merah).' });
             return;
         }
 

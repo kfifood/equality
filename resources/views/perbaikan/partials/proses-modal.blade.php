@@ -26,9 +26,9 @@
                         <i class="bi bi-speedometer fs-3 text-primary"></i>
                         <div>
                             <div class="fw-bold text-primary" style="font-size:1rem;">
-                                {{ $laporan->timbangan->kode_asset }}
+                                {{ $laporan->peralatan->kode_asset }}
                             </div>
-                            <div class="text-muted small">{{ $laporan->timbangan->merk_tipe_no_seri }}</div>
+                            <div class="text-muted small">{{ $laporan->peralatan->merk_tipe_lengkap }}</div>
                         </div>
                     </div>
                 </div>
@@ -199,7 +199,7 @@
             <div class="alert alert-success border-success py-2 mb-3">
                 <small>
                     <i class="bi bi-check-circle me-1"></i>
-                    <strong>Status Selesai:</strong> Timbangan akan dikembalikan ke lokasi tujuan
+                    <strong>Status Selesai:</strong> Peralatan akan dikembalikan ke lokasi tujuan
                     dan kondisi berubah kembali menjadi <strong>Baik</strong>.
                 </small>
             </div>

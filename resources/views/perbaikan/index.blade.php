@@ -123,15 +123,15 @@
                                             <div class="avatar-sm bg-warning rounded-circle d-flex align-items-center justify-content-center me-3">
                                                 <i class="bi bi-tools text-white"></i>
                                             </div>
-                                            <strong>{{ $laporan->timbangan->kode_asset }}</strong>
+                                            <strong>{{ $laporan->peralatan->kode_asset }}</strong>
                                         </div>
                                     </td>
 
                                     {{-- Merk & Tipe --}}
                                     <td>
                                         <span class="text-truncate d-inline-block" style="max-width:180px;"
-                                            title="{{ $laporan->timbangan->merk_tipe_no_seri }}">
-                                            {{ $laporan->timbangan->merk_tipe_no_seri }}
+                                            title="{{ $laporan->peralatan->merk_tipe_lengkap }}">
+                                            {{ $laporan->peralatan->merk_tipe_lengkap }}
                                         </span>
                                     </td>
 

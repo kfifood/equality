@@ -6,7 +6,8 @@ use App\Http\Controllers\LineController;
 use App\Http\Controllers\PenggunaanController;
 use App\Http\Controllers\PerbaikanController;
 use App\Http\Controllers\RiwayatController;
-use App\Http\Controllers\TimbanganController;
+use App\Http\Controllers\PeralatanController;
+use App\Http\Controllers\MasterKategoriAlatController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -52,29 +53,43 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
         Route::delete('/{id}',       [UserController::class, 'destroy'])->name('users.destroy');
     });
 
-    // ==================== MASTER DATA: TIMBANGAN ====================
-    Route::resource('timbangan', TimbanganController::class);
-    Route::prefix('timbangan')->group(function () {
-        Route::get('/',                    [TimbanganController::class, 'index'])->name('timbangan.index');
-        Route::get('/create',              [TimbanganController::class, 'create'])->name('timbangan.create');
-        Route::post('/',                   [TimbanganController::class, 'store'])->name('timbangan.store');
-        Route::get('/{id}/edit',           [TimbanganController::class, 'edit'])->name('timbangan.edit');
-        Route::put('/{id}',                [TimbanganController::class, 'update'])->name('timbangan.update');
-        Route::delete('/{id}',             [TimbanganController::class, 'destroy'])->name('timbangan.destroy');
-        Route::get('/{id}/riwayat',        [TimbanganController::class, 'riwayat'])->name('timbangan.riwayat');
-        Route::post('/import',             [TimbanganController::class, 'import'])->name('timbangan.import');
-        Route::get('/export',              [TimbanganController::class, 'export'])->name('timbangan.export');
-        Route::get('/template',            [TimbanganController::class, 'downloadTemplate'])->name('timbangan.download-template');
-        Route::post('/{id}/tandai-rusak',  [TimbanganController::class, 'tandaiRusak'])->name('timbangan.tandai-rusak');
+    // ==================== MASTER DATA: KATEGORI ALAT ====================
+    Route::prefix('master/kategori-alat')->group(function () {
+        Route::get('/',            [MasterKategoriAlatController::class, 'index'])->name('master-kategori-alat.index');
+        Route::post('/',           [MasterKategoriAlatController::class, 'store'])->name('master-kategori-alat.store');
+        Route::get('/list-aktif',  [MasterKategoriAlatController::class, 'listAktif'])->name('master-kategori-alat.list-aktif');
+        Route::get('/{id}/edit',   [MasterKategoriAlatController::class, 'edit'])->name('master-kategori-alat.edit');
+        Route::put('/{id}',        [MasterKategoriAlatController::class, 'update'])->name('master-kategori-alat.update');
+        Route::delete('/{id}',     [MasterKategoriAlatController::class, 'destroy'])->name('master-kategori-alat.destroy');
+    });
+
+    // ==================== MASTER DATA: PERALATAN ====================
+    // (rename dari TIMBANGAN — route Route::resource lama dibuang karena
+    // create()/edit() controller ini return JSON untuk modal, bukan full page)
+    Route::prefix('peralatan')->group(function () {
+        Route::get('/',                    [PeralatanController::class, 'index'])->name('peralatan.index');
+        Route::get('/create',              [PeralatanController::class, 'create'])->name('peralatan.create');
+        Route::post('/',                   [PeralatanController::class, 'store'])->name('peralatan.store');
+        Route::get('/{id}/edit',           [PeralatanController::class, 'edit'])->name('peralatan.edit');
+        Route::put('/{id}',                [PeralatanController::class, 'update'])->name('peralatan.update');
+        Route::delete('/{id}',             [PeralatanController::class, 'destroy'])->name('peralatan.destroy');
+        Route::get('/{id}/riwayat',        [PeralatanController::class, 'riwayat'])->name('peralatan.riwayat');
+        Route::get('/{id}/detail',         [PeralatanController::class, 'detail'])->name('peralatan.detail');
+        Route::post('/import',             [PeralatanController::class, 'import'])->name('peralatan.import');
+        Route::get('/export',              [PeralatanController::class, 'export'])->name('peralatan.export');
+        Route::get('/template',            [PeralatanController::class, 'downloadTemplate'])->name('peralatan.download-template');
+        Route::post('/{id}/tandai-rusak',  [PeralatanController::class, 'tandaiRusak'])->name('peralatan.tandai-rusak');
     });
 
     // ==================== MASTER DATA: LINE ====================
     Route::prefix('line')->group(function () {
-        Route::get('/',              [LineController::class, 'index'])->name('line.index');
-        Route::post('/',             [LineController::class, 'store'])->name('line.store');
-        Route::put('/{id}',          [LineController::class, 'update'])->name('line.update');
-        Route::delete('/{id}',       [LineController::class, 'destroy'])->name('line.destroy');
-        Route::get('/{id}/timbangan',[LineController::class, 'timbangan'])->name('line.timbangan');
+        Route::get('/',               [LineController::class, 'index'])->name('line.index');
+        Route::post('/',              [LineController::class, 'store'])->name('line.store');
+        Route::put('/{id}',           [LineController::class, 'update'])->name('line.update');
+        Route::delete('/{id}',        [LineController::class, 'destroy'])->name('line.destroy');
+        // NOTE: method 'timbangan' di LineController belum aku lihat filenya —
+        // nama method dibiarkan seperti semula, cuma path URL & nama route yang dirapikan.
+        Route::get('/{id}/peralatan', [LineController::class, 'timbangan'])->name('line.peralatan');
     });
 
     // ==================== MASTER: PIC ====================
@@ -108,7 +123,7 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
     Route::prefix('penggunaan')->group(function () {
         Route::get('/',                      [PenggunaanController::class, 'index'])->name('penggunaan.index');
         Route::get('/create',                [PenggunaanController::class, 'create'])->name('penggunaan.create');
-        Route::get('/create/{timbangan_id}', [PenggunaanController::class, 'create'])->name('penggunaan.create.withId');
+        Route::get('/create/{peralatan_id}', [PenggunaanController::class, 'create'])->name('penggunaan.create.withId');
         Route::post('/',                     [PenggunaanController::class, 'store'])->name('penggunaan.store');
     });
     Route::get('/penggunaan/{id}/laporan-data',
@@ -117,12 +132,12 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
 
     // ==================== OPERATIONS: PERBAIKAN ====================
     Route::prefix('perbaikan')->group(function () {
-        Route::get('/',                      [PerbaikanController::class, 'index'])->name('perbaikan.index');
-        Route::get('/create',                [PerbaikanController::class, 'create'])->name('perbaikan.create');
-        Route::get('/create/{timbangan_id}', [PerbaikanController::class, 'create'])->name('perbaikan.create.withId');
-        Route::post('/',                     [PerbaikanController::class, 'store'])->name('perbaikan.store');
-        Route::put('/{id}/status',           [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
-        Route::get('/timbangan/{id}',        [PerbaikanController::class, 'getTimbanganData'])->name('perbaikan.timbangan.data');
+        Route::get('/',             [PerbaikanController::class, 'index'])->name('perbaikan.index');
+        // NOTE: create(), create.withId, dan getTimbanganData() sudah dihapus dari
+        // PerbaikanController — dead code peninggalan alur lama (pakai model Timbangan
+        // yang sudah tidak ada) dan tidak dipanggil dari view manapun di alur baru.
+        Route::post('/',            [PerbaikanController::class, 'store'])->name('perbaikan.store');
+        Route::put('/{id}/status',  [PerbaikanController::class, 'updateStatus'])->name('perbaikan.updateStatus');
     });
     Route::get('/perbaikan/{laporan_id}/proses',   [App\Http\Controllers\PerbaikanController::class, 'prosesModal'])->name('perbaikan.proses-modal');
     Route::post('/perbaikan/{laporan_id}/proses',  [App\Http\Controllers\PerbaikanController::class, 'prosesStore'])->name('perbaikan.proses-store');
@@ -135,9 +150,11 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
     });
 
     // ==================== MONITORING ====================
-    Route::get('/monitoring/riwayat',              [RiwayatController::class, 'index'])->name('riwayat.index');
-    Route::get('/monitoring/riwayat/timeline',     [RiwayatController::class, 'timeline'])->name('riwayat.timeline');
-    Route::get('/monitoring/riwayat/timbangan/{id}',[RiwayatController::class, 'timbangan'])->name('riwayat.timbangan');
+    Route::get('/monitoring/riwayat',               [RiwayatController::class, 'index'])->name('riwayat.index');
+    Route::get('/monitoring/riwayat/timeline',      [RiwayatController::class, 'timeline'])->name('riwayat.timeline');
+    // NOTE: method di RiwayatController belum aku lihat filenya — nama method
+    // dibiarkan seperti semula (timbangan), cuma path URL & nama route dirapikan.
+    Route::get('/monitoring/riwayat/peralatan/{id}',[RiwayatController::class, 'timbangan'])->name('riwayat.peralatan');
 
     // ==================== REPORTS ====================
     Route::prefix('reports')->group(function () {

@@ -228,21 +228,36 @@
 
 @foreach($kalibrasiList as $i => $item)
 @php
-    $timbangan = $item->timbangan;
-    $alat      = $timbangan->jenis_alat_ukur ?? 'Timbangan';
-    $merk      = $timbangan->merk_tipe_no_seri ?? '-';
-    $kapasitas = $timbangan->kapasitas ?? '-';
-    $kode      = $timbangan->kode_asset ?? '-';
+    $peralatan = $item->peralatan;
+    // kode_kategori dipakai untuk menentukan tata letak sticker per jenis alat
+    // (mis. 'TMB' = Timbangan, 'TRM' = Thermometer). Alat baru cukup daftarkan
+    // kategorinya di master_kategori_alat, lalu tambahkan cabang layout di JS
+    // drawKalibrasiSticker() bila butuh tampilan berbeda dari default.
+    $kategoriKode = $peralatan->kategoriAlat->kode_kategori ?? null;
+    $alat      = $peralatan->kategoriAlat->nama_kategori ?? 'Alat Ukur';
+    $merk      = $peralatan->merk_tipe_lengkap ?? '-';
+    $kapasitas = $peralatan->spesifikasi['kapasitas'] ?? '-';
+    $kode      = $peralatan->kode_asset ?? '-';
     $dept      = $item->dept_bagian ?? '-';
     $tgl       = $item->tanggal_pelaksanaan?->format('d/m/Y') ?? '-';
     $pelaksana = $item->pelaksana ?? '-';
     $beda      = $item->beda_maksimum ?? '-';
     $nomor     = $item->certificate_number ?? '-';
     $filename  = 'sticker-' . str_replace(['/', ' '], '-', $kode) . '-' . str_replace('/', '-', $tgl);
+
+    // TODO (Thermometer): saat kolom 'data_pengukuran' (JSON) sudah ada di
+    // tabel kalibrasi, isi di sini, mis:
+    //   $pengukuran = $item->data_pengukuran['pengukuran'] ?? [];
+    // lalu kirim sebagai data-pengukuran="{{ json_encode($pengukuran) }}"
+    // dan tambahkan cabang kategori 'TRM' di drawKalibrasiSticker() (JS)
+    // untuk render 3 baris Suhu Alat / Suhu Master menggantikan baris
+    // Merk/Kapasitas & Beda Maksimum yang hanya relevan untuk Timbangan.
+    $pengukuran = $item->data_pengukuran['pengukuran'] ?? [];
 @endphp
 
 <div class="sticker-block"
      data-id="{{ $item->id }}"
+     data-kategori="{{ $kategoriKode }}"
      data-alat="{{ $alat }}"
      data-merk="{{ $merk }}"
      data-kapasitas="{{ $kapasitas }}"
@@ -252,6 +267,7 @@
      data-pelaksana="{{ $pelaksana }}"
      data-beda="{{ $beda }}"
      data-nomor="{{ $nomor }}"
+     data-pengukuran="{{ json_encode($pengukuran) }}"
      data-filename="{{ $filename }}">
 
     <div class="sticker-label">Sticker #{{ $i + 1 }} — {{ $kode }}</div>
@@ -339,7 +355,10 @@ function drawKalibrasiSticker(data, size, logo) {
     const bodyY   = y0 + headerH;
     const bodyH   = iH - headerH;
 
-    const rows = [
+    // ── Baris body sticker, berbeda per kategori alat ──
+    // Default (Timbangan / kategori lain yang belum punya layout khusus):
+    // tampilkan Merk & Kapasitas + Beda Maksimum seperti sebelumnya.
+    let rows = [
         ['Alat Ukur',           data.alat],
         ['Merk / Kapasitas',    data.merk + ' / ' + data.kapasitas],
         ['Kode Alat',           data.kode],
@@ -347,6 +366,25 @@ function drawKalibrasiSticker(data, size, logo) {
         ['Tanggal / Pelaksana', data.tgl + ' / ' + data.pelaksana],
         ['Beda Maksimum',       data.beda],
     ];
+
+    // Thermometer ('TRM'): ganti baris Merk/Kapasitas & Beda Maksimum dengan
+    // 3 baris pembacaan Suhu Alat / Suhu Master. Aktif otomatis begitu kolom
+    // 'data_pengukuran' di tabel kalibrasi terisi (lihat TODO di Blade).
+    if (data.kategori === 'TRM' && Array.isArray(data.pengukuran) && data.pengukuran.length) {
+        rows = [
+            ['Alat Ukur',           data.alat],
+            ['Merk',                data.merk],
+            ['Kode Alat',           data.kode],
+            ['SBU / Dept / Bagian', data.dept],
+            ['Tanggal / Pelaksana', data.tgl + ' / ' + data.pelaksana],
+        ];
+        data.pengukuran.slice(0, 3).forEach((p, idx) => {
+            rows.push([
+                'Suhu Alat / Master ' + (idx + 1),
+                (p.suhu_alat ?? '-') + '°C / ' + (p.suhu_master ?? '-') + '°C',
+            ]);
+        });
+    }
     const rowH = bodyH / rows.length;
 
     // ── Garis-garis pembatas ──
@@ -487,9 +525,11 @@ function renderAll() {
         document.querySelectorAll('.sticker-block').forEach(block => {
             const id = block.dataset.id;
             const data = {
+                kategori: block.dataset.kategori,
                 alat: block.dataset.alat, merk: block.dataset.merk, kapasitas: block.dataset.kapasitas,
                 kode: block.dataset.kode, dept: block.dataset.dept, tgl: block.dataset.tgl,
                 pelaksana: block.dataset.pelaksana, beda: block.dataset.beda, nomor: block.dataset.nomor,
+                pengukuran: JSON.parse(block.dataset.pengukuran || '[]'),
             };
             const dataUrl = drawKalibrasiSticker(data, size, logo);
             stickerData[id] = { dataUrl, wmm: size.wmm, hmm: size.hmm, filename: block.dataset.filename };

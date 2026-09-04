@@ -1,18 +1,18 @@
 <div class="modal-header" style="background-color:white; color:#4361EE;">
     <h5 class="modal-title">
-        <i class="bi bi-clock-history me-2"></i>Riwayat Timbangan - {{ $timbangan->kode_asset }}
+        <i class="bi bi-clock-history me-2"></i>Riwayat Peralatan - {{ $peralatan->kode_asset }}
     </h5>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 <div class="modal-body">
-    <!-- Info Timbangan -->
+    <!-- Info Peralatan -->
     <div class="row mb-4">
         <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body">
                     <h6 class="card-title">Lokasi Asli</h6>
                     <p class="card-text">
-                        <span class="badge bg-primary">{{ $timbangan->lokasi_asli ?? 'Lab' }}</span>
+                        <span class="badge bg-primary">{{ $peralatan->lokasi_asli ?? 'Lab' }}</span>
                     </p>
                 </div>
             </div>
@@ -22,8 +22,8 @@
                 <div class="card-body">
                     <h6 class="card-title">Lokasi Saat Ini</h6>
                     <p class="card-text">
-                        @if($timbangan->status_line)
-                            <span class="badge bg-info">{{ $timbangan->status_line }}</span>
+                        @if($peralatan->status_line)
+                            <span class="badge bg-info">{{ $peralatan->status_line }}</span>
                         @else
                             <span class="badge bg-secondary">Lab</span>
                         @endif
@@ -37,10 +37,10 @@
                     <h6 class="card-title">Status Lokasi</h6>
                     <p class="card-text">
                         @php
-                            $statusLokasi = $timbangan->status_lokasi;
+                            $statusLokasi = $peralatan->status_lokasi;
                             $badgeColor = match(true) {
-                                $timbangan->isDiLokasiAsli() => 'success',
-                                $timbangan->isDipinjam() => 'warning',
+                                $peralatan->isDiLokasiAsli() => 'success',
+                                $peralatan->isDipinjam() => 'warning',
                                 default => 'secondary'
                             };
                         @endphp
@@ -52,21 +52,29 @@
     </div>
 
     <div class="row mb-4">
-        <div class="col-md-6">
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body">
-                    <h6 class="card-title">Merk & Seri</h6>
-                    <p class="card-text">{{ $timbangan->merk_tipe_no_seri }}</p>
+                    <h6 class="card-title">Kategori</h6>
+                    <p class="card-text">{{ $peralatan->kategoriAlat->nama_kategori ?? '-' }}</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">Merk & Seri</h6>
+                    <p class="card-text">{{ $peralatan->merk_tipe_lengkap }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
             <div class="card bg-light">
                 <div class="card-body">
                     <h6 class="card-title">Kondisi</h6>
                     <p class="card-text">
                         @php
-                            $badgeColor = match($timbangan->kondisi_saat_ini) {
+                            $badgeColor = match($peralatan->kondisi_saat_ini) {
                                 'Baik' => 'success',
                                 'Rusak' => 'danger',
                                 'Dalam Perbaikan' => 'warning',
@@ -74,7 +82,7 @@
                             };
                         @endphp
                         <span class="badge bg-{{ $badgeColor }}">
-                            {{ $timbangan->kondisi_saat_ini }}
+                            {{ $peralatan->kondisi_saat_ini }}
                         </span>
                     </p>
                 </div>
@@ -82,16 +90,34 @@
         </div>
     </div>
 
-    <!-- Riwayat Penggunaan - UPDATED VERSION -->
+    @if(!empty($peralatan->spesifikasi))
+    <div class="card mb-4">
+        <div class="card-header">
+            <h6 class="card-title mb-0"><i class="bi bi-list-check me-2"></i>Spesifikasi</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                @foreach($peralatan->spesifikasi as $label => $value)
+                    <div class="col-md-4 mb-2">
+                        <small class="text-muted d-block">{{ $label }}</small>
+                        <strong>{{ $value }}</strong>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Riwayat Penggunaan -->
     <div class="card mb-3">
         <div class="card-header">
             <h6 class="card-title mb-0">
                 <i class="bi bi-arrow-right-circle me-2"></i>Riwayat Penggunaan
-                <span class="badge bg-primary ms-2">{{ $timbangan->riwayatPenggunaan->count() }}</span>
+                <span class="badge bg-primary ms-2">{{ $peralatan->riwayatPenggunaan->count() }}</span>
             </h6>
         </div>
         <div class="card-body">
-            @if($timbangan->riwayatPenggunaan->count() > 0)
+            @if($peralatan->riwayatPenggunaan->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
                         <thead>
@@ -104,7 +130,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($timbangan->riwayatPenggunaan->sortByDesc('created_at') as $riwayat)
+                            @foreach($peralatan->riwayatPenggunaan->sortByDesc('created_at') as $riwayat)
                             <tr>
                                 <td>{{ $riwayat->tanggal_pemakaian ? \Carbon\Carbon::parse($riwayat->tanggal_pemakaian)->format('d/m/Y') : '-' }}</td>
                                 <td>{{ $riwayat->line_tujuan }}</td>
@@ -134,16 +160,16 @@
         </div>
     </div>
 
-    <!-- Riwayat Perbaikan - UPDATED VERSION -->
+    <!-- Riwayat Perbaikan -->
     <div class="card">
         <div class="card-header">
             <h6 class="card-title mb-0">
                 <i class="bi bi-tools me-2"></i>Riwayat Perbaikan
-                <span class="badge bg-primary ms-2">{{ $timbangan->riwayatPerbaikan->count() }}</span>
+                <span class="badge bg-primary ms-2">{{ $peralatan->riwayatPerbaikan->count() }}</span>
             </h6>
         </div>
         <div class="card-body">
-            @if($timbangan->riwayatPerbaikan->count() > 0)
+            @if($peralatan->riwayatPerbaikan->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-sm table-bordered">
                         <thead>
@@ -156,7 +182,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($timbangan->riwayatPerbaikan->sortByDesc('created_at') as $riwayat)
+                            @foreach($peralatan->riwayatPerbaikan->sortByDesc('created_at') as $riwayat)
                             <tr>
                                 <td>{{ $riwayat->tanggal_masuk_lab ? \Carbon\Carbon::parse($riwayat->tanggal_masuk_lab)->format('d/m/Y') : '-' }}</td>
                                 <td>{{ $riwayat->line_sebelumnya }}</td>
@@ -165,9 +191,10 @@
                                         $status = $riwayat->status_perbaikan ?? 'Masuk Lab';
                                         $badgeColor = match($status) {
                                             'Masuk Lab' => 'secondary',
-                                            'Dalam Perbaikan' => 'warning',
-                                            'Selesai' => 'success',
+                                            'Perbaikan Internal' => 'primary',
                                             'Dikirim Eksternal' => 'info',
+                                            'Menunggu Penanganan' => 'warning',
+                                            'Selesai' => 'success',
                                             default => 'secondary'
                                         };
                                     @endphp
@@ -176,15 +203,15 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" 
-                                          title="{{ $riwayat->deskripsi_keluhan }}">
-                                        {{ $riwayat->deskripsi_keluhan }}
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;"
+                                          title="{{ $riwayat->keluhan_ringkas }}">
+                                        {{ $riwayat->keluhan_ringkas }}
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="text-truncate d-inline-block" style="max-width: 150px;" 
-                                          title="{{ $riwayat->tindakan_perbaikan ?? '-' }}">
-                                        {{ $riwayat->tindakan_perbaikan ?? '-' }}
+                                    <span class="text-truncate d-inline-block" style="max-width: 150px;"
+                                          title="{{ $riwayat->tindakan_ringkas ?? '-' }}">
+                                        {{ $riwayat->tindakan_ringkas ?? '-' }}
                                     </span>
                                 </td>
                             </tr>

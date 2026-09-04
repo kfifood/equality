@@ -5,20 +5,20 @@ namespace App\Observers;
 use App\Models\Kalibrasi;
 use App\Models\LaporanKerusakan;
 use App\Models\MasterKeluhan;
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 
 class KalibrasiObserver
 {
     /**
      * Setiap kali data kalibrasi disimpan (create/update),
-     * cari kalibrasi TERBARU untuk timbangan tsb lalu tulis balik
-     * ke timbangan.certificate_number & kapasitas. Ini menjaga data
-     * di tabel timbangan selalu jadi cerminan dari histori kalibrasi,
+     * cari kalibrasi TERBARU untuk peralatan tsb lalu tulis balik
+     * ke peralatan.certificate_number & spesifikasi['kapasitas']. Ini menjaga
+     * data di tabel peralatan selalu jadi cerminan dari histori kalibrasi,
      * bukan input manual yang terpisah.
      */
     public function saved(Kalibrasi $kalibrasi): void
     {
-        $this->sync($kalibrasi->timbangan_id);
+        $this->sync($kalibrasi->peralatan_id);
 
         // BARU — kalibrasi gagal harus berdampak nyata ke status alat,
         // bukan cuma tercatat sebagai riwayat.
@@ -33,16 +33,21 @@ class KalibrasiObserver
      */
     public function deleted(Kalibrasi $kalibrasi): void
     {
-        $this->sync($kalibrasi->timbangan_id);
+        $this->sync($kalibrasi->peralatan_id);
     }
 
-    protected function sync(?int $timbanganId): void
+    protected function sync(?int $peralatanId): void
     {
-        if (!$timbanganId) {
+        if (!$peralatanId) {
             return;
         }
 
-        $terbaru = Kalibrasi::where('timbangan_id', $timbanganId)
+        $peralatan = Peralatan::find($peralatanId);
+        if (!$peralatan) {
+            return;
+        }
+
+        $terbaru = Kalibrasi::where('peralatan_id', $peralatanId)
             ->orderByDesc('tanggal_pelaksanaan')
             ->first();
 
@@ -52,41 +57,49 @@ class KalibrasiObserver
 
         // 'beda_maksimum' di form/import kalibrasi dipakai untuk menyimpan
         // "Capacity & Deviation" (mis. "150000gr/ 10gr"), bukan cuma toleransi kecil.
-        // Ini adalah sumber data kapasitas timbangan yang sebenarnya, jadi kita
-        // teruskan ke timbangan.kapasitas juga.
+        // Ini adalah sumber data kapasitas peralatan yang sebenarnya, jadi kita
+        // teruskan ke peralatan.spesifikasi['kapasitas'] juga.
         // Hanya ditimpa kalau ada isinya — supaya kalau ada record kalibrasi baru
         // yang beda_maksimum-nya kosong, data kapasitas yang sudah ada tidak hilang.
+        //
+        // Catatan: ini masih spesifik untuk kategori alat "Timbangan". Untuk
+        // kategori lain (mis. Thermometer) beda_maksimum tidak relevan dan
+        // sengaja tidak disentuh di sini — data pengukuran khusus per kategori
+        // sebaiknya disimpan di kolom terpisah pada tabel kalibrasi sendiri,
+        // bukan ditumpuk ke spesifikasi peralatan (lihat catatan desain terkait).
         if ($terbaru?->beda_maksimum) {
-            $data['kapasitas'] = $terbaru->beda_maksimum;
+            $spesifikasi = $peralatan->spesifikasi ?? [];
+            $spesifikasi['kapasitas'] = $terbaru->beda_maksimum;
+            $data['spesifikasi'] = $spesifikasi;
         }
 
-        Timbangan::whereKey($timbanganId)->update($data);
+        $peralatan->update($data);
     }
 
     /**
      * Kalibrasi 'Tidak Lulus' → buat laporan_kerusakan otomatis (kalau belum
-     * ada yang aktif) dan tandai timbangan 'Rusak', supaya masuk alur kerja
+     * ada yang aktif) dan tandai peralatan 'Rusak', supaya masuk alur kerja
      * Perbaikan yang sama seperti laporan manual dari menu Penggunaan.
      */
     protected function tandaiRusakDariKalibrasiGagal(Kalibrasi $kalibrasi): void
     {
-        $timbangan = $kalibrasi->timbangan;
+        $peralatan = $kalibrasi->peralatan;
 
-        if (!$timbangan) {
+        if (!$peralatan) {
             return;
         }
 
-        $sudahAdaLaporanAktif = LaporanKerusakan::where('timbangan_id', $timbangan->id)
+        $sudahAdaLaporanAktif = LaporanKerusakan::where('peralatan_id', $peralatan->id)
             ->whereIn('status', ['Menunggu', 'Diproses'])
             ->exists();
 
         if (!$sudahAdaLaporanAktif) {
             $laporan = LaporanKerusakan::create([
-                'timbangan_id'          => $timbangan->id,
+                'peralatan_id'          => $peralatan->id,
                 'riwayat_penggunaan_id' => null,
                 'line_asal'             => $kalibrasi->dept_bagian
-                                            ?? $timbangan->status_line
-                                            ?? $timbangan->lokasi_asli
+                                            ?? $peralatan->status_line
+                                            ?? $peralatan->lokasi_asli
                                             ?? 'Lab',
                 'pic_pelapor'           => $kalibrasi->pelaksana ?? 'Lab Internal',
                 'tanggal_laporan'       => $kalibrasi->tanggal_pelaksanaan,
@@ -100,8 +113,8 @@ class KalibrasiObserver
             }
         }
 
-        if ($timbangan->kondisi_saat_ini !== 'Rusak') {
-            $timbangan->update(['kondisi_saat_ini' => 'Rusak']);
+        if ($peralatan->kondisi_saat_ini !== 'Rusak') {
+            $peralatan->update(['kondisi_saat_ini' => 'Rusak']);
         }
     }
 }

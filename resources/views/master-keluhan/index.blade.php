@@ -108,7 +108,7 @@
                             Nama Keluhan <span class="text-danger">*</span>
                         </label>
                         <input type="text" name="nama_keluhan" id="inputNamaKeluhan"
-                            class="form-control" placeholder="Contoh: Layar tidak menyala, Timbangan tidak akurat..."
+                            class="form-control" placeholder="Contoh: Layar tidak menyala, Hasil pengukuran tidak akurat..."
                             maxlength="255" required>
                         <div class="invalid-feedback" id="errorNamaKeluhan"></div>
                         <div class="form-text">Maksimal 255 karakter.</div>

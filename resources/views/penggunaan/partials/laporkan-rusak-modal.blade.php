@@ -1,7 +1,7 @@
 {{--
     Partial: penggunaan/partials/laporkan-rusak-modal.blade.php
     Di-render via AJAX oleh LaporanKerusakanController@create
-    Variabel yang tersedia: $penggunaan, $timbangan, $keluhanList
+    Variabel yang tersedia: $penggunaan, $peralatan, $keluhanList
 --}}
 
 <div class="modal-header" style="background-color:white; color:#4361EE;">
@@ -14,7 +14,7 @@
 <form id="formLaporkanRusak" action="{{ route('laporan-kerusakan.store') }}" method="POST">
     @csrf
     <input type="hidden" name="penggunaan_id" value="{{ $penggunaan->id }}">
-    <input type="hidden" name="timbangan_id" value="{{ $timbangan->id }}">
+    <input type="hidden" name="peralatan_id" value="{{ $peralatan->id }}">
 
     <div class="modal-body">
 
@@ -26,9 +26,9 @@
                         <i class="bi bi-speedometer fs-4 text-primary"></i>
                         <div>
                             <div class="fw-bold text-primary" style="font-size:1.05rem;">
-                                {{ $timbangan->kode_asset }}
+                                {{ $peralatan->kode_asset }}
                             </div>
-                            <div class="text-muted small">{{ $timbangan->merk_tipe_no_seri }}</div>
+                            <div class="text-muted small">{{ $peralatan->merk_tipe_lengkap }}</div>
                         </div>
                     </div>
                 </div>
@@ -235,7 +235,7 @@ $('#formLaporkanRusak').on('submit', function(e) {
     // Konfirmasi sebelum kirim
     Swal.fire({
         title: 'Kirim Laporan Kerusakan?',
-        html: 'Kondisi alat <strong>{{ $timbangan->kode_asset }}</strong> akan berubah menjadi <strong class="text-danger">Rusak</strong>.<br>Lanjutkan?',
+        html: 'Kondisi alat <strong>{{ $peralatan->kode_asset }}</strong> akan berubah menjadi <strong class="text-danger">Rusak</strong>.<br>Lanjutkan?',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',

@@ -56,14 +56,14 @@
                             <form action="{{ route('kalibrasi.index') }}" method="GET" id="filterForm">
                                 <div class="row g-3">
                                     <div class="col-md-3">
-                                        <label class="form-label">Timbangan</label>
-                                        <select name="timbangan_id" class="form-select"
+                                        <label class="form-label">Peralatan</label>
+                                        <select name="peralatan_id" class="form-select"
                                             onchange="this.form.submit()">
-                                            <option value="">Semua Timbangan</option>
-                                            @foreach($timbanganList as $t)
-                                                <option value="{{ $t->id }}"
-                                                    {{ request('timbangan_id') == $t->id ? 'selected' : '' }}>
-                                                    {{ $t->kode_asset }} — {{ $t->merk_tipe_no_seri }}
+                                            <option value="">Semua Peralatan</option>
+                                            @foreach($peralatanList as $p)
+                                                <option value="{{ $p->id }}"
+                                                    {{ request('peralatan_id') == $p->id ? 'selected' : '' }}>
+                                                    {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -97,7 +97,7 @@
                                             <button class="btn btn-outline-primary" type="submit">
                                                 <i class="bi bi-search"></i>
                                             </button>
-                                            @if(request()->anyFilled(['timbangan_id', 'hasil', 'dept_bagian', 'search']))
+                                            @if(request()->anyFilled(['peralatan_id', 'hasil', 'dept_bagian', 'search']))
                                                 <a href="{{ route('kalibrasi.index') }}" class="btn btn-outline-danger">
                                                     <i class="bi bi-x-circle"></i>
                                                 </a>
@@ -145,14 +145,14 @@
                                             <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2">
                                                 <i class="bi bi-patch-check text-white" style="font-size:0.85rem;"></i>
                                             </div>
-                                            <strong>{{ $item->timbangan->kode_asset ?? '-' }}</strong>
+                                            <strong>{{ $item->peralatan->kode_asset ?? '-' }}</strong>
                                         </div>
                                     </td>
 
                                     <td class="d-none d-md-table-cell">
                                         <span class="text-truncate d-inline-block" style="max-width:180px;"
-                                            title="{{ $item->timbangan->merk_tipe_no_seri ?? '-' }}">
-                                            {{ $item->timbangan->merk_tipe_no_seri ?? '-' }}
+                                            title="{{ $item->peralatan->merk_tipe_lengkap ?? '-' }}">
+                                            {{ $item->peralatan->merk_tipe_lengkap ?? '-' }}
                                         </span>
                                     </td>
 

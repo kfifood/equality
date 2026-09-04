@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use App\Models\RiwayatPerbaikan;
 use App\Models\RiwayatPenggunaan;
 use App\Models\MasterLine;
@@ -14,56 +14,56 @@ class DashboardController extends Controller
     public function index()
     {
         try {
-            // Statistik utama untuk timbangan
+            // Statistik utama untuk peralatan
             $stats = [
-                'total_timbangan' => Timbangan::count(),
-                'timbangan_baik' => Timbangan::where('kondisi_saat_ini', 'Baik')->count(),
-                'timbangan_rusak' => Timbangan::where('kondisi_saat_ini', 'Rusak')->count(),
-                'timbangan_perbaikan' => Timbangan::where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
-                'total_line' => Timbangan::distinct('status_line')->whereNotNull('status_line')->count('status_line'),
+                'total_peralatan' => Peralatan::count(),
+                'peralatan_baik' => Peralatan::where('kondisi_saat_ini', 'Baik')->count(),
+                'peralatan_rusak' => Peralatan::where('kondisi_saat_ini', 'Rusak')->count(),
+                'peralatan_perbaikan' => Peralatan::where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
+                'total_line' => Peralatan::distinct('status_line')->whereNotNull('status_line')->count('status_line'),
                 'perbaikan_aktif' => RiwayatPerbaikan::whereIn('status_perbaikan', ['Masuk Lab', 'Dalam Perbaikan'])->count(),
                 'penggunaan_bulan_ini' => RiwayatPenggunaan::whereMonth('tanggal_pemakaian', now()->month)->count(),
-                'timbangan_di_lab' => Timbangan::whereNull('status_line')->count(),
+                'peralatan_di_lab' => Peralatan::whereNull('status_line')->count(),
             ];
 
             // Hitung persentase
-            $stats['persentase_baik'] = $stats['total_timbangan'] > 0 ? 
-                round(($stats['timbangan_baik'] / $stats['total_timbangan']) * 100, 1) : 0;
+            $stats['persentase_baik'] = $stats['total_peralatan'] > 0 ? 
+                round(($stats['peralatan_baik'] / $stats['total_peralatan']) * 100, 1) : 0;
 
         } catch (\Exception $e) {
             // Fallback jika ada error
             $stats = [
-                'total_timbangan' => 0,
-                'timbangan_baik' => 0,
-                'timbangan_rusak' => 0,
-                'timbangan_perbaikan' => 0,
+                'total_peralatan' => 0,
+                'peralatan_baik' => 0,
+                'peralatan_rusak' => 0,
+                'peralatan_perbaikan' => 0,
                 'total_line' => 0,
                 'perbaikan_aktif' => 0,
                 'penggunaan_bulan_ini' => 0,
-                'timbangan_di_lab' => 0,
+                'peralatan_di_lab' => 0,
                 'persentase_baik' => 0,
             ];
         }
 
         // Data terbaru
-        $recentTimbangan = Timbangan::orderBy('updated_at', 'desc')->limit(5)->get();
-        $recentPerbaikan = RiwayatPerbaikan::with(['timbangan'])
+        $recentPeralatan = Peralatan::with('kategoriAlat')->orderBy('updated_at', 'desc')->limit(5)->get();
+        $recentPerbaikan = RiwayatPerbaikan::with(['peralatan'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
-        $recentPenggunaan = RiwayatPenggunaan::with(['timbangan'])
+        $recentPenggunaan = RiwayatPenggunaan::with(['peralatan'])
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
 
         // Data untuk chart distribusi line
-        $distribusiLine = Timbangan::select('status_line', DB::raw('count(*) as total'))
+        $distribusiLine = Peralatan::select('status_line', DB::raw('count(*) as total'))
             ->whereNotNull('status_line')
             ->groupBy('status_line')
             ->get();
 
-        // Timbangan yang perlu perhatian
-        $timbanganPerhatian = Timbangan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
+        // Peralatan yang perlu perhatian
+        $peralatanPerhatian = Peralatan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
             ->orderBy('updated_at', 'desc')
             ->limit(3)
             ->get();
@@ -75,11 +75,11 @@ class DashboardController extends Controller
 
         return view('dashboard', compact(
             'stats', 
-            'recentTimbangan', 
+            'recentPeralatan', 
             'recentPerbaikan', 
             'recentPenggunaan',
             'distribusiLine',
-            'timbanganPerhatian',
+            'peralatanPerhatian',
             'perbaikanLama'
         ));
     }

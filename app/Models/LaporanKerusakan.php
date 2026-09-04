@@ -12,7 +12,7 @@ class LaporanKerusakan extends Model
     protected $table = 'laporan_kerusakan';
 
     protected $fillable = [
-        'timbangan_id',
+        'peralatan_id',
         'riwayat_penggunaan_id',
         'line_asal',
         'pic_pelapor',
@@ -29,9 +29,9 @@ class LaporanKerusakan extends Model
 
     // ── Relasi ────────────────────────────────────────────────────────────────
 
-    public function timbangan()
+    public function peralatan()
     {
-        return $this->belongsTo(Timbangan::class, 'timbangan_id');
+        return $this->belongsTo(Peralatan::class, 'peralatan_id');
     }
 
     public function riwayatPenggunaan()

@@ -36,9 +36,9 @@ class MasterLine extends Model
         return $this->hasMany(RiwayatPenggunaan::class, 'line_tujuan', 'nama_line');
     }
 
-    // Relasi ke timbangan (jika diperlukan)
-    public function timbangan()
+    // Relasi ke peralatan (jika diperlukan)
+    public function peralatan()
     {
-        return $this->hasMany(Timbangan::class, 'status_line', 'nama_line');
+        return $this->hasMany(Peralatan::class, 'status_line', 'nama_line');
     }
 }

@@ -12,7 +12,7 @@ class Kalibrasi extends Model
     protected $table = 'kalibrasi';
 
     protected $fillable = [
-        'timbangan_id',
+        'peralatan_id',
         'certificate_number',
         'tanggal_pelaksanaan',
         'dept_bagian',
@@ -30,9 +30,9 @@ class Kalibrasi extends Model
 
     // ── Relasi ──────────────────────────────────────────────
 
-    public function timbangan()
+    public function peralatan()
     {
-        return $this->belongsTo(Timbangan::class, 'timbangan_id');
+        return $this->belongsTo(Peralatan::class, 'peralatan_id');
     }
 
     // ── Scopes ──────────────────────────────────────────────

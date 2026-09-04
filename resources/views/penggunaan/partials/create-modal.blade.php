@@ -11,16 +11,16 @@
             <div class="col-md-6">
                 <div class="mb-3">
                     <label class="form-label">Pilih Alat <span class="text-danger">*</span></label>
-                    <select name="timbangan_id" class="form-select select2-timbangan" id="timbanganSelect" required>
+                    <select name="peralatan_id" class="form-select select2-peralatan" id="peralatanSelect" required>
                         <option value="">Pilih Alat</option>
-                        @foreach($timbangan as $item)
+                        @foreach($peralatan as $item)
                             <option value="{{ $item->id }}"
-                                {{ $selectedTimbangan && $selectedTimbangan->id == $item->id ? 'selected' : '' }}
+                                {{ $selectedPeralatan && $selectedPeralatan->id == $item->id ? 'selected' : '' }}
                                 data-lokasi="{{ $item->status_line ? $item->status_line : 'Lab' }}"
                                 data-kode="{{ $item->kode_asset }}"
-                                data-merk="{{ $item->merk_tipe_no_seri }}"
+                                data-merk="{{ $item->merk_tipe_lengkap }}"
                                 data-kondisi="{{ $item->kondisi_saat_ini }}">
-                                {{ $item->kode_asset }} - {{ $item->merk_tipe_no_seri }}
+                                {{ $item->kode_asset }} - {{ $item->merk_tipe_lengkap }}
                                 @if($item->status_line)
                                     (Sedang di {{ $item->status_line }})
                                 @else
@@ -98,8 +98,8 @@
             <small>
                 <i class="bi bi-info-circle me-1"></i>
                 <strong>Informasi Penggunaan:</strong><br>
-                • Hanya timbangan kondisi <strong>Baik</strong> yang dapat digunakan<br>
-                • Timbangan di line lain <strong>bisa dipindahkan</strong><br>
+                • Hanya peralatan kondisi <strong>Baik</strong> yang dapat digunakan<br>
+                • Peralatan di line lain <strong>bisa dipindahkan</strong><br>
                 • Daftar PIC difilter otomatis sesuai Line Tujuan yang dipilih
             </small>
         </div>
@@ -107,7 +107,7 @@
         <div class="alert alert-warning d-none" id="warningAlert">
             <small>
                 <i class="bi bi-exclamation-triangle me-1"></i>
-                <strong>Perhatian:</strong> Timbangan sedang digunakan di line lain.
+                <strong>Perhatian:</strong> Peralatan sedang digunakan di line lain.
                 Status penggunaan sebelumnya otomatis menjadi "Selesai".
             </small>
         </div>
@@ -115,7 +115,7 @@
         <div class="alert alert-danger d-none" id="dangerAlert">
             <small>
                 <i class="bi bi-x-circle me-1"></i>
-                <strong>Peringatan:</strong> Kondisi timbangan <span id="kondisiTimbangan"></span> — tidak dapat digunakan.
+                <strong>Peringatan:</strong> Kondisi peralatan <span id="kondisiPeralatan"></span> — tidak dapat digunakan.
             </small>
         </div>
 
@@ -156,12 +156,12 @@ $(document).ready(function () {
     const allPics = JSON.parse($('#allPicData').attr('data-pics') || '[]');
 
     // ── Init Select2 ─────────────────────────────────────────────────────────
-    $('.select2-timbangan').select2({
+    $('.select2-peralatan').select2({
         placeholder: 'Cari alat berdasarkan kode asset atau merk...',
         allowClear: true, width: '100%',
         dropdownParent: $('#dynamicModal'),
-        templateResult: formatTimbangan,
-        templateSelection: formatTimbanganSelection
+        templateResult: formatPeralatan,
+        templateSelection: formatPeralatanSelection
     });
 
     $('.select2-line').select2({
@@ -176,8 +176,8 @@ $(document).ready(function () {
         dropdownParent: $('#dynamicModal')
     });
 
-    // ── Format Select2 Timbangan ─────────────────────────────────────────────
-    function formatTimbangan(item) {
+    // ── Format Select2 Peralatan ─────────────────────────────────────────────
+    function formatPeralatan(item) {
         if (!item.id) return item.text;
         const el = item.element;
         return $(
@@ -192,7 +192,7 @@ $(document).ready(function () {
             '</div>'
         );
     }
-    function formatTimbanganSelection(item) {
+    function formatPeralatanSelection(item) {
         if (!item.id) return item.text;
         return item.element.getAttribute('data-kode') + ' — ' + item.element.getAttribute('data-merk');
     }
@@ -200,8 +200,8 @@ $(document).ready(function () {
         return k === 'Baik' ? 'success' : k === 'Rusak' ? 'danger' : 'warning';
     }
 
-    // ── Saat Timbangan dipilih ────────────────────────────────────────────────
-    $('#timbanganSelect').on('change', function () {
+    // ── Saat Peralatan dipilih ────────────────────────────────────────────────
+    $('#peralatanSelect').on('change', function () {
         const opt    = $(this).find('option:selected');
         const lokasi = opt.data('lokasi');
         const kondisi= opt.data('kondisi');
@@ -213,7 +213,7 @@ $(document).ready(function () {
             $('#warningAlert').toggleClass('d-none', lokasi === 'Lab');
             const notBaik = kondisi !== 'Baik';
             $('#dangerAlert').toggleClass('d-none', !notBaik);
-            if (notBaik) $('#kondisiTimbangan').text(kondisi);
+            if (notBaik) $('#kondisiPeralatan').text(kondisi);
             $('#submitBtn').prop('disabled', notBaik)
                            .toggleClass('btn-secondary', notBaik)
                            .toggleClass('btn-primary', !notBaik);
@@ -256,7 +256,7 @@ $(document).ready(function () {
         $('#picValue').val($(this).val());
     });
 
-    // Trigger timbangan jika sudah ada pre-selected
-    $('#timbanganSelect').trigger('change');
+    // Trigger peralatan jika sudah ada pre-selected
+    $('#peralatanSelect').trigger('change');
 });
 </script>
