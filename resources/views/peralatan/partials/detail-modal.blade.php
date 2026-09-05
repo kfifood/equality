@@ -96,8 +96,8 @@
         <div class="col-md-6">
             <div class="card bg-light">
                 <div class="card-body">
-                    <h6 class="card-title">Certificate Number</h6>
-                    <p class="card-text">{{ $peralatan->certificate_number ?? '-' }}</p>
+                    <h6 class="card-title">Calibration Number</h6>
+                    <p class="card-text">{{ $peralatan->calibration_number ?? '-' }}</p>
                 </div>
             </div>
         </div>
@@ -263,7 +263,7 @@
                         <thead>
                             <tr>
                                 <th>Tanggal Pelaksanaan</th>
-                                <th>No. Certificate</th>
+                                <th>No. Kalibrasi</th>
                                 <th>Dept/Bagian</th>
                                 <th>Beda Maksimum</th>
                                 <th>Hasil</th>
@@ -275,7 +275,7 @@
                             @foreach($peralatan->kalibrasi as $kal)
                             <tr>
                                 <td>{{ $kal->tanggal_pelaksanaan ? $kal->tanggal_pelaksanaan->format('d/m/Y') : '-' }}</td>
-                                <td>{{ $kal->certificate_number ?? '-' }}</td>
+                                <td>{{ $kal->calibration_number ?? '-' }}</td>
                                 <td>{{ $kal->dept_bagian ?? '-' }}</td>
                                 <td>{{ $kal->beda_maksimum ?? '-' }}</td>
                                 <td>

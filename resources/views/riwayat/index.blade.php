@@ -39,13 +39,13 @@
                                                value="{{ request('tanggal_sampai') }}">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Timbangan</label>
+                                        <label class="form-label">Peralatan</label>
                                         <select name="timbangan_id" class="form-select">
-                                            <option value="">Semua Timbangan</option>
-                                            @foreach($timbanganList as $timbangan)
-                                                <option value="{{ $timbangan->id }}" 
-                                                    {{ request('timbangan_id') == $timbangan->id ? 'selected' : '' }}>
-                                                    {{ $timbangan->kode_asset }}
+                                            <option value="">Semua Peralatan</option>
+                                            @foreach($peralatanList as $peralatan)
+                                                <option value="{{ $peralatan->id }}" 
+                                                    {{ request('timbangan_id') == $peralatan->id ? 'selected' : '' }}>
+                                                    {{ $peralatan->kode_asset }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -122,9 +122,9 @@
                                                         </div>
                                                         <div>
                                                             <strong>
-                                                                <a href="javascript:void(0)" onclick="showTimbanganRiwayat({{ $item->timbangan_id }})" 
+                                                                <a href="{{ route('riwayat.peralatan', $item->peralatan_id) }}" 
                                                                    class="text-decoration-none">
-                                                                    {{ $item->timbangan->kode_asset }}
+                                                                    {{ $item->peralatan->kode_asset ?? '-' }}
                                                                 </a>
                                                             </strong>
                                                         </div>
@@ -247,9 +247,9 @@
                                                         </div>
                                                         <div>
                                                             <strong>
-                                                                <a href="javascript:void(0)" onclick="showTimbanganRiwayat({{ $item->timbangan_id }})" 
+                                                                <a href="{{ route('riwayat.peralatan', $item->peralatan_id) }}" 
                                                                    class="text-decoration-none">
-                                                                    {{ $item->timbangan->kode_asset }}
+                                                                    {{ $item->peralatan->kode_asset ?? '-' }}
                                                                 </a>
                                                             </strong>
                                                         </div>
@@ -486,47 +486,13 @@ $(document).ready(function() {
     }
 });
 
-// Function untuk show timbangan riwayat
-function showTimbanganRiwayat(timbanganId) {
-    Swal.fire({
-        title: 'Memuat data...',
-        text: 'Sedang mengambil data riwayat',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    $.ajax({
-        url: '{{ url("timbangan") }}/' + timbanganId + '/riwayat',
-        type: 'GET',
-        success: function(response) {
-            Swal.close();
-            
-            if (response.success) {
-                $('#dynamicModalContent').html(response.html);
-                var modal = new bootstrap.Modal(document.getElementById('dynamicModal'));
-                modal.show();
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Gagal memuat data riwayat'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            console.error('Error:', xhr);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal memuat data riwayat'
-            });
-        }
-    });
-}
+// NOTE: dulu ada fungsi showTimbanganRiwayat() yang buka data riwayat lewat AJAX + modal,
+// tapi controller RiwayatController::peralatan() mengembalikan full page view (bukan JSON
+// {success, html} seperti pola modal di menu lain), jadi polanya tidak cocok dipakai AJAX.
+// Kode Asset sekarang langsung berupa link <a> ke halaman riwayat.peralatan (lihat di atas).
+// Kalau nanti mau tetap pakai modal, RiwayatController::peralatan() perlu diubah dulu supaya
+// return response()->json(['success' => true, 'html' => view(...)->render()]) seperti pola
+// LineController::peralatan().
 
 // Close modal handler
 $('#dynamicModal').on('hidden.bs.modal', function () {

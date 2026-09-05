@@ -60,14 +60,18 @@
                                     </select>
                                 </div>
 
-                                {{-- Tipe Laporan (hanya untuk Excel) --}}
+                                {{-- Tipe Laporan (hanya untuk Excel).
+                                     NOTE: value option di bawah ini (summary/riwayat/lengkap/timbangan/penggunaan/perbaikan)
+                                     harus sama persis dengan $format yang dicek di App\Exports\PeralatanExport.
+                                     File Export itu belum aku lihat isinya — kalau kamu sudah/belum rename
+                                     case 'timbangan' di sana, samakan value option "timbangan" ini juga. --}}
                                 <div class="col-md-2" id="exportFormatWrapper">
                                     <label class="form-label fw-semibold">Tipe Laporan</label>
                                     <select class="form-select" id="exportFormat">
                                         <option value="summary">Summary Lengkap</option>
                                         <option value="riwayat">Riwayat Pergerakan</option>
                                         <option value="lengkap">Laporan Lengkap</option>
-                                        <option value="timbangan">Data Timbangan</option>
+                                        <option value="timbangan">Data Peralatan</option>
                                         <option value="penggunaan">Riwayat Penggunaan</option>
                                         <option value="perbaikan">Riwayat Perbaikan</option>
                                     </select>
@@ -209,7 +213,7 @@
                                     @else
                                         <div class="text-center py-4">
                                             <i class="bi bi-diagram-3 fa-2x text-muted mb-3"></i>
-                                            <p class="text-muted">Tidak ada timbangan di line</p>
+                                            <p class="text-muted">Tidak ada peralatan di line</p>
                                         </div>
                                     @endif
                                 </div>
@@ -288,7 +292,7 @@
                                                 <tbody>
                                                     @foreach($recentPenggunaan as $penggunaan)
                                                     <tr>
-                                                        <td class="ps-3 fw-medium">{{ $penggunaan->timbangan->kode_asset }}</td>
+                                                        <td class="ps-3 fw-medium">{{ $penggunaan->peralatan->kode_asset ?? '-' }}</td>
                                                         <td><span class="badge bg-info">{{ $penggunaan->line_tujuan }}</span></td>
                                                         <td class="pe-3">{{ \Carbon\Carbon::parse($penggunaan->tanggal_pemakaian)->format('d/m/Y') }}</td>
                                                     </tr>
@@ -329,7 +333,7 @@
                                                 <tbody>
                                                     @foreach($recentPerbaikan as $perbaikan)
                                                     <tr>
-                                                        <td class="ps-3 fw-medium">{{ $perbaikan->timbangan->kode_asset }}</td>
+                                                        <td class="ps-3 fw-medium">{{ $perbaikan->peralatan->kode_asset ?? '-' }}</td>
                                                         <td>{{ $perbaikan->line_sebelumnya }}</td>
                                                         <td class="pe-3">
                                                             @php

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use App\Models\RiwayatPerbaikan;
 use App\Models\RiwayatPenggunaan;
 use Illuminate\Http\Request;
@@ -12,8 +12,8 @@ class RiwayatController extends Controller
 {
     public function index(Request $request)
     {
-        $queryPenggunaan = RiwayatPenggunaan::with('timbangan');
-        $queryPerbaikan = RiwayatPerbaikan::with('timbangan');
+        $queryPenggunaan = RiwayatPenggunaan::with('peralatan');
+        $queryPerbaikan = RiwayatPerbaikan::with('peralatan');
 
         // Filter by date range
         if ($request->has('tanggal_dari') && $request->tanggal_dari != '') {
@@ -26,10 +26,13 @@ class RiwayatController extends Controller
             $queryPerbaikan->whereDate('tanggal_masuk_lab', '<=', $request->tanggal_sampai);
         }
 
-        // Filter by timbangan
+        // Filter by peralatan
+        // NOTE: input request masih bernama 'timbangan_id' — kalau form/view
+        // sudah kamu update ke 'peralatan_id', ganti $request->timbangan_id
+        // di bawah ini jadi $request->peralatan_id.
         if ($request->has('timbangan_id') && $request->timbangan_id != '') {
-            $queryPenggunaan->where('timbangan_id', $request->timbangan_id);
-            $queryPerbaikan->where('timbangan_id', $request->timbangan_id);
+            $queryPenggunaan->where('peralatan_id', $request->timbangan_id);
+            $queryPerbaikan->where('peralatan_id', $request->timbangan_id);
         }
 
         // Filter by line
@@ -40,10 +43,10 @@ class RiwayatController extends Controller
 
         // Filter by kode asset
         if ($request->has('kode_asset') && $request->kode_asset != '') {
-            $queryPenggunaan->whereHas('timbangan', function($q) use ($request) {
+            $queryPenggunaan->whereHas('peralatan', function($q) use ($request) {
                 $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%');
             });
-            $queryPerbaikan->whereHas('timbangan', function($q) use ($request) {
+            $queryPerbaikan->whereHas('peralatan', function($q) use ($request) {
                 $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%');
             });
         }
@@ -51,18 +54,22 @@ class RiwayatController extends Controller
         $riwayatPenggunaan = $queryPenggunaan->orderBy('created_at', 'desc')->paginate(15, ['*'], 'penggunaan_page');
         $riwayatPerbaikan = $queryPerbaikan->orderBy('created_at', 'desc')->paginate(15, ['*'], 'perbaikan_page');
 
-        $timbanganList = Timbangan::orderBy('kode_asset')->get();
+        $peralatanList = Peralatan::orderBy('kode_asset')->get();
 
         return view('riwayat.index', compact(
-            'riwayatPenggunaan', 
+            'riwayatPenggunaan',
             'riwayatPerbaikan',
-            'timbanganList'
+            'peralatanList'
         ));
     }
 
-    public function timbangan($id)
+    // NOTE: method ini sebelumnya bernama timbangan($id) — di-rename jadi
+    // peralatan($id). Kalau ada route yang manggil ->timbangan, update juga.
+    // View 'riwayat.timbangan' juga perlu disesuaikan (variabel $timbangan
+    // di dalamnya sekarang jadi $peralatan).
+    public function peralatan($id)
     {
-        $timbangan = Timbangan::with([
+        $peralatan = Peralatan::with([
             'riwayatPerbaikan' => function($query) {
                 $query->orderBy('created_at', 'desc');
             },
@@ -71,17 +78,24 @@ class RiwayatController extends Controller
             }
         ])->findOrFail($id);
 
-        return view('riwayat.timbangan', compact('timbangan'));
+        return view('riwayat.peralatan', compact('peralatan'));
     }
 
     // Method untuk timeline gabungan - UPDATED VERSION
 public function timeline(Request $request)
 {
     // Query untuk penggunaan dengan pagination
-    $penggunaanQuery = RiwayatPenggunaan::with('timbangan')
+    // NOTE: kolom 'deskripsi_keluhan' di riwayat_perbaikan cuma field lama
+    // (fallback), keluhan versi baru disimpan lewat relasi
+    // laporanKerusakan->keluhanList. Karena query ini pakai UNION ALL mentah
+    // (bukan Eloquent collection), kolom KETERANGAN untuk baris PERBAIKAN
+    // hanya akan terisi untuk data lama yang masih pakai deskripsi_keluhan.
+    // Kalau mau keluhan versi baru ikut tampil di timeline ini, perlu subquery
+    // tambahan ke laporan_kerusakan_keluhan — kabari kalau mau aku bantu itu.
+    $penggunaanQuery = RiwayatPenggunaan::with('peralatan')
         ->select(
             'id',
-            'timbangan_id',
+            'peralatan_id',
             'line_tujuan as lokasi',
             'tanggal_pemakaian as tanggal',
             'pic',
@@ -90,11 +104,11 @@ public function timeline(Request $request)
             'created_at'
         );
 
-    // Query untuk perbaikan dengan pagination  
-    $perbaikanQuery = RiwayatPerbaikan::with('timbangan')
+    // Query untuk perbaikan dengan pagination
+    $perbaikanQuery = RiwayatPerbaikan::with('peralatan')
         ->select(
             'id',
-            'timbangan_id', 
+            'peralatan_id',
             'line_sebelumnya as lokasi',
             'tanggal_masuk_lab as tanggal',
             DB::raw("NULL as pic"),
@@ -108,23 +122,24 @@ public function timeline(Request $request)
         $penggunaanQuery->whereDate('tanggal_pemakaian', '>=', $request->tanggal_dari);
         $perbaikanQuery->whereDate('tanggal_masuk_lab', '>=', $request->tanggal_dari);
     }
-    
+
     if ($request->has('tanggal_sampai') && $request->tanggal_sampai != '') {
         $penggunaanQuery->whereDate('tanggal_pemakaian', '<=', $request->tanggal_sampai);
         $perbaikanQuery->whereDate('tanggal_masuk_lab', '<=', $request->tanggal_sampai);
     }
-    
+
+    // NOTE: input request masih bernama 'timbangan_id', lihat catatan di index()
     if ($request->has('timbangan_id') && $request->timbangan_id != '') {
-        $penggunaanQuery->where('timbangan_id', $request->timbangan_id);
-        $perbaikanQuery->where('timbangan_id', $request->timbangan_id);
+        $penggunaanQuery->where('peralatan_id', $request->timbangan_id);
+        $perbaikanQuery->where('peralatan_id', $request->timbangan_id);
     }
 
     // Filter by kode asset
     if ($request->has('kode_asset') && $request->kode_asset != '') {
-        $penggunaanQuery->whereHas('timbangan', function($q) use ($request) {
+        $penggunaanQuery->whereHas('peralatan', function($q) use ($request) {
             $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%');
         });
-        $perbaikanQuery->whereHas('timbangan', function($q) use ($request) {
+        $perbaikanQuery->whereHas('peralatan', function($q) use ($request) {
             $q->where('kode_asset', 'like', '%' . $request->kode_asset . '%');
         });
     }
@@ -140,8 +155,8 @@ public function timeline(Request $request)
         ->orderBy('created_at', 'desc')
         ->paginate(20);
 
-    $timbanganList = Timbangan::orderBy('kode_asset')->get();
+    $peralatanList = Peralatan::orderBy('kode_asset')->get();
 
-    return view('riwayat.timeline', compact('riwayat', 'timbanganList'));
+    return view('riwayat.timeline', compact('riwayat', 'peralatanList'));
 }
 }

@@ -69,6 +69,18 @@
                                         </select>
                                     </div>
                                     <div class="col-md-2">
+                                        <label class="form-label">Kategori Alat</label>
+                                        <select name="kategori_alat_id" class="form-select" onchange="this.form.submit()">
+                                            <option value="">Semua Kategori</option>
+                                            @foreach($kategoriAlatList as $kat)
+                                                <option value="{{ $kat->id }}"
+                                                    {{ request('kategori_alat_id') == $kat->id ? 'selected' : '' }}>
+                                                    {{ $kat->nama_kategori }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
                                         <label class="form-label">Hasil</label>
                                         <select name="hasil" class="form-select" onchange="this.form.submit()">
                                             <option value="">Semua Hasil</option>
@@ -88,16 +100,16 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-5">
+                                    <div class="col-md-3">
                                         <label class="form-label">Pencarian</label>
                                         <div class="input-group">
                                             <input type="text" name="search" class="form-control" id="searchInput"
-                                                placeholder="Cari kode asset, certificate, pelaksana..."
+                                                placeholder="Cari kode asset, calibration, pelaksana..."
                                                 value="{{ request('search') }}">
                                             <button class="btn btn-outline-primary" type="submit">
                                                 <i class="bi bi-search"></i>
                                             </button>
-                                            @if(request()->anyFilled(['peralatan_id', 'hasil', 'dept_bagian', 'search']))
+                                            @if(request()->anyFilled(['peralatan_id', 'kategori_alat_id', 'hasil', 'dept_bagian', 'search']))
                                                 <a href="{{ route('kalibrasi.index') }}" class="btn btn-outline-danger">
                                                     <i class="bi bi-x-circle"></i>
                                                 </a>
@@ -123,7 +135,7 @@
                                     <th class="d-none d-md-table-cell">Merk &amp; Seri</th>
                                     <th>Tgl. Pelaksanaan</th>
                                     <th class="d-none d-md-table-cell">Dept / Bagian</th>
-                                    <th class="d-none d-lg-table-cell">Certificate No.</th>
+                                    <th class="d-none d-lg-table-cell">Calibration No.</th>
                                     <th class="d-none d-lg-table-cell">Beda Maksimum</th>
                                     <th class="d-none d-md-table-cell">Pelaksana</th>
                                     <th>Hasil</th>
@@ -171,9 +183,9 @@
                                     </td>
 
                                     <td class="d-none d-lg-table-cell">
-                                        @if($item->certificate_number)
+                                        @if($item->calibration_number)
                                             <span class="font-monospace small">
-                                                <i class="bi bi-file-earmark-text text-primary me-1"></i>{{ $item->certificate_number }}
+                                                <i class="bi bi-file-earmark-text text-primary me-1"></i>{{ $item->calibration_number }}
                                             </span>
                                         @else
                                             <span class="text-muted">-</span>

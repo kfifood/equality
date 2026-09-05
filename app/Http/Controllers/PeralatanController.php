@@ -117,7 +117,7 @@ class PeralatanController extends Controller
             'lokasi_asli'        => $request->lokasi_asli,
             'status_line'        => null, // Default di Lab
             'kondisi_saat_ini'   => 'Baik',
-            'certificate_number' => $request->certificate_number,
+            'calibration_number' => $request->calibration_number,
             'spesifikasi'        => $this->buildSpesifikasi($request),
         ]);
 
@@ -166,7 +166,7 @@ class PeralatanController extends Controller
             'serial_number'      => $request->serial_number,
             'tanggal_datang'     => $request->tanggal_datang,
             'lokasi_asli'        => $request->lokasi_asli,
-            'certificate_number' => $request->certificate_number,
+            'calibration_number' => $request->calibration_number,
             'spesifikasi'        => $this->buildSpesifikasi($request),
         ]);
 

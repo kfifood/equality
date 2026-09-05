@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use App\Models\RiwayatPerbaikan;
 use App\Models\RiwayatPenggunaan;
 use App\Models\MasterLine;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
-use App\Exports\TimbanganExport;
+use App\Exports\PeralatanExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
@@ -37,16 +37,16 @@ class LaporanController extends Controller
     $distribusiLine = $this->buildDistribusiLine($line);
 
     $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
-        ->with('timbangan')
+        ->with('peralatan')
         ->orderBy('tanggal_pemakaian', 'desc')
         ->limit(10)->get();
 
     $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
-        ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
+        ->with(['peralatan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
         ->orderBy('tanggal_masuk_lab', 'desc')
         ->limit(10)->get();
 
-    $timbanganList = Timbangan::orderBy('kode_asset')
+    $peralatanList = Peralatan::orderBy('kode_asset')
         ->when($line !== '', fn($q) => $q->where('status_line', $line))
         ->get();
 
@@ -62,7 +62,7 @@ class LaporanController extends Controller
         return $this->generatePDF(
             $year, $month, $line,
             $statistik, $penggunaanPeriod, $perbaikanPeriod,
-            $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+            $distribusiLine, $recentPenggunaan, $recentPerbaikan, $peralatanList
         );
     }
 
@@ -70,7 +70,7 @@ class LaporanController extends Controller
         'statistik', 'distribusiLine',
         'recentPenggunaan', 'recentPerbaikan',
         'penggunaanPeriod', 'perbaikanPeriod',
-        'timbanganList', 'years', 'months',
+        'peralatanList', 'years', 'months',
         'year', 'month', 'period', 'line', 'lineList'
     ));
 }
@@ -95,28 +95,28 @@ class LaporanController extends Controller
             $distribusiLine   = $this->buildDistribusiLine($line);
 
             $recentPenggunaan = $this->buildPenggunaanQuery($startDate, $endDate, $line)
-                ->with('timbangan')->orderBy('tanggal_pemakaian', 'desc')->limit(10)->get();
+                ->with('peralatan')->orderBy('tanggal_pemakaian', 'desc')->limit(10)->get();
 
             $recentPerbaikan = $this->buildPerbaikanQuery($startDate, $endDate, $line)
-                ->with(['timbangan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
+                ->with(['peralatan', 'laporanKerusakan.keluhanList', 'detailTindakan.masterTindakan'])
                 ->orderBy('tanggal_masuk_lab', 'desc')->limit(10)->get();
 
-            $timbanganList = Timbangan::orderBy('kode_asset')
+            $peralatanList = Peralatan::orderBy('kode_asset')
                 ->when($line !== '', fn($q) => $q->where('status_line', $line))
                 ->get();
 
             return $this->generatePDF(
                 $year, $month, $line,
                 $statistik, $penggunaanPeriod, $perbaikanPeriod,
-                $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+                $distribusiLine, $recentPenggunaan, $recentPerbaikan, $peralatanList
             );
 
         } else {
             $lineSuffix = $line ? '-' . str_replace(' ', '_', $line) : '';
-            $filename   = 'laporan-timbangan-' . $year . '-' . $month . $lineSuffix . '-' . $format . '.xlsx';
+            $filename   = 'laporan-peralatan-' . $year . '-' . $month . $lineSuffix . '-' . $format . '.xlsx';
 
             return Excel::download(
-                new TimbanganExport($year, $month, $format, $line),
+                new PeralatanExport($year, $month, $format, $line),
                 $filename,
                 \Maatwebsite\Excel\Excel::XLSX,
                 ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
@@ -135,7 +135,7 @@ class LaporanController extends Controller
 
     private function buildStatistik(string $line): array
     {
-        $q = Timbangan::query()->when($line !== '', fn($x) => $x->where('status_line', $line));
+        $q = Peralatan::query()->when($line !== '', fn($x) => $x->where('status_line', $line));
 
         $total    = (clone $q)->count();
         $baik     = (clone $q)->where('kondisi_saat_ini', 'Baik')->count();
@@ -145,9 +145,9 @@ class LaporanController extends Controller
             'baik'             => $baik,
             'rusak'            => (clone $q)->where('kondisi_saat_ini', 'Rusak')->count(),
             'perbaikan'        => (clone $q)->where('kondisi_saat_ini', 'Dalam Perbaikan')->count(),
-            'di_lab'           => $line === '' ? Timbangan::whereNull('status_line')->count() : 0,
+            'di_lab'           => $line === '' ? Peralatan::whereNull('status_line')->count() : 0,
             'di_line'          => $line === ''
-                ? Timbangan::whereNotNull('status_line')->count()
+                ? Peralatan::whereNotNull('status_line')->count()
                 : $total,
             'persentase_baik'  => $total > 0 ? round(($baik / $total) * 100, 1) : 0,
         ];
@@ -167,7 +167,7 @@ class LaporanController extends Controller
 
     private function buildDistribusiLine(string $line)
     {
-        return Timbangan::select('status_line')
+        return Peralatan::select('status_line')
             ->whereNotNull('status_line')
             ->selectRaw('COUNT(*) as total')
             ->groupBy('status_line')
@@ -179,7 +179,7 @@ class LaporanController extends Controller
     private function generatePDF(
         $year, $month, $line,
         $statistik, $penggunaanPeriod, $perbaikanPeriod,
-        $distribusiLine, $recentPenggunaan, $recentPerbaikan, $timbanganList
+        $distribusiLine, $recentPenggunaan, $recentPerbaikan, $peralatanList
     ) {
         $months = [
             '01' => 'Januari',  '02' => 'Februari', '03' => 'Maret',
@@ -198,11 +198,11 @@ class LaporanController extends Controller
             'distribusiLine'   => $distribusiLine,
             'recentPenggunaan' => $recentPenggunaan,
             'recentPerbaikan'  => $recentPerbaikan,
-            'timbanganList'    => $timbanganList,
+            'peralatanList'    => $peralatanList,
         ];
 
         $suffix   = $line ? '-' . str_replace(' ', '_', $line) : '';
-        $filename = 'laporan-timbangan-' . $year . '-' . $month . $suffix . '.pdf';
+        $filename = 'laporan-peralatan-' . $year . '-' . $month . $suffix . '.pdf';
 
         $pdf = PDF::loadView('laporan.pdf', $data)
             ->setPaper('a4', 'landscape')
@@ -223,14 +223,14 @@ class LaporanController extends Controller
 
     public function statistik(Request $request)
     {
-        $distribusiLine = Timbangan::select('status_line')
+        $distribusiLine = Peralatan::select('status_line')
             ->whereNotNull('status_line')
             ->selectRaw('COUNT(*) as total')
             ->groupBy('status_line')
             ->orderBy('total', 'desc')
             ->get();
 
-        $distribusiKondisi = Timbangan::select('kondisi_saat_ini')
+        $distribusiKondisi = Peralatan::select('kondisi_saat_ini')
             ->selectRaw('COUNT(*) as total')
             ->groupBy('kondisi_saat_ini')
             ->get();
@@ -298,8 +298,8 @@ class LaporanController extends Controller
             }
         }
 
-        $total = Timbangan::count();
-        $baik  = Timbangan::where('kondisi_saat_ini', 'Baik')->count();
+        $total = Peralatan::count();
+        $baik  = Peralatan::where('kondisi_saat_ini', 'Baik')->count();
 
         if ($total > 0) {
             $mtbf['reliability'] = round(($baik / $total) * 100, 1);

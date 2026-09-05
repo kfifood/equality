@@ -81,9 +81,9 @@
         </div>
 
         <div class="mb-3">
-            <label for="certificate_number" class="form-label">Certificate Number</label>
-            <input type="text" class="form-control" id="certificate_number" name="certificate_number"
-                   value="{{ old('certificate_number', $peralatan->certificate_number) }}" placeholder="Contoh: CERT-2024-001">
+            <label for="calibration_number" class="form-label">Calibration Number</label>
+            <input type="text" class="form-control" id="calibration_number" name="calibration_number"
+                   value="{{ old('calibration_number', $peralatan->calibration_number) }}" placeholder="Contoh: CAL-2024-001">
         </div>
 
         {{-- Section Spesifikasi Dinamis, terisi dari data existing --}}

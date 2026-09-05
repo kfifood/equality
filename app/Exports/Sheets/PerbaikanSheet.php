@@ -28,7 +28,7 @@ class PerbaikanSheet implements FromCollection, WithHeadings, WithTitle, WithSty
         $endDate   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
         return RiwayatPerbaikan::with([
-                'timbangan',
+                'peralatan.kategoriAlat',
                 'laporanKerusakan.keluhanList',
                 'detailTindakan.masterTindakan',
             ])
@@ -37,8 +37,9 @@ class PerbaikanSheet implements FromCollection, WithHeadings, WithTitle, WithSty
             ->orderBy('tanggal_masuk_lab', 'desc')
             ->get()
             ->map(fn($p) => [
-                'Kode Asset'          => $p->timbangan->kode_asset ?? '-',
-                'Merk Tipe Seri'      => $p->timbangan->merk_tipe_no_seri ?? '-',
+                'Kode Asset'          => $p->kode_asset_lengkap,
+                'Kategori'            => $p->peralatan->nama_kategori ?? '-',
+                'Merk Tipe Seri'      => $p->merk_lengkap,
                 'Line Sebelumnya'     => $p->line_sebelumnya ?? '-',
                 'Tanggal Masuk'       => $p->tanggal_masuk_lab ? $p->tanggal_masuk_lab->format('d/m/Y') : '-',
                 'Keluhan'             => $this->resolveKeluhan($p),
@@ -48,7 +49,7 @@ class PerbaikanSheet implements FromCollection, WithHeadings, WithTitle, WithSty
                 'Tanggal Selesai'     => $p->tanggal_selesai_perbaikan
                     ? $p->tanggal_selesai_perbaikan->format('d/m/Y') : '-',
                 'Line Tujuan'         => $p->line_tujuan ?? '-',
-                'Durasi (Hari)'       => $p->getDurasiPerbaikanAttribute() ?? '-',
+                'Durasi (Hari)'       => $p->durasi_perbaikan ?? '-',
                 'PIC Teknik'          => $p->pic_teknik ?? '-',
             ]);
     }
@@ -56,7 +57,7 @@ class PerbaikanSheet implements FromCollection, WithHeadings, WithTitle, WithSty
     public function headings(): array
     {
         return [
-            'KODE ASSET', 'MERK TIPE SERI', 'LINE SEBELUMNYA',
+            'KODE ASSET', 'KATEGORI', 'MERK TIPE SERI', 'LINE SEBELUMNYA',
             'TANGGAL MASUK', 'KELUHAN', 'TINDAKAN PERBAIKAN',
             'PERBAIKAN EKSTERNAL', 'STATUS', 'TANGGAL SELESAI',
             'LINE TUJUAN', 'DURASI (HARI)', 'PIC TEKNIK',

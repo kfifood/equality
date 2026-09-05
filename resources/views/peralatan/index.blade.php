@@ -209,12 +209,12 @@
                                         @endif
                                     </td>
 
-                                    {{-- Certificate Number — sembunyikan di bawah lg --}}
+                                    {{-- Calibration Number — sembunyikan di bawah lg --}}
                                     <td class="d-none d-lg-table-cell">
-                                        @if($item->certificate_number)
+                                        @if($item->calibration_number)
                                             <span class="font-monospace small" data-bs-toggle="tooltip"
-                                                title="Certificate Number">
-                                                <i class="bi bi-patch-check text-success me-1"></i>{{ $item->certificate_number }}
+                                                title="Calibration Number">
+                                                <i class="bi bi-patch-check text-success me-1"></i>{{ $item->calibration_number }}
                                             </span>
                                         @else
                                             <span class="text-muted">-</span>
@@ -455,7 +455,7 @@
                         <h6 class="alert-heading">Petunjuk Import:</h6>
                         <ul class="mb-0 small">
                             <li>Kolom wajib: kode_kategori, kode_asset, merk, tanggal_datang, lokasi_asli (type &amp; serial_number opsional)</li>
-                            <li>Kolom opsional: certificate_number</li>
+                            <li>Kolom opsional: calibration_number</li>
                             <li>Kolom lain di luar daftar wajib akan otomatis dianggap sebagai spesifikasi (label = nama kolom)</li>
                             <li>kode_kategori harus sudah terdaftar di Master Kategori Alat</li>
                         </ul>

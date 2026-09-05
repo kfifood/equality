@@ -101,6 +101,13 @@
 /* ── Tombol hapus baris ── */
 .btn-del-row { padding: 3px 8px; font-size: .8rem; }
 
+/* ── Input pengukuran suhu (Thermometer) — compact, 3 baris dalam 1 sel ── */
+.pengukuran-mini { display: flex; flex-direction: column; gap: 2px; min-width: 260px; }
+.pengukuran-mini-row { display: flex; align-items: center; gap: 4px; font-size: .75rem; }
+.pengukuran-mini-row span { color: #888; flex-shrink: 0; width: 14px; }
+.pengukuran-mini-row input { padding: 2px 5px; font-size: .78rem; width: 70px; }
+.pengukuran-mini-row .unit { width: auto; color: #aaa; }
+
 /* ── Validasi error per baris ── */
 .row-error td { background: #fff5f5 !important; }
 .row-error-msg { color: #dc3545; font-size: .75rem; display: none; }
@@ -150,8 +157,8 @@
                     <tr>
                         <th width="34" class="text-center">#</th>
                         <th style="min-width:210px;">Peralatan <span class="text-danger">*</span></th>
-                        <th style="min-width:140px;">Certificate No.</th>
-                        <th style="min-width:100px;">Beda Maks.</th>
+                        <th style="min-width:140px;">Calibration No.</th>
+                        <th style="min-width:170px;">Hasil Pengukuran</th>
                         <th style="min-width:90px;">Hasil</th>
                         <th style="min-width:110px;">Dept / Bagian <span class="text-muted" style="font-size:.75em;">(override)</span></th>
                         <th style="min-width:120px;">Pelaksana <span class="text-muted" style="font-size:.75em;">(override)</span></th>
@@ -221,6 +228,7 @@
         const row    = document.getElementById('row-' + rowId);
         if (!row) return;
         row.querySelector('.bts-hidden-id').value   = p.id;
+        row.dataset.kategori = p.kategori || '';
         const lbl = row.querySelector('.bts-label-text');
         lbl.textContent = p.label;
         lbl.classList.remove('bts-placeholder');
@@ -234,8 +242,22 @@
         const deptInput = row.querySelector('.col-dept');
         if (deptInput) deptInput.value = p.dept;
 
-        const bedaInput = row.querySelector('.col-beda');
-        if (bedaInput) bedaInput.value = p.spesifikasi;
+        const bedaWrap       = row.querySelector('.col-beda-wrap');
+        const pengukuranWrap = row.querySelector('.col-pengukuran-wrap');
+        const bedaInput      = row.querySelector('.col-beda');
+
+        if (p.kategori === 'TRM') {
+            // Thermometer → tampilkan 3 baris Suhu Alat/Master, kosongkan Beda Maks.
+            bedaWrap.style.display       = 'none';
+            pengukuranWrap.style.display = '';
+            if (bedaInput) bedaInput.value = '';
+        } else {
+            // Timbangan / kategori lain → tampilkan Beda Maksimum seperti biasa
+            bedaWrap.style.display       = '';
+            pengukuranWrap.style.display = 'none';
+            pengukuranWrap.querySelectorAll('input').forEach(el => el.value = '');
+            if (bedaInput) bedaInput.value = p.spesifikasi;
+        }
     }
 
     // ── Tutup dropdown yang terbuka ───────────────────────────────────────
@@ -283,11 +305,36 @@
                 </div>
             </td>
 
-            {{-- Certificate No --}}
-            <td><input type="text" class="form-control col-cert" name="rows[${rid}][certificate_number]" placeholder="Opsional"></td>
+            {{-- Calibration No --}}
+            <td><input type="text" class="form-control col-cert" name="rows[${rid}][calibration_number]" placeholder="Opsional"></td>
 
-            {{-- Beda Maksimum --}}
-            <td><input type="text" class="form-control col-beda" name="rows[${rid}][beda_maksimum]" placeholder="mis. ±0.5 g"></td>
+            {{-- Beda Maksimum (default) --}}
+            <td>
+                <div class="col-beda-wrap">
+                    <input type="text" class="form-control col-beda" name="rows[${rid}][beda_maksimum]" placeholder="mis. ±0.5 g">
+                </div>
+                {{-- Suhu Alat/Master (khusus Thermometer) — disembunyikan default --}}
+                <div class="pengukuran-mini col-pengukuran-wrap" style="display:none;">
+                    <div class="pengukuran-mini-row">
+                        <span>1</span>
+                        <input type="text" class="pengukuran-alat" data-idx="0" placeholder="Alat">
+                        <input type="text" class="pengukuran-master" data-idx="0" placeholder="Master">
+                        <span class="unit">°C</span>
+                    </div>
+                    <div class="pengukuran-mini-row">
+                        <span>2</span>
+                        <input type="text" class="pengukuran-alat" data-idx="1" placeholder="Alat">
+                        <input type="text" class="pengukuran-master" data-idx="1" placeholder="Master">
+                        <span class="unit">°C</span>
+                    </div>
+                    <div class="pengukuran-mini-row">
+                        <span>3</span>
+                        <input type="text" class="pengukuran-alat" data-idx="2" placeholder="Alat">
+                        <input type="text" class="pengukuran-master" data-idx="2" placeholder="Master">
+                        <span class="unit">°C</span>
+                    </div>
+                </div>
+            </td>
 
             {{-- Hasil --}}
             <td>
@@ -424,16 +471,28 @@
             }
             tr.classList.remove('row-error');
 
-            rows.push({
+            const rowData = {
                 peralatan_id:        pid,
                 tanggal_pelaksanaan: sharedTgl,
                 dept_bagian:         tr.querySelector('[name$="[dept_bagian]"]')?.value.trim() || sharedDept,
                 pelaksana:           tr.querySelector('[name$="[pelaksana]"]')?.value.trim()   || sharedPel,
-                certificate_number:  tr.querySelector('[name$="[certificate_number]"]')?.value.trim() || '',
+                calibration_number:  tr.querySelector('[name$="[calibration_number]"]')?.value.trim() || '',
                 beda_maksimum:       tr.querySelector('[name$="[beda_maksimum]"]')?.value.trim()      || '',
                 hasil:               tr.querySelector('[name$="[hasil]"]')?.value || '',
                 catatan:             tr.querySelector('[name$="[catatan]"]')?.value.trim()            || '',
-            });
+            };
+
+            // Thermometer: kumpulkan 3 baris Suhu Alat/Master jadi array
+            // 'pengukuran', dan kosongkan beda_maksimum (tidak relevan).
+            if (tr.dataset.kategori === 'TRM') {
+                rowData.beda_maksimum = '';
+                rowData.pengukuran = [0, 1, 2].map(idx => ({
+                    suhu_alat:   tr.querySelector(`.pengukuran-alat[data-idx="${idx}"]`)?.value.trim()   || '',
+                    suhu_master: tr.querySelector(`.pengukuran-master[data-idx="${idx}"]`)?.value.trim() || '',
+                })).filter(p => p.suhu_alat || p.suhu_master);
+            }
+
+            rows.push(rowData);
         });
 
         if (hasError) {

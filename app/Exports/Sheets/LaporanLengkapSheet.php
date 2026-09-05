@@ -28,14 +28,14 @@ class LaporanLengkapSheet implements FromCollection, WithHeadings, WithTitle, Wi
         $startDate = Carbon::create($this->year, $this->month, 1)->startOfMonth();
         $endDate   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
-        $penggunaanData = RiwayatPenggunaan::with('timbangan')
+        $penggunaanData = RiwayatPenggunaan::with('peralatan.kategoriAlat')
             ->whereBetween('tanggal_pemakaian', [$startDate, $endDate])
             ->when($this->line !== '', fn($q) => $q->where('line_tujuan', $this->line))
             ->orderBy('tanggal_pemakaian')
             ->get();
 
         $perbaikanData = RiwayatPerbaikan::with([
-                'timbangan',
+                'peralatan.kategoriAlat',
                 'laporanKerusakan.keluhanList',
                 'detailTindakan.masterTindakan',
             ])
@@ -48,8 +48,9 @@ class LaporanLengkapSheet implements FromCollection, WithHeadings, WithTitle, Wi
 
         foreach ($penggunaanData as $p) {
             $data->push([
-                'kode_asset'      => $p->timbangan->kode_asset ?? '-',
-                'merk_tipe'       => $p->timbangan->merk_tipe_no_seri ?? '-',
+                'kode_asset'      => $p->kode_asset_lengkap,
+                'kategori'        => $p->peralatan->nama_kategori ?? '-',
+                'merk_tipe'       => $p->merk_lengkap,
                 'tanggal'         => $p->tanggal_pemakaian->format('d/m/Y'),
                 'jenis'           => 'PENGGUNAAN',
                 'line'            => $p->line_tujuan,
@@ -60,14 +61,15 @@ class LaporanLengkapSheet implements FromCollection, WithHeadings, WithTitle, Wi
                 'perbaikan_ekst'  => '-',
                 'tanggal_selesai' => '-',
                 'durasi_hari'     => '-',
-                'status'          => $p->getStatusPenggunaanAttribute(),
+                'status'          => $p->status_penggunaan,
             ]);
         }
 
         foreach ($perbaikanData as $p) {
             $data->push([
-                'kode_asset'      => $p->timbangan->kode_asset ?? '-',
-                'merk_tipe'       => $p->timbangan->merk_tipe_no_seri ?? '-',
+                'kode_asset'      => $p->kode_asset_lengkap,
+                'kategori'        => $p->peralatan->nama_kategori ?? '-',
+                'merk_tipe'       => $p->merk_lengkap,
                 'tanggal'         => $p->tanggal_masuk_lab->format('d/m/Y'),
                 'jenis'           => 'PERBAIKAN',
                 'line'            => $p->line_sebelumnya ?? '-',
@@ -78,7 +80,7 @@ class LaporanLengkapSheet implements FromCollection, WithHeadings, WithTitle, Wi
                 'perbaikan_ekst'  => $p->perbaikan_eksternal ?? '-',
                 'tanggal_selesai' => $p->tanggal_selesai_perbaikan
                     ? $p->tanggal_selesai_perbaikan->format('d/m/Y') : '-',
-                'durasi_hari'     => $p->getDurasiPerbaikanAttribute() ?? '-',
+                'durasi_hari'     => $p->durasi_perbaikan ?? '-',
                 'status'          => $p->status_perbaikan,
             ]);
         }
@@ -89,7 +91,7 @@ class LaporanLengkapSheet implements FromCollection, WithHeadings, WithTitle, Wi
     public function headings(): array
     {
         return [
-            'KODE ASSET', 'MERK TIPE', 'TANGGAL', 'JENIS', 'LINE', 'PIC',
+            'KODE ASSET', 'KATEGORI', 'MERK TIPE', 'TANGGAL', 'JENIS', 'LINE', 'PIC',
             'KETERANGAN', 'KELUHAN', 'TINDAKAN PERBAIKAN',
             'PERBAIKAN EKSTERNAL', 'TANGGAL SELESAI', 'DURASI (HARI)', 'STATUS',
         ];

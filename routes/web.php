@@ -87,9 +87,8 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
         Route::post('/',              [LineController::class, 'store'])->name('line.store');
         Route::put('/{id}',           [LineController::class, 'update'])->name('line.update');
         Route::delete('/{id}',        [LineController::class, 'destroy'])->name('line.destroy');
-        // NOTE: method 'timbangan' di LineController belum aku lihat filenya —
-        // nama method dibiarkan seperti semula, cuma path URL & nama route yang dirapikan.
-        Route::get('/{id}/peralatan', [LineController::class, 'timbangan'])->name('line.peralatan');
+        // Method di LineController sudah di-rename jadi peralatan($id) — route disesuaikan.
+        Route::get('/{id}/peralatan', [LineController::class, 'peralatan'])->name('line.peralatan');
     });
 
     // ==================== MASTER: PIC ====================
@@ -152,9 +151,8 @@ Route::middleware(['auth', \App\Http\Middleware\RestrictGuestAccess::class])->gr
     // ==================== MONITORING ====================
     Route::get('/monitoring/riwayat',               [RiwayatController::class, 'index'])->name('riwayat.index');
     Route::get('/monitoring/riwayat/timeline',      [RiwayatController::class, 'timeline'])->name('riwayat.timeline');
-    // NOTE: method di RiwayatController belum aku lihat filenya — nama method
-    // dibiarkan seperti semula (timbangan), cuma path URL & nama route dirapikan.
-    Route::get('/monitoring/riwayat/peralatan/{id}',[RiwayatController::class, 'timbangan'])->name('riwayat.peralatan');
+    // Method di RiwayatController sudah di-rename jadi peralatan($id) — route disesuaikan.
+    Route::get('/monitoring/riwayat/peralatan/{id}',[RiwayatController::class, 'peralatan'])->name('riwayat.peralatan');
 
     // ==================== REPORTS ====================
     Route::prefix('reports')->group(function () {

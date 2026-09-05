@@ -79,9 +79,10 @@
                 <option value="">-- Pilih Peralatan --</option>
                 @foreach($peralatanList as $p)
                     <option value="{{ $p->id }}"
-                        data-certificate="{{ $p->certificate_number ?? '' }}"
+                        data-calibration="{{ $p->calibration_number ?? '' }}"
                         data-spesifikasi="{{ $p->spesifikasi_ringkas ?? '' }}"
-                        data-dept="{{ $p->dept_bagian_default ?? '' }}">
+                        data-dept="{{ $p->dept_bagian_default ?? '' }}"
+                        data-kategori="{{ $p->kategoriAlat->kode_kategori ?? '' }}">
                         {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                     </option>
                 @endforeach
@@ -151,18 +152,18 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label for="certificate_number" class="form-label">
-                        Certificate Number
+                    <label for="calibration_number" class="form-label">
+                        Calibration Number
                         <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
                             auto dari peralatan
                         </span>
                     </label>
-                    <input type="text" class="form-control" id="certificate_number"
-                           name="certificate_number"
+                    <input type="text" class="form-control" id="calibration_number"
+                           name="calibration_number"
                            placeholder="Otomatis terisi saat pilih peralatan">
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-6" id="beda_maksimum_wrap">
                 <div class="mb-3">
                     <label for="beda_maksimum" class="form-label">
                         Beda Maksimum
@@ -174,6 +175,41 @@
                            name="beda_maksimum" placeholder="Otomatis terisi saat pilih peralatan">
                 </div>
             </div>
+        </div>
+
+        {{-- Suhu Alat / Suhu Master — khusus kategori Thermometer (TRM).
+             Disembunyikan secara default, muncul otomatis saat peralatan
+             yang dipilih berkategori Thermometer. --}}
+        <div id="pengukuran_wrap" style="display:none;">
+            <label class="form-label d-block mb-2">
+                Hasil Pengukuran (3 titik)
+                <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
+                    khusus Termometer
+                </span>
+            </label>
+            @for ($i = 0; $i < 3; $i++)
+                <div class="row mb-2">
+                    <div class="col-md-1 d-flex align-items-center justify-content-center">
+                        <span class="text-muted small">#{{ $i + 1 }}</span>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Suhu Alat</span>
+                            <input type="text" class="form-control" name="pengukuran[{{ $i }}][suhu_alat]"
+                                   placeholder="mis. 36.2">
+                            <span class="input-group-text">°C</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Suhu Master</span>
+                            <input type="text" class="form-control" name="pengukuran[{{ $i }}][suhu_master]"
+                                   placeholder="mis. 36.0">
+                            <span class="input-group-text">°C</span>
+                        </div>
+                    </div>
+                </div>
+            @endfor
         </div>
 
         <div class="mb-3">
@@ -199,9 +235,26 @@
     var searchEl    = document.getElementById('c_search');
     var listEl      = document.getElementById('c_list');
     var labelEl     = document.getElementById('c_label');
-    var certInput   = document.getElementById('certificate_number');
+    var calInput    = document.getElementById('calibration_number');
     var deptInput   = document.getElementById('dept_bagian');
     var bedaInput   = document.getElementById('beda_maksimum');
+    var bedaWrap    = document.getElementById('beda_maksimum_wrap');
+    var pengukuranWrap = document.getElementById('pengukuran_wrap');
+
+    // ── Tampilkan field yang sesuai dengan kategori peralatan terpilih ──
+    // 'TRM' (Thermometer) → sembunyikan Beda Maksimum, tampilkan 3 baris
+    // Suhu Alat/Master. Kategori lain (mis. 'TMB' Timbangan) → sebaliknya.
+    function applyKategoriFields(kategori) {
+        if (kategori === 'TRM') {
+            bedaWrap.style.display       = 'none';
+            pengukuranWrap.style.display = '';
+            bedaInput.value = '';
+        } else {
+            bedaWrap.style.display       = '';
+            pengukuranWrap.style.display = 'none';
+            pengukuranWrap.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+        }
+    }
 
     // Ambil semua option dari select asli
     var options = [];
@@ -210,9 +263,10 @@
         options.push({
             value      : opt.value,
             text       : opt.text.trim(),
-            certificate: opt.getAttribute('data-certificate') || '',
+            calibration: opt.getAttribute('data-calibration') || '',
             spesifikasi: opt.getAttribute('data-spesifikasi') || '',
-            dept       : opt.getAttribute('data-dept')        || ''
+            dept       : opt.getAttribute('data-dept')        || '',
+            kategori   : opt.getAttribute('data-kategori')    || ''
         });
     });
 
@@ -245,9 +299,10 @@
                 // Selalu timpa dengan data peralatan yang BARU dipilih —
                 // supaya kalau user ganti pilihan, field lain ikut menyesuaikan
                 // (tidak nyangkut data dari peralatan yang dipilih sebelumnya).
-                certInput.value = o.certificate;
+                calInput.value = o.calibration;
                 deptInput.value = o.dept;
                 bedaInput.value = o.spesifikasi;
+                applyKategoriFields(o.kategori);
 
                 closeDropdown();
             });

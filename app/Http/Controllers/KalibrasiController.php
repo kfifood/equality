@@ -22,10 +22,16 @@ class KalibrasiController extends Controller
 
     public function index(Request $request)
     {
-        $query = Kalibrasi::with('peralatan');
+        $query = Kalibrasi::with('peralatan.kategoriAlat');
 
         if ($request->filled('peralatan_id')) {
             $query->where('peralatan_id', $request->peralatan_id);
+        }
+        // Filter kategori alat (mis. Timbangan / Thermometer) — difilter lewat
+        // relasi peralatan.kategoriAlat, bukan kolom langsung di tabel kalibrasi.
+        if ($request->filled('kategori_alat_id')) {
+            $kategoriAlatId = $request->kategori_alat_id;
+            $query->whereHas('peralatan', fn($q2) => $q2->where('kategori_alat_id', $kategoriAlatId));
         }
         if ($request->filled('hasil')) {
             $query->where('hasil', $request->hasil);
@@ -36,7 +42,7 @@ class KalibrasiController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('certificate_number', 'like', '%' . $search . '%')
+                $q->where('calibration_number', 'like', '%' . $search . '%')
                   ->orWhere('pelaksana', 'like', '%' . $search . '%')
                   ->orWhere('dept_bagian', 'like', '%' . $search . '%')
                   ->orWhereHas('peralatan', fn($q2) =>
@@ -53,18 +59,20 @@ class KalibrasiController extends Controller
                            ->paginate($perPage)
                            ->withQueryString();
 
-        $peralatanList = Peralatan::orderBy('kode_asset')->get(['id', 'kode_asset', 'merk', 'type', 'serial_number']);
-        $deptList      = Kalibrasi::whereNotNull('dept_bagian')->distinct()->orderBy('dept_bagian')->pluck('dept_bagian');
+        $peralatanList    = Peralatan::orderBy('kode_asset')->get(['id', 'kode_asset', 'merk', 'type', 'serial_number']);
+        $deptList         = Kalibrasi::whereNotNull('dept_bagian')->distinct()->orderBy('dept_bagian')->pluck('dept_bagian');
+        $kategoriAlatList = \App\Models\MasterKategoriAlat::orderBy('nama_kategori')->get(['id', 'nama_kategori']);
 
-        return view('kalibrasi.index', compact('kalibrasi', 'peralatanList', 'deptList'));
+        return view('kalibrasi.index', compact('kalibrasi', 'peralatanList', 'deptList', 'kategoriAlatList'));
     }
 
     // ── CREATE (single) ───────────────────────────────────────────────────────
 
     public function create()
     {
-        $peralatanList = Peralatan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
+        $peralatanList = Peralatan::with('kategoriAlat')
+                                  ->orderBy('kode_asset')
+                                  ->get(['id', 'kategori_alat_id', 'kode_asset', 'merk', 'type', 'serial_number', 'calibration_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
 
         // Hitung dept_bagian yang akan dipakai kalau kalibrasi baru dibuat
         // untuk masing-masing peralatan, supaya bisa ditampilkan sebagai
@@ -116,14 +124,17 @@ class KalibrasiController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'peralatan_id'        => 'required|exists:peralatan,id',
-            'tanggal_pelaksanaan' => 'required|date',
-            'certificate_number'  => 'nullable|string|max:255',
-            'dept_bagian'         => 'nullable|string|max:255',
-            'beda_maksimum'       => 'nullable|string|max:100',
-            'hasil'               => 'nullable|in:Lulus,Tidak Lulus',
-            'pelaksana'           => 'nullable|string|max:255',
-            'catatan'             => 'nullable|string',
+            'peralatan_id'                => 'required|exists:peralatan,id',
+            'tanggal_pelaksanaan'         => 'required|date',
+            'calibration_number'          => 'nullable|string|max:255',
+            'dept_bagian'                 => 'nullable|string|max:255',
+            'beda_maksimum'               => 'nullable|string|max:100',
+            'pengukuran'                  => 'nullable|array|max:3',
+            'pengukuran.*.suhu_alat'      => 'nullable|string|max:50',
+            'pengukuran.*.suhu_master'    => 'nullable|string|max:50',
+            'hasil'                       => 'nullable|in:Lulus,Tidak Lulus',
+            'pelaksana'                   => 'nullable|string|max:255',
+            'catatan'                     => 'nullable|string',
         ], [
             'peralatan_id.required'        => 'Peralatan harus dipilih.',
             'peralatan_id.exists'          => 'Peralatan tidak ditemukan.',
@@ -136,12 +147,19 @@ class KalibrasiController extends Controller
         // tapi tetap bisa dioverride manual kalau memang perlu. Kalau dikosongkan,
         // hitung ulang dari lokasi peralatan sebagai fallback.
         Kalibrasi::create($request->only([
-            'peralatan_id', 'certificate_number', 'tanggal_pelaksanaan',
+            'peralatan_id', 'calibration_number', 'tanggal_pelaksanaan',
             'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
         ]) + [
             'dept_bagian' => $request->filled('dept_bagian')
                 ? $request->dept_bagian
                 : $this->resolveDeptBagian($peralatan),
+            // Generik per kategori alat — saat ini dipakai untuk Thermometer
+            // (3 baris suhu alat/master). Kosong untuk kategori yang tidak
+            // mengirim field 'pengukuran' (mis. Timbangan, yang pakai
+            // 'beda_maksimum' saja).
+            'data_pengukuran' => $request->filled('pengukuran')
+                ? ['pengukuran' => array_values($request->pengukuran)]
+                : null,
         ]);
 
         return response()->json(['success' => true, 'message' => 'Data kalibrasi berhasil ditambahkan.']);
@@ -161,9 +179,12 @@ class KalibrasiController extends Controller
             'rows'                              => 'required|array|min:1|max:100',
             'rows.*.peralatan_id'               => 'required|exists:peralatan,id',
             'rows.*.tanggal_pelaksanaan'        => 'required|date',
-            'rows.*.certificate_number'         => 'nullable|string|max:255',
+            'rows.*.calibration_number'         => 'nullable|string|max:255',
             'rows.*.dept_bagian'                => 'nullable|string|max:255',
             'rows.*.beda_maksimum'              => 'nullable|string|max:100',
+            'rows.*.pengukuran'                 => 'nullable|array|max:3',
+            'rows.*.pengukuran.*.suhu_alat'     => 'nullable|string|max:50',
+            'rows.*.pengukuran.*.suhu_master'   => 'nullable|string|max:50',
             'rows.*.hasil'                      => 'nullable|in:Lulus,Tidak Lulus',
             'rows.*.pelaksana'                  => 'nullable|string|max:255',
             'rows.*.catatan'                    => 'nullable|string',
@@ -192,10 +213,14 @@ class KalibrasiController extends Controller
 
             return [
                 'peralatan_id'        => $r['peralatan_id'],
-                'certificate_number'  => $r['certificate_number']  ?? null,
+                'calibration_number'  => $r['calibration_number']  ?? null,
                 'tanggal_pelaksanaan' => $r['tanggal_pelaksanaan'],
                 'dept_bagian'         => $deptBagian,
                 'beda_maksimum'       => $r['beda_maksimum']       ?? null,
+                // Generik per kategori alat — lihat catatan di store().
+                'data_pengukuran'     => !empty($r['pengukuran'])
+                    ? ['pengukuran' => array_values($r['pengukuran'])]
+                    : null,
                 'hasil'               => $r['hasil']               ?: null,
                 'pelaksana'           => $r['pelaksana']           ?? null,
                 'catatan'             => $r['catatan']             ?? null,
@@ -206,7 +231,7 @@ class KalibrasiController extends Controller
         try {
             // Sengaja pakai create() di dalam loop, BUKAN Kalibrasi::insert($insertData).
             // insert() adalah query mentah yang tidak memicu Eloquent model events,
-            // sehingga KalibrasiObserver (sinkron ke peralatan.certificate_number)
+            // sehingga KalibrasiObserver (sinkron ke peralatan.calibration_number)
             // tidak akan jalan kalau tetap pakai insert().
             foreach ($insertData as $row) {
                 Kalibrasi::create($row);
@@ -227,9 +252,10 @@ class KalibrasiController extends Controller
 
     public function edit($id)
     {
-        $kalibrasi     = Kalibrasi::with('peralatan')->findOrFail($id);
-        $peralatanList = Peralatan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number']);
+        $kalibrasi     = Kalibrasi::with('peralatan.kategoriAlat')->findOrFail($id);
+        $peralatanList = Peralatan::with('kategoriAlat')
+                                  ->orderBy('kode_asset')
+                                  ->get(['id', 'kategori_alat_id', 'kode_asset', 'merk', 'type', 'serial_number', 'calibration_number']);
 
         return response()->json([
             'success' => true,
@@ -244,14 +270,17 @@ class KalibrasiController extends Controller
         $kalibrasi = Kalibrasi::findOrFail($id);
 
         $request->validate([
-            'peralatan_id'        => 'required|exists:peralatan,id',
-            'tanggal_pelaksanaan' => 'required|date',
-            'certificate_number'  => 'nullable|string|max:255',
-            'dept_bagian'         => 'nullable|string|max:255',
-            'beda_maksimum'       => 'nullable|string|max:100',
-            'hasil'               => 'nullable|in:Lulus,Tidak Lulus',
-            'pelaksana'           => 'nullable|string|max:255',
-            'catatan'             => 'nullable|string',
+            'peralatan_id'                => 'required|exists:peralatan,id',
+            'tanggal_pelaksanaan'         => 'required|date',
+            'calibration_number'          => 'nullable|string|max:255',
+            'dept_bagian'                 => 'nullable|string|max:255',
+            'beda_maksimum'               => 'nullable|string|max:100',
+            'pengukuran'                  => 'nullable|array|max:3',
+            'pengukuran.*.suhu_alat'      => 'nullable|string|max:50',
+            'pengukuran.*.suhu_master'    => 'nullable|string|max:50',
+            'hasil'                       => 'nullable|in:Lulus,Tidak Lulus',
+            'pelaksana'                   => 'nullable|string|max:255',
+            'catatan'                     => 'nullable|string',
         ], [
             'peralatan_id.required'        => 'Peralatan harus dipilih.',
             'peralatan_id.exists'          => 'Peralatan tidak ditemukan.',
@@ -259,9 +288,13 @@ class KalibrasiController extends Controller
         ]);
 
         $kalibrasi->update($request->only([
-            'peralatan_id', 'certificate_number', 'tanggal_pelaksanaan',
+            'peralatan_id', 'calibration_number', 'tanggal_pelaksanaan',
             'dept_bagian', 'beda_maksimum', 'hasil', 'pelaksana', 'catatan',
-        ]));
+        ]) + [
+            'data_pengukuran' => $request->filled('pengukuran')
+                ? ['pengukuran' => array_values($request->pengukuran)]
+                : null,
+        ]);
 
         return response()->json(['success' => true, 'message' => 'Data kalibrasi berhasil diperbarui.']);
     }
@@ -285,8 +318,9 @@ class KalibrasiController extends Controller
      */
     public function bulk()
     {
-        $peralatanList = Peralatan::orderBy('kode_asset')
-                                  ->get(['id', 'kode_asset', 'merk', 'type', 'serial_number', 'certificate_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
+        $peralatanList = Peralatan::with('kategoriAlat')
+                                  ->orderBy('kode_asset')
+                                  ->get(['id', 'kategori_alat_id', 'kode_asset', 'merk', 'type', 'serial_number', 'calibration_number', 'spesifikasi', 'status_line', 'lokasi_asli']);
 
         // Siapkan data yang sudah di-map, bukan map di Blade
         $peralatanJson = $peralatanList->map(fn($p) => [
@@ -294,9 +328,14 @@ class KalibrasiController extends Controller
             'kode_asset'  => $p->kode_asset,
             'merk'        => $p->merk_tipe_lengkap,
             'label'       => $p->kode_asset . ' — ' . $p->merk_tipe_lengkap,
-            'certificate' => $p->certificate_number ?? '',
+            'certificate' => $p->calibration_number ?? '',
             'spesifikasi' => $p->spesifikasi_ringkas,
             'dept'        => $this->resolveDeptBagian($p) ?? '',
+            // kode_kategori dipakai di JS untuk menentukan input mana yang
+            // ditampilkan per baris: 'TMB' → Beda Maksimum, 'TRM' → 3 baris
+            // Suhu Alat/Master. Kategori baru bisa ditambah cabangnya nanti
+            // tanpa ubah struktur data ini.
+            'kategori'    => $p->kategoriAlat->kode_kategori ?? null,
         ]);
 
         return response()->json([
@@ -339,7 +378,7 @@ class KalibrasiController extends Controller
         $headers = [
             'A' => 'kode_asset',
             'B' => 'tanggal_pelaksanaan',
-            'C' => 'certificate_number',
+            'C' => 'calibration_number',
             'D' => 'dept_bagian',
             'E' => 'beda_maksimum',
             'F' => 'hasil',
@@ -497,7 +536,7 @@ class KalibrasiController extends Controller
             $validRows[] = [
                 'peralatan_id'        => $peralatan->id,
                 'tanggal_pelaksanaan' => $tanggalFormatted,
-                'certificate_number'  => trim($certNo    ?? '') ?: null,
+                'calibration_number'  => trim($certNo    ?? '') ?: null,
                 // dept_bagian TIDAK diambil dari kolom Excel (kolom D) lagi —
                 // dihitung dari lokasi asli/terkini peralatan, supaya tidak ada
                 // lagi nilai boilerplate seperti "Production Area" yang tidak
@@ -526,7 +565,7 @@ class KalibrasiController extends Controller
         DB::beginTransaction();
         try {
             // Sama seperti storeBulk() — pakai create() per baris supaya
-            // KalibrasiObserver ikut jalan dan peralatan.certificate_number tersinkron.
+            // KalibrasiObserver ikut jalan dan peralatan.calibration_number tersinkron.
             foreach ($validRows as $row) {
                 Kalibrasi::create($row);
             }

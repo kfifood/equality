@@ -63,7 +63,11 @@ class DashboardController extends Controller
             ->get();
 
         // Peralatan yang perlu perhatian
+        // NOTE: eager-load laporanKerusakanAktif supaya tombol "proses" di dashboard bisa
+        // langsung buka modal proses perbaikan (butuh laporan_kerusakan_id, bukan peralatan_id —
+        // alur create perbaikan langsung dari peralatan sudah tidak ada lagi).
         $peralatanPerhatian = Peralatan::whereIn('kondisi_saat_ini', ['Rusak', 'Dalam Perbaikan'])
+            ->with('laporanKerusakanAktif')
             ->orderBy('updated_at', 'desc')
             ->limit(3)
             ->get();

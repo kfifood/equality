@@ -23,7 +23,7 @@ class Peralatan extends Model
         'tanggal_selesai_perbaikan',
         'kondisi_saat_ini',
         'catatan',
-        'certificate_number',
+        'calibration_number',
         'spesifikasi',
     ];
 

@@ -12,7 +12,7 @@ class KalibrasiObserver
     /**
      * Setiap kali data kalibrasi disimpan (create/update),
      * cari kalibrasi TERBARU untuk peralatan tsb lalu tulis balik
-     * ke peralatan.certificate_number & spesifikasi['kapasitas']. Ini menjaga
+     * ke peralatan.calibration_number & spesifikasi['kapasitas']. Ini menjaga
      * data di tabel peralatan selalu jadi cerminan dari histori kalibrasi,
      * bukan input manual yang terpisah.
      */
@@ -52,7 +52,7 @@ class KalibrasiObserver
             ->first();
 
         $data = [
-            'certificate_number' => $terbaru?->certificate_number,
+            'calibration_number' => $terbaru?->calibration_number,
         ];
 
         // 'beda_maksimum' di form/import kalibrasi dipakai untuk menyimpan

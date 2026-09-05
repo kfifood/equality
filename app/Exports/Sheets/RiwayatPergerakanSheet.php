@@ -3,7 +3,7 @@
 namespace App\Exports\Sheets;
 
 use App\Exports\Concerns\ExcelHelpers;
-use App\Models\Timbangan;
+use App\Models\Peralatan;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -27,7 +27,8 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
         $startDate = Carbon::create($this->year, $this->month, 1)->startOfMonth();
         $endDate   = Carbon::create($this->year, $this->month, 1)->endOfMonth();
 
-        $timbanganList = Timbangan::with([
+        $peralatanList = Peralatan::with([
+            'kategoriAlat',
             'riwayatPenggunaan' => fn($q) => $q
                 ->whereBetween('tanggal_pemakaian', [$startDate, $endDate])
                 ->when($this->line !== '', fn($x) => $x->where('line_tujuan', $this->line))
@@ -44,10 +45,10 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
 
         $data = collect();
 
-        foreach ($timbanganList as $timbangan) {
+        foreach ($peralatanList as $peralatan) {
             $allHistory = collect();
 
-            foreach ($timbangan->riwayatPenggunaan as $p) {
+            foreach ($peralatan->riwayatPenggunaan as $p) {
                 $allHistory->push([
                     'type'        => 'PENGGUNAAN',
                     'date'        => $p->tanggal_pemakaian,
@@ -56,11 +57,11 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
                     'keterangan'  => $p->keterangan ?? '-',
                     'keluhan'     => '-',
                     'tindakan'    => '-',
-                    'status'      => $p->getStatusPenggunaanAttribute(),
+                    'status'      => $p->status_penggunaan,
                 ]);
             }
 
-            foreach ($timbangan->riwayatPerbaikan as $p) {
+            foreach ($peralatan->riwayatPerbaikan as $p) {
                 $allHistory->push([
                     'type'        => 'PERBAIKAN',
                     'date'        => $p->tanggal_masuk_lab,
@@ -86,32 +87,35 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
                 }
             }
 
-            // Skip timbangan tanpa aktivitas di bulan ini
+            // Skip peralatan tanpa aktivitas di bulan ini
             if ($allHistory->isEmpty()) {
                 continue;
             }
 
             $sortedHistory = $allHistory->sortBy('date');
+            $kategori      = $peralatan->nama_kategori;
 
             // Status awal
             $data->push([
-                'kode_asset'      => $timbangan->kode_asset,
-                'merk_tipe'       => $timbangan->merk_tipe_no_seri,
+                'kode_asset'      => $peralatan->kode_asset,
+                'kategori'        => $kategori,
+                'merk_tipe'       => $peralatan->merk_tipe_lengkap,
                 'jenis_aktivitas' => 'STATUS AWAL',
                 'tanggal'         => $startDate->format('d/m/Y'),
-                'line_tujuan'     => $timbangan->lokasi_asli ?? 'Lab',
+                'line_tujuan'     => $peralatan->lokasi_asli ?? 'Lab',
                 'pic'             => '-',
                 'keterangan'      => 'Status awal bulan',
                 'keluhan'         => '-',
                 'tindakan'        => '-',
-                'status'          => $timbangan->kondisi_saat_ini,
+                'status'          => $peralatan->kondisi_saat_ini,
             ]);
 
             // Semua aktivitas
             foreach ($sortedHistory as $h) {
                 $data->push([
-                    'kode_asset'      => $timbangan->kode_asset,
-                    'merk_tipe'       => $timbangan->merk_tipe_no_seri,
+                    'kode_asset'      => $peralatan->kode_asset,
+                    'kategori'        => $kategori,
+                    'merk_tipe'       => $peralatan->merk_tipe_lengkap,
                     'jenis_aktivitas' => $h['type'],
                     'tanggal'         => $h['date']->format('d/m/Y'),
                     'line_tujuan'     => $h['line_tujuan'],
@@ -125,16 +129,17 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
 
             // Status akhir
             $data->push([
-                'kode_asset'      => $timbangan->kode_asset,
-                'merk_tipe'       => $timbangan->merk_tipe_no_seri,
+                'kode_asset'      => $peralatan->kode_asset,
+                'kategori'        => $kategori,
+                'merk_tipe'       => $peralatan->merk_tipe_lengkap,
                 'jenis_aktivitas' => 'STATUS AKHIR',
                 'tanggal'         => $endDate->format('d/m/Y'),
-                'line_tujuan'     => $timbangan->status_line ?? 'Lab',
+                'line_tujuan'     => $peralatan->status_line ?? 'Lab',
                 'pic'             => '-',
                 'keterangan'      => 'Status akhir bulan',
                 'keluhan'         => '-',
                 'tindakan'        => '-',
-                'status'          => $timbangan->kondisi_saat_ini,
+                'status'          => $peralatan->kondisi_saat_ini,
             ]);
         }
 
@@ -144,7 +149,7 @@ class RiwayatPergerakanSheet implements FromCollection, WithHeadings, WithTitle,
     public function headings(): array
     {
         return [
-            'KODE ASSET', 'MERK TIPE', 'JENIS AKTIVITAS',
+            'KODE ASSET', 'KATEGORI', 'MERK TIPE', 'JENIS AKTIVITAS',
             'TANGGAL', 'LINE', 'PIC',
             'KETERANGAN', 'KELUHAN', 'TINDAKAN', 'STATUS',
         ];

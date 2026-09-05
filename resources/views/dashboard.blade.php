@@ -251,9 +251,12 @@
                                 @endif
                             </small>
                         </div>
-                        <a href="{{ route('perbaikan.create.withId', $item->id) }}" 
+                        <a href="{{ $item->laporanKerusakanAktif ? 'javascript:void(0)' : route('perbaikan.index') }}" 
                            class="btn btn-sm btn-outline-warning" 
-                           onclick="showCreatePerbaikanModal({{ $item->id }})">
+                           title="{{ $item->laporanKerusakanAktif ? 'Proses perbaikan' : 'Lihat di menu Perbaikan' }}"
+                           @if($item->laporanKerusakanAktif)
+                               onclick="showProsesPerbaikanModal({{ $item->laporanKerusakanAktif->id }})"
+                           @endif>
                             <i class="bi bi-tools"></i>
                         </a>
                     </div>
@@ -338,7 +341,9 @@
                     <div class="text-center py-5">
                         <i class="bi bi-tools fa-3x text-muted mb-3"></i>
                         <p class="text-muted">Tidak ada data perbaikan</p>
-                        <a href="{{ route('perbaikan.create') }}" class="btn btn-warning btn-sm">Catat Perbaikan</a>
+                        {{-- route perbaikan.create sudah dihapus — perbaikan sekarang selalu
+                             berawal dari tombol "Laporkan Rusak" di menu Penggunaan Alat --}}
+                        <a href="{{ route('perbaikan.index') }}" class="btn btn-warning btn-sm">Lihat Menu Perbaikan</a>
                     </div>
                     @endif
                 </div>
@@ -391,6 +396,15 @@
                     @endif
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Modal Container (untuk proses perbaikan dari kartu Perhatian) -->
+<div class="modal fade" id="dynamicModal" tabindex="-1" aria-labelledby="dynamicModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" id="dynamicModalContent">
+            <!-- Content will be loaded here via AJAX -->
         </div>
     </div>
 </div>
@@ -505,13 +519,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Function untuk modal perbaikan (jika belum ada)
-function showCreatePerbaikanModal(peralatanId = null) {
-    let url = '{{ route("perbaikan.create") }}';
-    if (peralatanId) {
-        url = '{{ url("perbaikan/create") }}/' + peralatanId;
-    }
-
+// Fungsi untuk buka modal proses perbaikan dari laporan kerusakan aktif
+// (menggantikan showCreatePerbaikanModal lama yang manggil route perbaikan.create /
+// perbaikan.create.withId — keduanya sudah dihapus dari PerbaikanController & routes,
+// karena alur baru mengharuskan proses perbaikan selalu berangkat dari laporan_kerusakan_id).
+function showProsesPerbaikanModal(laporanId) {
     Swal.fire({
         title: 'Memuat form...',
         text: 'Sedang memuat form perbaikan',
@@ -522,11 +534,11 @@ function showCreatePerbaikanModal(peralatanId = null) {
     });
 
     $.ajax({
-        url: url,
+        url: '{{ url("perbaikan") }}/' + laporanId + '/proses',
         type: 'GET',
         success: function(response) {
             Swal.close();
-            
+
             if (response.success) {
                 $('#dynamicModalContent').html(response.html);
                 $('#dynamicModal').modal('show');
@@ -534,7 +546,7 @@ function showCreatePerbaikanModal(peralatanId = null) {
                 Swal.fire({
                     icon: 'error',
                     title: 'Error',
-                    text: 'Gagal memuat form perbaikan'
+                    text: response.message || 'Gagal memuat form perbaikan'
                 });
             }
         },

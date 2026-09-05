@@ -30,13 +30,13 @@
                                                value="{{ request('tanggal_sampai') }}">
                                     </div>
                                     <div class="col-md-2">
-                                        <label class="form-label">Timbangan</label>
+                                        <label class="form-label">Peralatan</label>
                                         <select name="timbangan_id" class="form-select">
-                                            <option value="">Semua Timbangan</option>
-                                            @foreach($timbanganList as $timbangan)
-                                                <option value="{{ $timbangan->id }}" 
-                                                    {{ request('timbangan_id') == $timbangan->id ? 'selected' : '' }}>
-                                                    {{ $timbangan->kode_asset }}
+                                            <option value="">Semua Peralatan</option>
+                                            @foreach($peralatanList as $peralatan)
+                                                <option value="{{ $peralatan->id }}" 
+                                                    {{ request('timbangan_id') == $peralatan->id ? 'selected' : '' }}>
+                                                    {{ $peralatan->kode_asset }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -84,9 +84,9 @@
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <h6 class="card-title mb-0">
-                                                <a href="javascript:void(0)" onclick="showTimbanganRiwayat({{ $item->timbangan_id }})" 
+                                                <a href="{{ route('riwayat.peralatan', $item->peralatan_id) }}" 
                                                    class="text-decoration-none">
-                                                    {{ $item->timbangan->kode_asset }}
+                                                    {{ $item->peralatan->kode_asset ?? '-' }}
                                                 </a>
                                                 <span class="badge bg-{{ $item->jenis == 'penggunaan' ? 'success' : 'warning' }} ms-2">
                                                     <i class="bi bi-{{ $item->jenis == 'penggunaan' ? 'arrow-right-circle' : 'tools' }} me-1"></i>
@@ -103,12 +103,12 @@
                                         <div class="row mb-2">
                                             <div class="col-md-6">
                                                 <small class="text-muted">Lokasi Asli:</small>
-                                                <span class="badge bg-primary ms-1">{{ $item->timbangan->lokasi_asli ?? 'Lab' }}</span>
+                                                <span class="badge bg-primary ms-1">{{ $item->peralatan->lokasi_asli ?? 'Lab' }}</span>
                                             </div>
                                             <div class="col-md-6">
                                                 <small class="text-muted">Status Saat Ini:</small>
                                                 @php
-                                                    $statusColor = match($item->timbangan->kondisi_saat_ini) {
+                                                    $statusColor = match($item->peralatan->kondisi_saat_ini ?? null) {
                                                         'Baik' => 'success',
                                                         'Rusak' => 'danger',
                                                         'Dalam Perbaikan' => 'warning',
@@ -116,7 +116,7 @@
                                                     };
                                                 @endphp
                                                 <span class="badge bg-{{ $statusColor }} ms-1">
-                                                    {{ $item->timbangan->kondisi_saat_ini }}
+                                                    {{ $item->peralatan->kondisi_saat_ini ?? '-' }}
                                                 </span>
                                             </div>
                                         </div>
@@ -187,9 +187,58 @@
                             @endforeach
                         </div>
 
+                        @if($riwayat->hasPages())
                         <div class="mt-4">
-                            {{ $riwayat->appends(request()->query())->links() }}
+                            <nav aria-label="Pagination Navigation">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
+                                    <div class="mb-2 mb-md-0">
+                                        <p class="small text-muted mb-0">
+                                            Menampilkan
+                                            <span class="fw-semibold">{{ $riwayat->firstItem() }}</span>
+                                            sampai
+                                            <span class="fw-semibold">{{ $riwayat->lastItem() }}</span>
+                                            dari
+                                            <span class="fw-semibold">{{ $riwayat->total() }}</span>
+                                            data
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <div class="btn-group" role="group" aria-label="Pagination">
+                                            {{-- Previous Page --}}
+                                            @if($riwayat->onFirstPage())
+                                                <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                                                    <i class="bi bi-chevron-left"></i> Prev
+                                                </button>
+                                            @else
+                                                <a href="{{ $riwayat->appends(request()->query())->previousPageUrl() }}"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    <i class="bi bi-chevron-left"></i> Prev
+                                                </a>
+                                            @endif
+
+                                            {{-- Current Page Info --}}
+                                            <button type="button" class="btn btn-primary btn-sm disabled">
+                                                Halaman {{ $riwayat->currentPage() }} / {{ $riwayat->lastPage() }}
+                                            </button>
+
+                                            {{-- Next Page --}}
+                                            @if($riwayat->hasMorePages())
+                                                <a href="{{ $riwayat->appends(request()->query())->nextPageUrl() }}"
+                                                   class="btn btn-outline-primary btn-sm">
+                                                    Next <i class="bi bi-chevron-right"></i>
+                                                </a>
+                                            @else
+                                                <button type="button" class="btn btn-outline-primary btn-sm disabled">
+                                                    Next <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </nav>
                         </div>
+                        @endif
                     @else
                         <div class="text-center py-5">
                             <i class="bi bi-clock-history fa-3x text-muted mb-3"></i>
@@ -263,47 +312,10 @@ $(document).ready(function() {
     });
 });
 
-// Function untuk show timbangan riwayat
-function showTimbanganRiwayat(timbanganId) {
-    // Show loading
-    Swal.fire({
-        title: 'Memuat data...',
-        text: 'Sedang mengambil data riwayat',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
+// NOTE: showTimbanganRiwayat() (AJAX + modal) dihapus — Kode Asset di atas sekarang
+// langsung berupa link <a> ke halaman riwayat.peralatan, karena RiwayatController::peralatan()
+// mengembalikan full page view, bukan JSON {success, html} seperti pola modal di menu lain.
 
-    $.ajax({
-        url: '{{ url("timbangan") }}/' + timbanganId + '/riwayat',
-        type: 'GET',
-        success: function(response) {
-            Swal.close();
-            
-            if (response.success) {
-                $('#dynamicModalContent').html(response.html);
-                $('#dynamicModal').modal('show');
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Gagal memuat data riwayat'
-                });
-            }
-        },
-        error: function(xhr) {
-            Swal.close();
-            console.error('Error:', xhr);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Gagal memuat data riwayat'
-            });
-        }
-    });
-}
 
 // Close modal handler
 $('#dynamicModal').on('hidden.bs.modal', function () {

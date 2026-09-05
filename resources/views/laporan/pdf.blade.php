@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Laporan Timbangan - {{ $periode }}</title>
+    <title>Laporan Peralatan - {{ $periode }}</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -135,7 +135,7 @@
 
     {{-- ── Header ───────────────────────────────────────────────────── --}}
     <div class="header">
-        <h1>Laporan Timbangan</h1>
+        <h1>Laporan Peralatan</h1>
         <div class="sub">
             Periode: <strong>{{ $periode }}</strong>
             &nbsp;&bull;&nbsp;
@@ -203,7 +203,7 @@
                 </td>
             </tr>
             @empty
-            <tr><td colspan="3" class="text-center">Tidak ada timbangan di line</td></tr>
+            <tr><td colspan="3" class="text-center">Tidak ada peralatan di line</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -223,8 +223,8 @@
         <tbody>
             @forelse($recentPenggunaan as $penggunaan)
             <tr>
-                <td>{{ $penggunaan->timbangan->kode_asset ?? '-' }}</td>
-                <td class="col-wrap">{{ $penggunaan->timbangan->merk_tipe_no_seri ?? '-' }}</td>
+                <td>{{ $penggunaan->peralatan->kode_asset ?? '-' }}</td>
+                <td class="col-wrap">{{ $penggunaan->peralatan->merk_tipe_lengkap ?? '-' }}</td>
                 <td>{{ $penggunaan->line_tujuan }}</td>
                 <td>{{ \Carbon\Carbon::parse($penggunaan->tanggal_pemakaian)->format('d/m/Y') }}</td>
                 <td>{{ $penggunaan->pic ?? '-' }}</td>
@@ -280,7 +280,7 @@
                 };
             @endphp
             <tr>
-                <td>{{ $perbaikan->timbangan->kode_asset ?? '-' }}</td>
+                <td>{{ $perbaikan->peralatan->kode_asset ?? '-' }}</td>
                 <td>{{ $perbaikan->line_sebelumnya ?? '-' }}</td>
                 <td>{{ $perbaikan->tanggal_masuk_lab ? \Carbon\Carbon::parse($perbaikan->tanggal_masuk_lab)->format('d/m/Y') : '-' }}</td>
                 <td>{{ $perbaikan->tanggal_selesai_perbaikan ? \Carbon\Carbon::parse($perbaikan->tanggal_selesai_perbaikan)->format('d/m/Y') : '-' }}</td>
@@ -294,15 +294,15 @@
         </tbody>
     </table>
 
-    {{-- ── Data Timbangan (halaman baru) ───────────────────────────── --}}
+    {{-- ── Data Peralatan (halaman baru) ───────────────────────────── --}}
     <div class="page-break"></div>
 
     <div class="header" style="margin-bottom:12px;">
-        <h1>Data Timbangan — {{ strtoupper($filterLine) }}</h1>
+        <h1>Data Peralatan — {{ strtoupper($filterLine) }}</h1>
         <div class="sub">Periode: <strong>{{ $periode }}</strong> &bull; Dicetak: {{ $tanggalCetak }}</div>
     </div>
 
-    <div class="section-title">DAFTAR TIMBANGAN</div>
+    <div class="section-title">DAFTAR PERALATAN</div>
     <table>
         <thead>
             <tr>
@@ -315,9 +315,9 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($timbanganList as $tmb)
+            @foreach($peralatanList as $alat)
             @php
-                $badgeClass = match($tmb->kondisi_saat_ini) {
+                $badgeClass = match($alat->kondisi_saat_ini) {
                     'Baik'            => 'badge-success',
                     'Rusak'           => 'badge-danger',
                     'Dalam Perbaikan' => 'badge-warning',
@@ -325,19 +325,19 @@
                 };
             @endphp
             <tr>
-                <td>{{ $tmb->kode_asset }}</td>
-                <td class="col-wrap">{{ $tmb->merk_tipe_no_seri }}</td>
-                <td>{{ $tmb->lokasi_asli ?? '-' }}</td>
-                <td>{{ $tmb->status_line ?: 'Lab' }}</td>
-                <td><span class="badge {{ $badgeClass }}">{{ $tmb->kondisi_saat_ini }}</span></td>
-                <td>{{ $tmb->getStatusLengkapAttribute() }}</td>
+                <td>{{ $alat->kode_asset }}</td>
+                <td class="col-wrap">{{ $alat->merk_tipe_lengkap }}</td>
+                <td>{{ $alat->lokasi_asli ?? '-' }}</td>
+                <td>{{ $alat->status_line ?: 'Lab' }}</td>
+                <td><span class="badge {{ $badgeClass }}">{{ $alat->kondisi_saat_ini }}</span></td>
+                <td>{{ $alat->status_lengkap }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
     <div class="footer">
-        Dicetak otomatis oleh Sistem Manajemen Timbangan &mdash;
+        Dicetak otomatis oleh Sistem Manajemen Peralatan QC &mdash;
         {{ config('app.name') }} &mdash; {{ date('Y') }}
     </div>
 

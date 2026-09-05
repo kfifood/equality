@@ -69,7 +69,9 @@ class RiwayatPerbaikan extends Model
 
     public function getMerkLengkapAttribute(): string
     {
-        return $this->peralatan ? $this->peralatan->merk_tipe_no_seri : '-';
+        // FIX: field lama 'merk_tipe_no_seri' sudah tidak ada di model Peralatan,
+        // sekarang jadi accessor 'merk_tipe_lengkap' (gabungan merk + type + serial_number).
+        return $this->peralatan ? $this->peralatan->merk_tipe_lengkap : '-';
     }
 
     public function getKondisiPeralatanAttribute(): string
