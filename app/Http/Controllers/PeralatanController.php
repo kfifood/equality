@@ -98,7 +98,7 @@ class PeralatanController extends Controller
             'merk'              => 'required|string|max:255',
             'type'              => 'nullable|string|max:255',
             'serial_number'     => 'nullable|string|max:255',
-            'tanggal_datang'    => 'required|date',
+            'tanggal_datang'    => 'nullable|date',
             'lokasi_asli'       => 'required|string',
         ], [
             'kategori_alat_id.required' => 'Kategori alat harus dipilih.',
@@ -148,7 +148,7 @@ class PeralatanController extends Controller
             'merk'              => 'required|string|max:255',
             'type'              => 'nullable|string|max:255',
             'serial_number'     => 'nullable|string|max:255',
-            'tanggal_datang'    => 'required|date',
+            'tanggal_datang'    => 'nullable|date',
             'lokasi_asli'       => 'required|string',
         ], [
             'kategori_alat_id.required' => 'Kategori alat harus dipilih.',

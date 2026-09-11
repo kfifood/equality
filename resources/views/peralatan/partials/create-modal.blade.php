@@ -36,9 +36,9 @@
         <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label for="tanggal_datang" class="form-label">Tanggal Datang <span class="text-danger">*</span></label>
+                    <label for="tanggal_datang" class="form-label">Tanggal Datang</label>
                     <input type="date" class="form-control" id="tanggal_datang" name="tanggal_datang"
-                           value="{{ old('tanggal_datang') }}" required>
+                           value="{{ old('tanggal_datang') }}">
                 </div>
             </div>
             <div class="col-md-6">
