@@ -331,11 +331,11 @@ class KalibrasiController extends Controller
             'certificate' => $p->calibration_number ?? '',
             'spesifikasi' => $p->spesifikasi_ringkas,
             'dept'        => $this->resolveDeptBagian($p) ?? '',
-            // kode_kategori dipakai di JS untuk menentukan input mana yang
-            // ditampilkan per baris: 'TMB' → Beda Maksimum, 'TRM' → 3 baris
-            // Suhu Alat/Master. Kategori baru bisa ditambah cabangnya nanti
-            // tanpa ubah struktur data ini.
-            'kategori'    => $p->kategoriAlat->kode_kategori ?? null,
+            // 'jenis' dipakai di JS untuk menentukan input mana yang
+            // ditampilkan per baris: 'termometer' (semua kategori berawalan
+            // "Termometer") → 3 baris Suhu Alat/Master, selain itu → Beda
+            // Maksimum. Ditentukan dari nama kategori, bukan kode.
+            'jenis'       => $p->kategoriAlat?->jenis_sticker ?? 'default',
         ]);
 
         return response()->json([

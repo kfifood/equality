@@ -263,7 +263,7 @@
             <label for="stickerSize" class="cp-size-label">Ukuran Cetak</label>
             @php
                 // Rasio lebar:tinggi berbeda per kategori alat (lihat currentSizeFor()
-                // di JS: Timbangan/lainnya = 2:1, Thermometer 'TRM' lebar dikunci
+                // di JS: Timbangan/lainnya = 2:1, Termometer lebar dikunci
                 // 30mm & cuma tingginya yang membesar). Supaya
                 // yang nyetak paham persis berapa mm hasilnya, label tiap opsi
                 // dihitung di sini (server-side, PHP), dibuat cocok dengan rumus
@@ -271,24 +271,41 @@
                 // otomatis menyesuaikan kategori alat yang ada di halaman ini.
                 $sizeBases = ['300' => 'Kecil', '400' => 'Standar', '500' => 'Sedang', '600' => 'Besar'];
 
+                // Jenis sticker ditentukan dari NAMA kategori lewat accessor
+                // MasterKategoriAlat::jenis_sticker: yang diawali "Termometer"
+                // → template termometer, yang diawali "Timer" → template timer,
+                // lainnya default — apa pun kode kategorinya.
+
+                // Dikelompokkan per JENIS sticker (bukan per kode kategori), jadi
+                // semua termometer cukup tampil satu kali di label dropdown.
                 $kategoriHadir = [];
                 foreach ($kalibrasiList as $item) {
-                    $kode = $item->peralatan->kategoriAlat->kode_kategori ?? '';
-                    $nama = $item->peralatan->kategoriAlat->nama_kategori ?? 'Alat Ukur';
-                    $kategoriHadir[$kode] = $nama;
+                    $nama  = $item->peralatan->kategoriAlat->nama_kategori ?? 'Alat Ukur';
+                    $jenis = $item->peralatan->kategoriAlat?->jenis_sticker ?? 'default';
+                    if ($jenis === 'termometer') {
+                        $kategoriHadir['termometer'] = 'Termometer';
+                    } elseif ($jenis === 'timer') {
+                        $kategoriHadir['timer'] = 'Timer';
+                    } else {
+                        $kategoriHadir[$nama] = $nama;
+                    }
                 }
                 if (empty($kategoriHadir)) {
-                    $kategoriHadir[''] = 'Alat Ukur';
+                    $kategoriHadir['Alat Ukur'] = 'Alat Ukur';
                 }
 
-                // Sama persis dengan currentSizeFor() di JS: TRM lebarnya DIKUNCI
+                // Sama persis dengan currentSizeFor() di JS: termometer lebarnya DIKUNCI
                 // 30mm (tidak ikut skala dropdown), cuma tingginya yang membesar
                 // (30mm di "Kecil" s/d 40mm di "Besar"). Kategori lain (mis.
                 // Timbangan) tetap pakai rasio 2:1 lama (H = base+5, W = base*2).
-                $hitungUkuranMm = function (int $base, string $kode) {
-                    if ($kode === 'TRM') {
+                $hitungUkuranMm = function (int $base, string $jenis) {
+                    if ($jenis === 'termometer') {
                         $w = 300;
                         $h = (int) round($base / 3 + 200);
+                    } elseif ($jenis === 'timer') {
+                        // Timer: ukuran FIXED 45×10mm, tidak ikut dropdown
+                        $w = 450;
+                        $h = 100;
                     } else {
                         $h = $base + 5;
                         $w = $base * 2;
@@ -301,7 +318,7 @@
                 @foreach($sizeBases as $base => $label)
                     @php
                         $dims = collect($kategoriHadir)
-                            ->map(fn ($nama, $kode) => $nama . ' ' . $hitungUkuranMm((int) $base, $kode))
+                            ->map(fn ($nama, $jenis) => $nama . ' ' . $hitungUkuranMm((int) $base, (string) $jenis))
                             ->implode(' · ');
                     @endphp
                     <option value="{{ $base }}" {{ $base == 300 ? 'selected' : '' }}>
@@ -329,12 +346,12 @@
 @foreach($kalibrasiList as $i => $item)
 @php
     $peralatan = $item->peralatan;
-    // kode_kategori dipakai untuk menentukan tata letak sticker per jenis alat
-    // (mis. 'TMB' = Timbangan, 'TRM' = Thermometer). Alat baru cukup daftarkan
-    // kategorinya di master_kategori_alat, lalu tambahkan cabang layout di JS
-    // drawKalibrasiSticker() bila butuh tampilan berbeda dari default.
-    $kategoriKode = $peralatan->kategoriAlat->kode_kategori ?? null;
+    // Jenis sticker ditentukan dari NAMA kategori, bukan kode: kategori yang
+    // diawali "Termometer" (Termometer Dinding, Termometer Tusuk, dst — kodenya
+    // boleh beda-beda) memakai template termometer; lainnya template default.
+    // Kategori termometer baru otomatis ikut tanpa ubah kode.
     $alat      = $peralatan->kategoriAlat->nama_kategori ?? 'Alat Ukur';
+    $jenisSticker = $peralatan->kategoriAlat?->jenis_sticker ?? 'default';
     $merk      = $peralatan->merk_tipe_lengkap ?? '-';
     $kapasitas = $peralatan->spesifikasi['kapasitas'] ?? '-';
     $kode      = $peralatan->kode_asset ?? '-';
@@ -353,7 +370,7 @@
 
 <div class="sticker-block"
      data-id="{{ $item->id }}"
-     data-kategori="{{ $kategoriKode }}"
+     data-jenis="{{ $jenisSticker }}"
      data-alat="{{ $alat }}"
      data-merk="{{ $merk }}"
      data-kapasitas="{{ $kapasitas }}"
@@ -403,18 +420,25 @@ const fctx    = factory.getContext('2d');
 // dengan bentuk fisik yang berbeda:
 // - Timbangan (& kategori lain yang belum punya template khusus):
 //   rasio lebar:tinggi = 2:1, mis. "Kecil" → 30×60mm (perilaku lama).
-// - Thermometer ('TRM'): LEBAR DIKUNCI 30mm (mentok, tidak ikut skala
+// - Termometer (semua kategori berawalan "Termometer"): LEBAR DIKUNCI 30mm (mentok, tidak ikut skala
 //   dropdown), hanya TINGGI yang membesar mengikuti pilihan "Ukuran
 //   Cetak" (30mm di "Kecil" s/d 40mm di "Besar") — supaya tulisan
 //   "Alat (°C)" / "Master (°C)" & angka suhunya tidak kegepengan/kecil,
 //   tanpa melebarkan sticker-nya (lebar 3cm tetap harus pas di label).
-function currentSizeFor(kategori) {
+function currentSizeFor(jenis) {
     const base = parseInt(document.getElementById('stickerSize').value, 10);
 
-    if (kategori === 'TRM') {
+    if (jenis === 'termometer') {
         const W = 300; // lebar dikunci 30mm, berapa pun "Ukuran Cetak" yang dipilih
         const H = Math.round(base / 3 + 200); // base 300→300(30mm) ... 600→400(40mm)
         return { H, W, hmm: H / 10, wmm: W / 10 };
+    }
+
+    if (jenis === 'timer') {
+        // Timer: ukuran FIXED 45mm × 10mm, tidak ikut dropdown. Canvas digambar
+        // 2× resolusi (20px/mm) supaya teks kecilnya tetap tajam saat dicetak;
+        // ukuran fisik cetak tetap dari wmm/hmm.
+        return { W: 900, H: 200, wmm: 45, hmm: 10 };
     }
 
     const H = base + 5;
@@ -492,13 +516,16 @@ function fitValueLines(ctx, text, maxW, maxH, baseFs) {
 
 /**
  * Gambar satu sticker kalibrasi ke factoryCanvas dan kembalikan dataURL PNG.
- * Template berbeda per kategori alat: Thermometer ('TRM') punya bentuk fisik
+ * Template berbeda per jenis alat: Termometer (kategori berawalan "Termometer") punya bentuk fisik
  * & tata letak sendiri (lihat drawThermometerSticker), kategori lain (mis.
  * Timbangan) pakai template default di bawah ini.
  */
 function drawKalibrasiSticker(data, size, logo) {
-    if (data.kategori === 'TRM') {
+    if (data.jenis === 'termometer') {
         return drawThermometerSticker(data, size, logo);
+    }
+    if (data.jenis === 'timer') {
+        return drawTimerSticker(data, size, logo);
     }
 
     const { H, W } = size;
@@ -618,9 +645,126 @@ rows.forEach(([label, value], i) => {
 
     return factory.toDataURL('image/png');
 }
+// ── Helper timer: pecah satu kata yang terlalu panjang per huruf ──
+function breakLongWord(ctx, word, maxW) {
+    const parts = []; let cur = '';
+    for (const ch of word) {
+        if (ctx.measureText(cur + ch).width > maxW && cur) { parts.push(cur); cur = ch; }
+        else cur += ch;
+    }
+    if (cur) parts.push(cur);
+    return parts;
+}
+
+// ── Helper timer: wrap teks per kata; kata yang kelewat panjang dipecah per huruf ──
+function wrapTextHard(ctx, text, maxW) {
+    const lines = []; let cur = '';
+    for (const w of String(text).split(' ')) {
+        const pieces = ctx.measureText(w).width > maxW ? breakLongWord(ctx, w, maxW) : [w];
+        pieces.forEach((piece, i) => {
+            const test = cur ? (i === 0 ? cur + ' ' + piece : piece) : piece;
+            if (i === 0 && cur && ctx.measureText(test).width <= maxW) { cur = test; }
+            else { if (cur) lines.push(cur); cur = piece; }
+        });
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+
+// ── Helper timer: 1 baris (font mengecil sampai minSingleFs), lalu wrap maks 2 baris ──
+function fitTextTwoLines(ctx, text, maxW, maxH, startFs, minSingleFs) {
+    const fam = 'Montserrat, Arial, sans-serif';
+    for (let fs = startFs; fs >= minSingleFs; fs--) {
+        ctx.font = `700 ${fs}px ${fam}`;
+        if (ctx.measureText(text).width <= maxW) return { fs, lines: [text] };
+    }
+    const maxFs2 = Math.min(startFs, Math.floor(maxH / (2 * 1.1)));
+    for (let fs = maxFs2; fs >= 8; fs--) {
+        ctx.font = `700 ${fs}px ${fam}`;
+        const lines = wrapTextHard(ctx, text, maxW);
+        if (lines.length <= 2) return { fs, lines };
+    }
+    ctx.font = `700 8px ${fam}`;
+    return { fs: 8, lines: wrapTextHard(ctx, text, maxW).slice(0, 2) };
+}
+/**
+ * Template sticker khusus kategori Timer (semua yang berawalan "Timer") —
+ * sticker kecil memanjang 45mm × 10mm: kiri logo, kanan 2 baris
+ * ("KALIBRASI ALAT UKUR" / "Nomor : ..."). Ukuran fixed (lihat
+ * currentSizeFor()), digambar di canvas 900×200 px (20px/mm).
+ */
+function drawTimerSticker(data, size, logo) {
+    const { H, W } = size;
+    factory.width  = W;
+    factory.height = H;
+    const ctx = fctx;
+    ctx.clearRect(0, 0, W, H);
+
+    const lw = Math.max(2, Math.round(H / 60));
+    const mg = Math.round(H * 0.04);
+    const x0 = mg, y0 = mg, x1 = W - mg, y1 = H - mg;
+    const iW = x1 - x0, iH = y1 - y0;
+
+    ctx.strokeStyle = '#000';
+    ctx.fillStyle   = '#000';
+    ctx.lineWidth   = lw;
+    ctx.strokeRect(x0, y0, iW, iH);
+
+    const colX = x0 + Math.round(iW * 0.29); // batas kolom logo | teks
+    const midY = y0 + Math.round(iH / 2);    // pemisah judul / nomor
+    line(ctx, colX, y0, colX, y1);
+    line(ctx, colX, midY, x1, midY);
+
+    // ── Logo (sel kiri) ──
+    if (logo) {
+        const pad   = Math.round(iH * 0.08);
+        const areaW = colX - x0 - pad * 2;
+        const areaH = iH - pad * 2;
+        const sc    = Math.min(areaW / logo.naturalWidth, areaH / logo.naturalHeight);
+        const lw2   = logo.naturalWidth  * sc * 1.3;
+        const lh2   = logo.naturalHeight * sc;
+        ctx.drawImage(logo, x0 + (colX - x0 - lw2) / 2, y0 + (iH - lh2) / 2, lw2, lh2);
+    } else {
+        ctx.font = `900 ${Math.round(iH * 0.25)}px Montserrat, Arial, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('LOGO', x0 + (colX - x0) / 2, y0 + iH / 2);
+    }
+
+    // ── Teks (rata kiri, auto-shrink sampai muat lebar sel) ──
+    const padX  = Math.round(iW * 0.025);
+    const maxW  = x1 - colX - padX * 2;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+
+    const drawFit = (text, cy, startFs) => {
+        let fs = startFs;
+        ctx.font = `700 ${fs}px Montserrat, Arial, sans-serif`;
+        while (ctx.measureText(text).width > maxW && fs > 8) {
+            fs--; ctx.font = `700 ${fs}px Montserrat, Arial, sans-serif`;
+        }
+        ctx.fillText(text, colX + padX, cy);
+    };
+
+    const rowH = iH / 2;
+    drawFit('KALIBRASI ALAT UKUR',       y0 + rowH * 0.5, Math.round(rowH * 0.55));
+        // Nomor: 1 baris dulu (font mengecil), kalau masih kepanjangan → wrap 2 baris
+    const nomorText   = 'Nomor : ' + (data.nomor || '');
+    const nomorStart  = Math.round(rowH * 0.45);        // samakan dengan angka font Nomor yang kamu pakai
+    const minSingleFs = Math.round(nomorStart * 0.35);   // batas terkecil sebelum wrap
+    const fitted = fitTextTwoLines(ctx, nomorText, maxW, rowH * 0.92, nomorStart, minSingleFs);
+
+    ctx.font = `700 ${fitted.fs}px Montserrat, Arial, sans-serif`;
+    const lineH = fitted.fs * 1.1;
+    let ly = midY + rowH / 2 - (fitted.lines.length * lineH) / 2 + lineH / 2;
+    fitted.lines.forEach(l => {
+        ctx.fillText(l, colX + padX, ly);
+        ly += lineH;
+    });
+
+    return factory.toDataURL('image/png');
+}
 
 /**
- * Template sticker khusus kategori Thermometer ('TRM') — bentuk fisik &
+ * Template sticker khusus kategori Termometer (semua yang berawalan "Termometer") — bentuk fisik &
  * tata letak beda total dari template Timbangan: header (logo | judul +
  * nomor), baris "Tgl Kalibrasi" penuh, lalu tabel 2 kolom "Alat (°C)" /
  * "Master (°C)" dengan 3 baris hasil pembacaan. Lebar dikunci 30mm,
@@ -635,7 +779,7 @@ function drawThermometerSticker(data, size, logo) {
     ctx.clearRect(0, 0, W, H);
 
     const lw = Math.max(1, Math.round(H / 100));
-    // Margin dihitung dari sisi TERPENDEK (bukan cuma H) — sejak lebar TRM
+    // Margin dihitung dari sisi TERPENDEK (bukan cuma H) — sejak lebar termometer
     // dikunci 30mm sementara tinggi bisa membesar sampai 40mm, W & H tidak
     // lagi selalu skala bareng, jadi kalau margin dihitung dari H saja,
     // marginnya bisa "memakan" porsi lebar secara tidak proporsional.
@@ -770,7 +914,7 @@ function renderAll() {
         document.querySelectorAll('.sticker-block').forEach(block => {
             const id = block.dataset.id;
             const data = {
-                kategori: block.dataset.kategori,
+                jenis: block.dataset.jenis,
                 alat: block.dataset.alat, merk: block.dataset.merk, kapasitas: block.dataset.kapasitas,
                 kode: block.dataset.kode, dept: block.dataset.dept, tgl: block.dataset.tgl,
                 pelaksana: block.dataset.pelaksana, beda: block.dataset.beda, nomor: block.dataset.nomor,
@@ -778,7 +922,7 @@ function renderAll() {
             };
             // Ukuran fisik dihitung per item — rasio berbeda per kategori
             // (lihat currentSizeFor()), jadi tidak bisa dihitung sekali di luar loop.
-            const size = currentSizeFor(data.kategori);
+            const size = currentSizeFor(data.jenis);
             const dataUrl = drawKalibrasiSticker(data, size, logo);
             stickerData[id] = { dataUrl, wmm: size.wmm, hmm: size.hmm, filename: block.dataset.filename };
             block.querySelector('.sticker-img').src = dataUrl;

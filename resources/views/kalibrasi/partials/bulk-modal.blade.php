@@ -228,7 +228,7 @@
         const row    = document.getElementById('row-' + rowId);
         if (!row) return;
         row.querySelector('.bts-hidden-id').value   = p.id;
-        row.dataset.kategori = p.kategori || '';
+        row.dataset.jenis = p.jenis || 'default';
         const lbl = row.querySelector('.bts-label-text');
         lbl.textContent = p.label;
         lbl.classList.remove('bts-placeholder');
@@ -246,8 +246,8 @@
         const pengukuranWrap = row.querySelector('.col-pengukuran-wrap');
         const bedaInput      = row.querySelector('.col-beda');
 
-        if (p.kategori === 'TRM') {
-            // Thermometer → tampilkan 3 baris Suhu Alat/Master, kosongkan Beda Maks.
+        if (p.jenis === 'termometer') {
+            // Termometer → tampilkan 3 baris Suhu Alat/Master, kosongkan Beda Maks.
             bedaWrap.style.display       = 'none';
             pengukuranWrap.style.display = '';
             if (bedaInput) bedaInput.value = '';
@@ -482,9 +482,9 @@
                 catatan:             tr.querySelector('[name$="[catatan]"]')?.value.trim()            || '',
             };
 
-            // Thermometer: kumpulkan 3 baris Suhu Alat/Master jadi array
+            // Termometer: kumpulkan 3 baris Suhu Alat/Master jadi array
             // 'pengukuran', dan kosongkan beda_maksimum (tidak relevan).
-            if (tr.dataset.kategori === 'TRM') {
+            if (tr.dataset.jenis === 'termometer') {
                 rowData.beda_maksimum = '';
                 rowData.pengukuran = [0, 1, 2].map(idx => ({
                     suhu_alat:   tr.querySelector(`.pengukuran-alat[data-idx="${idx}"]`)?.value.trim()   || '',
