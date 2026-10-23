@@ -82,7 +82,7 @@
                         data-calibration="{{ $p->calibration_number ?? '' }}"
                         data-spesifikasi="{{ $p->spesifikasi_ringkas ?? '' }}"
                         data-dept="{{ $p->dept_bagian_default ?? '' }}"
-                        data-kategori="{{ $p->kategoriAlat->kode_kategori ?? '' }}">
+                        data-jenis="{{ $p->kategoriAlat?->jenis_sticker ?? 'default' }}">
                         {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                     </option>
                 @endforeach
@@ -177,9 +177,9 @@
             </div>
         </div>
 
-        {{-- Suhu Alat / Suhu Master — khusus kategori Thermometer (TRM).
-             Disembunyikan secara default, muncul otomatis saat peralatan
-             yang dipilih berkategori Thermometer. --}}
+        {{-- Suhu Alat / Suhu Master — khusus kategori Termometer (semua kategori
+             berawalan "Termometer", mis. Dinding & Tusuk). Disembunyikan secara
+             default, muncul otomatis saat peralatan yang dipilih termometer. --}}
         <div id="pengukuran_wrap" style="display:none;">
             <label class="form-label d-block mb-2">
                 Hasil Pengukuran (3 titik)
@@ -242,10 +242,11 @@
     var pengukuranWrap = document.getElementById('pengukuran_wrap');
 
     // ── Tampilkan field yang sesuai dengan kategori peralatan terpilih ──
-    // 'TRM' (Thermometer) → sembunyikan Beda Maksimum, tampilkan 3 baris
-    // Suhu Alat/Master. Kategori lain (mis. 'TMB' Timbangan) → sebaliknya.
-    function applyKategoriFields(kategori) {
-        if (kategori === 'TRM') {
+    // Jenis 'termometer' (kategori berawalan "Termometer", ditentukan dari
+    // MasterKategoriAlat::jenis_sticker) → sembunyikan Beda Maksimum, tampilkan
+    // 3 baris Suhu Alat/Master. Jenis lain (Timbangan, Timer, dst) → sebaliknya.
+    function applyKategoriFields(jenis) {
+        if (jenis === 'termometer') {
             bedaWrap.style.display       = 'none';
             pengukuranWrap.style.display = '';
             bedaInput.value = '';
@@ -266,7 +267,7 @@
             calibration: opt.getAttribute('data-calibration') || '',
             spesifikasi: opt.getAttribute('data-spesifikasi') || '',
             dept       : opt.getAttribute('data-dept')        || '',
-            kategori   : opt.getAttribute('data-kategori')    || ''
+            jenis      : opt.getAttribute('data-jenis')       || 'default'
         });
     });
 
@@ -302,7 +303,7 @@
                 calInput.value = o.calibration;
                 deptInput.value = o.dept;
                 bedaInput.value = o.spesifikasi;
-                applyKategoriFields(o.kategori);
+                applyKategoriFields(o.jenis);
 
                 closeDropdown();
             });

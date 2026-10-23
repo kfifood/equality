@@ -81,7 +81,7 @@
                 @foreach($peralatanList as $p)
                     <option value="{{ $p->id }}"
                         data-calibration="{{ $p->calibration_number ?? '' }}"
-                        data-kategori="{{ $p->kategoriAlat->kode_kategori ?? '' }}"
+                        data-jenis="{{ $p->kategoriAlat?->jenis_sticker ?? 'default' }}"
                         {{ old('peralatan_id', $kalibrasi->peralatan_id) == $p->id ? 'selected' : '' }}>
                         {{ $p->kode_asset }} — {{ $p->merk_tipe_lengkap }}
                     </option>
@@ -178,12 +178,12 @@
             </div>
         </div>
 
-        {{-- Suhu Alat / Suhu Master — khusus kategori Thermometer (TRM) --}}
+        {{-- Suhu Alat / Suhu Master — khusus kategori Termometer (berawalan "Termometer") --}}
         @php
             $pengukuranLama  = old('pengukuran', $kalibrasi->pengukuran ?? []);
-            $kategoriAwal    = $kalibrasi->peralatan->kategoriAlat->kode_kategori ?? '';
+            $jenisAwal       = $kalibrasi->peralatan->kategoriAlat?->jenis_sticker ?? 'default';
         @endphp
-        <div id="pengukuran_wrap" style="{{ $kategoriAwal === 'TRM' ? '' : 'display:none;' }}">
+        <div id="pengukuran_wrap" style="{{ $jenisAwal === 'termometer' ? '' : 'display:none;' }}">
             <label class="form-label d-block mb-2">
                 Hasil Pengukuran (3 titik)
                 <span class="badge bg-secondary bg-opacity-75 ms-1" style="font-size:0.65em;">
@@ -252,8 +252,8 @@
     var pengukuranWrap = document.getElementById('pengukuran_wrap');
 
     // ── Tampilkan field yang sesuai dengan kategori peralatan terpilih ──
-    function applyKategoriFields(kategori) {
-        if (kategori === 'TRM') {
+    function applyKategoriFields(jenis) {
+        if (jenis === 'termometer') {
             bedaWrap.style.display       = 'none';
             pengukuranWrap.style.display = '';
         } else {
@@ -270,7 +270,7 @@
             value      : opt.value,
             text       : opt.text.trim(),
             calibration: opt.getAttribute('data-calibration') || '',
-            kategori   : opt.getAttribute('data-kategori')    || ''
+            jenis      : opt.getAttribute('data-jenis')       || 'default'
         });
     });
 
@@ -281,6 +281,9 @@
         if (current) {
             labelEl.textContent = current.text;
             labelEl.classList.remove('ts-placeholder');
+            // Sesuaikan field (Beda Maksimum vs Suhu) dengan peralatan awal,
+            // supaya Beda Maksimum ikut tersembunyi untuk termometer.
+            applyKategoriFields(current.jenis);
         }
     }
 
@@ -308,7 +311,7 @@
                 labelEl.textContent = o.text;
                 labelEl.classList.remove('ts-placeholder');
                 calInput.value      = o.calibration;
-                applyKategoriFields(o.kategori);
+                applyKategoriFields(o.jenis);
                 closeDropdown();
             });
             listEl.appendChild(div);
