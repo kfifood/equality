@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Peralatan;
-use App\Models\MasterLine;
-use App\Models\MasterKategoriAlat;
-use Illuminate\Http\Request;
-use App\Imports\PeralatanImport; // TODO: buat/rename dari App\Imports\TimbanganImport
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\PeralatanExport; // TODO: buat/rename dari App\Exports\TimbanganExport
+ use App\Models\Peralatan;
+ use App\Models\MasterLine;
+ use App\Models\MasterKategoriAlat;
+ use Illuminate\Http\Request;
+ use App\Imports\PeralatanImport;
+ use App\Exports\PeralatanExport;
+ use Maatwebsite\Excel\Facades\Excel;
+ use PhpOffice\PhpSpreadsheet\Spreadsheet;
+ use PhpOffice\PhpSpreadsheet\Style\Fill;
+ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+ use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class PeralatanController extends Controller
 {
@@ -310,39 +315,185 @@ class PeralatanController extends Controller
         }
     }
 
+     /**
+     * Import massal dari Excel. Dipanggil via AJAX dari modal import.
+     * Response selalu JSON: {success, message, errors?[]}
+     */
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:2048',
+            'file' => 'required|file|mimes:xlsx,xls|max:5120',
+        ], [
+            'file.required' => 'Pilih file Excel terlebih dahulu.',
+            'file.mimes'    => 'File harus berformat .xlsx atau .xls.',
+            'file.max'      => 'Ukuran file maksimal 5 MB.',
         ]);
-
+ 
+        $import = new PeralatanImport;
+ 
         try {
-            Excel::import(new PeralatanImport, $request->file('file'));
-            return redirect()->route('peralatan.index')
-                ->with('success', 'Data peralatan berhasil diimport.');
-        } catch (\Exception $e) {
-            return redirect()->route('peralatan.index')
-                ->with('error', 'Error importing file: ' . $e->getMessage());
+            Excel::import($import, $request->file('file'));
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'success' => false,
+                'message' => 'File tidak bisa diproses: ' . $e->getMessage(),
+            ]);
         }
+ 
+        if (!empty($import->errors)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Import dibatalkan, tidak ada data yang disimpan. Perbaiki error berikut lalu upload ulang:',
+                'errors'  => $import->errors,
+            ]);
+        }
+ 
+        return response()->json([
+            'success' => true,
+            'message' => $import->jumlahBerhasil . ' peralatan berhasil diimport.',
+        ]);
     }
-
+ 
+    /**
+     * Export data peralatan. PeralatanExport sekarang butuh ($year, $month, $format, $line)
+     * karena dipakai juga untuk laporan; untuk daftar peralatan saja pakai format 'peralatan'
+     * (PeralatanSheet tidak memakai year/month).
+     */
     public function export()
     {
-        return Excel::download(new PeralatanExport, 'peralatan-' . date('Y-m-d') . '.xlsx');
+        return Excel::download(
+            new PeralatanExport(now()->year, now()->month, 'peralatan'),
+            'peralatan-' . date('Y-m-d') . '.xlsx'
+        );
     }
-
+ 
+    /**
+     * Template Excel dibuat on-the-fly supaya dropdown kategori & lokasi selalu
+     * sinkron dengan Master Kategori Alat dan Master Line yang aktif.
+     * (Tidak lagi butuh file statis resources/templates/template-import-peralatan.xlsx)
+     */
     public function downloadTemplate()
     {
-        $filePath = resource_path('templates/template-import-peralatan.xlsx');
-
-        if (!file_exists($filePath)) {
-            return redirect()->route('peralatan.index')
-                ->with('error', 'Template tidak ditemukan.');
+        $kategori = MasterKategoriAlat::aktif()->orderBy('nama_kategori')->get(['nama_kategori', 'kode_kategori']);
+        $lokasi   = collect(['Lab'])->merge(MasterLine::aktif()->orderBy('nama_line')->pluck('nama_line'));
+ 
+        $spreadsheet = new Spreadsheet();
+ 
+        // ── Sheet 1: Data Peralatan (yang diisi user & diimport) ─────────────
+        $ws = $spreadsheet->getActiveSheet();
+        $ws->setTitle('Data Peralatan');
+ 
+        $headers = [
+            'kategori (wajib)', 'kode_asset (wajib)', 'merk (wajib)', 'type', 'serial_number',
+            'tanggal_datang', 'lokasi_asli (wajib)', 'calibration_number',
+            'kapasitas', 'range_suhu', // contoh kolom spesifikasi — boleh ganti / tambah
+        ];
+        $ws->fromArray($headers, null, 'A1');
+ 
+        $ws->getStyle('A1:J1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4361EE']],
+        ]);
+        // Kolom WAJIB = merah (dan bertuliskan "(wajib)"), opsional = biru, spesifikasi = abu-abu
+        foreach (['A1:C1', 'G1'] as $rangeWajib) {
+            $ws->getStyle($rangeWajib)->getFill()->getStartColor()->setRGB('DC3545');
         }
-
-        return response()->download($filePath, 'template-import-peralatan.xlsx');
+        $ws->getStyle('I1:J1')->getFill()->getStartColor()->setRGB('6C757D');
+ 
+        foreach (['A' => 22, 'B' => 22, 'C' => 18, 'D' => 16, 'E' => 16, 'F' => 16, 'G' => 22, 'H' => 22, 'I' => 18, 'J' => 18] as $col => $w) {
+            $ws->getColumnDimension($col)->setWidth($w);
+        }
+        $ws->freezePane('A2');
+ 
+        // Format Text agar Excel tidak mengubah "007" jadi 7 atau No. Seri panjang jadi 1.2E+11
+        foreach (['B', 'E', 'H'] as $col) {
+            $ws->getStyle("{$col}2:{$col}1000")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+        }
+        $ws->getStyle('F2:F1000')->getNumberFormat()->setFormatCode('dd/mm/yyyy');
+ 
+        // ── Sheet 2: Referensi (isi dropdown) ────────────────────────────────
+        $ref = $spreadsheet->createSheet();
+        $ref->setTitle('Referensi');
+        $ref->fromArray(['Kategori (nama)', 'Kode'], null, 'A1');
+        $r = 2;
+        foreach ($kategori as $k) {
+            $ref->setCellValueExplicit("A{$r}", $k->nama_kategori, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $ref->setCellValueExplicit("B{$r}", $k->kode_kategori, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $r++;
+        }
+        $lastKat = max($r - 1, 2);
+ 
+        $ref->setCellValue('D1', 'Lokasi Asli');
+        $r = 2;
+        foreach ($lokasi as $l) {
+            $ref->setCellValueExplicit("D{$r}", $l, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $r++;
+        }
+        $lastLok = max($r - 1, 2);
+ 
+        $ref->getStyle('A1:D1')->getFont()->setBold(true);
+        $ref->getColumnDimension('A')->setWidth(24);
+        $ref->getColumnDimension('B')->setWidth(10);
+        $ref->getColumnDimension('D')->setWidth(18);
+ 
+        // ── Dropdown ─────────────────────────────────────────────────────────
+        $dvKategori = new DataValidation();
+        $dvKategori->setType(DataValidation::TYPE_LIST)
+            ->setErrorStyle(DataValidation::STYLE_STOP)
+            ->setAllowBlank(true)
+            ->setShowDropDown(true)
+            ->setShowErrorMessage(true)
+            ->setErrorTitle('Kategori tidak valid')
+            ->setError('Pilih kategori dari daftar (lihat sheet Referensi).')
+            ->setFormula1('=Referensi!$A$2:$A$' . $lastKat);
+        $ws->setDataValidation('A2:A1000', $dvKategori);
+ 
+        $dvLokasi = new DataValidation();
+        $dvLokasi->setType(DataValidation::TYPE_LIST)
+            ->setErrorStyle(DataValidation::STYLE_STOP)
+            ->setAllowBlank(true)
+            ->setShowDropDown(true)
+            ->setShowErrorMessage(true)
+            ->setErrorTitle('Lokasi tidak valid')
+            ->setError('Pilih "Lab" atau salah satu Line dari daftar.')
+            ->setFormula1('=Referensi!$D$2:$D$' . $lastLok);
+        $ws->setDataValidation('G2:G1000', $dvLokasi);
+ 
+        // ── Sheet 3: Petunjuk ────────────────────────────────────────────────
+        $info = $spreadsheet->createSheet();
+        $info->setTitle('Petunjuk');
+        $baris = [
+            ['PETUNJUK PENGISIAN'],
+            [''],
+            ['1. Isi data mulai baris 2 di sheet "Data Peralatan". Jangan ubah / hapus baris header (baris 1).'],
+            ['2. Kolom WAJIB (header merah, bertanda "(wajib)"): kategori, kode_asset, merk, lokasi_asli.'],
+            ['   Header biru = opsional, header abu-abu = spesifikasi (opsional). Tulisan "(wajib)" jangan dihapus/diubah.'],
+            ['3. Kolom opsional: type, serial_number, tanggal_datang (dd/mm/yyyy), calibration_number.'],
+            ['4. kategori boleh diisi nama (mis. "Timbangan") atau kode kategori; pilih dari dropdown.'],
+            ['5. lokasi_asli: "Lab" atau nama Line yang aktif; pilih dari dropdown.'],
+            ['6. kode_asset harus unik — tidak boleh sama dengan data yang sudah ada maupun baris lain di file ini.'],
+            ['7. Kolom I dst. (kapasitas, range_suhu, ...) = SPESIFIKASI. Nama kolom jadi label spesifikasi.'],
+            ['   Boleh ganti nama kolom atau tambah kolom baru di sebelah kanan. Sel yang kosong dilewati.'],
+            ['   Gunakan nama kolom tanpa simbol, mis. "range_suhu" (bukan "Range (°C)").'],
+            ['8. Alat yang diimport otomatis berstatus Baik dan berada di Lab (sama seperti tombol Tambah).'],
+            ['9. Kalau ada SATU baris saja yang salah, seluruh import dibatalkan dan nomor baris yang salah ditampilkan.'],
+            ['10. Hanya sheet pertama ("Data Peralatan") yang dibaca.'],
+        ];
+        $info->fromArray($baris, null, 'A1');
+        $info->getStyle('A1')->getFont()->setBold(true)->setSize(13);
+        $info->getColumnDimension('A')->setWidth(110);
+ 
+        $spreadsheet->setActiveSheetIndex(0);
+ 
+        return response()->streamDownload(function () use ($spreadsheet) {
+            (new Xlsx($spreadsheet))->save('php://output');
+        }, 'template-import-peralatan.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
+    
     // Sinkronisasi kondisi peralatan (dipanggil dari luar / AJAX cepat)
     public function updateKondisi($id, Request $request)
     {

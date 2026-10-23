@@ -10,7 +10,14 @@
                     <h5 class="card-title mb-0">
                         <i class="bi bi-speedometer me-2"></i>Data Peralatan
                     </h5>
-                    <div>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('peralatan.download-template') }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-download me-1"></i>Template
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-success"
+                            data-bs-toggle="modal" data-bs-target="#importModal">
+                            <i class="bi bi-file-earmark-excel me-1"></i>Import Excel
+                        </button>
                         <button class="btn btn-sm" style="background-color:#4361EE; color:white;"
                             onclick="showCreateModal()">
                             <i class="bi bi-plus-circle me-1"></i>Tambah
@@ -432,38 +439,49 @@
 <div class="modal fade" id="importModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{{ route('peralatan.import') }}" method="POST" enctype="multipart/form-data">
+            <form id="importForm" action="{{ route('peralatan.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-header" style="background-color:white; color:#4361EE;">
                     <h5 class="modal-title">
                         <i class="bi bi-upload me-2"></i>Import Data Peralatan
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="file" class="form-label">Pilih File Excel</label>
-                        <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls,.csv" required>
+                        <label for="importFile" class="form-label">Pilih File Excel <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="importFile" name="file" accept=".xlsx,.xls" required>
                         <div class="form-text">
-                            Format file: .xlsx, .xls, atau .csv.
+                            Format .xlsx atau .xls, maks 5 MB.
                             <a href="{{ route('peralatan.download-template') }}" class="text-decoration-none">
                                 <i class="bi bi-download me-1"></i>Download template
                             </a>
                         </div>
                     </div>
-                    <div class="alert alert-info">
+ 
+                    <div class="alert alert-info mb-0">
                         <h6 class="alert-heading">Petunjuk Import:</h6>
                         <ul class="mb-0 small">
-                            <li>Kolom wajib: kode_kategori, kode_asset, merk, tanggal_datang, lokasi_asli (type &amp; serial_number opsional)</li>
-                            <li>Kolom opsional: calibration_number</li>
-                            <li>Kolom lain di luar daftar wajib akan otomatis dianggap sebagai spesifikasi (label = nama kolom)</li>
-                            <li>kode_kategori harus sudah terdaftar di Master Kategori Alat</li>
+                            <li>
+                                Kolom <span class="badge bg-danger">wajib</span> (header merah di template):
+                                <strong>kategori, kode_asset, merk, lokasi_asli</strong>
+                            </li>
+                            <li>
+                                Kolom <span class="badge bg-primary">opsional</span> (header biru):
+                                type, serial_number, tanggal_datang, calibration_number
+                            </li>
+                            <li>
+                                Kolom <span class="badge bg-secondary">spesifikasi</span> (header abu-abu):
+                                kolom tambahan apa pun, nama kolom jadi label spesifikasi
+                            </li>
+                            <li>Alat yang diimport otomatis berstatus <strong>Baik</strong> dan berada di <strong>Lab</strong></li>
+                            <li>Jika ada satu baris yang salah, <strong>seluruh import dibatalkan</strong> dan baris yang salah ditampilkan</li>
                         </ul>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" id="btnImportSubmit">
                         <i class="bi bi-upload me-1"></i>Import
                     </button>
                 </div>
@@ -886,6 +904,89 @@ function clearValidationErrors() {
 
 $('#dynamicModal').on('hidden.bs.modal', function() {
     $('#dynamicModalContent').html('');
+});
+</script>
+<script>
+document.addEventListener('submit', async function (e) {
+    const form = e.target;
+    if (form.id !== 'importForm') return;
+    e.preventDefault();
+ 
+    const btn      = document.getElementById('btnImportSubmit');
+    const htmlAwal = btn.innerHTML;
+    const esc      = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+ 
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses...';
+ 
+    try {
+        const resp = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        });
+ 
+        let res = null;
+        try { res = await resp.json(); } catch (_) { /* bukan JSON */ }
+        if (!res) {
+            throw new Error('Respons server tidak dikenali (HTTP ' + resp.status + ').');
+        }
+ 
+        // ── Berhasil ────────────────────────────────────────────────────────
+        if (res.success) {
+            const modalEl = document.getElementById('importModal');
+            const modal   = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+ 
+            await Swal.fire({
+                icon: 'success',
+                title: 'Import Berhasil',
+                text: res.message,
+                timer: 2500,
+                showConfirmButton: false,
+            });
+            location.reload();
+            return;
+        }
+ 
+        // ── Gagal: errors bisa array (error import) atau object (validasi file 422) ──
+        let daftar = [];
+        if (Array.isArray(res.errors)) {
+            daftar = res.errors;
+        } else if (res.errors && typeof res.errors === 'object') {
+            daftar = Object.values(res.errors).flat();
+        }
+ 
+        const maks   = 50;
+        const items  = daftar.slice(0, maks).map(m => '<li class="mb-1">' + esc(m) + '</li>').join('');
+        const sisa   = daftar.length > maks
+            ? '<p class="small text-muted mb-0 text-start">...dan ' + (daftar.length - maks) + ' error lainnya.</p>'
+            : '';
+ 
+        Swal.fire({
+            icon: 'error',
+            title: 'Import Dibatalkan',
+            width: 720,
+            confirmButtonText: 'Mengerti',
+            html:
+                (res.message ? '<p class="text-start">' + esc(res.message) + '</p>' : '') +
+                (items ? '<ul class="text-start small ps-3" style="max-height:320px; overflow:auto;">' + items + '</ul>' : '') +
+                sisa,
+        });
+ 
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Gagal Import', text: err.message });
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = htmlAwal;
+    }
+});
+ 
+// Kosongkan input file setiap modal dibuka lagi
+document.addEventListener('show.bs.modal', function (e) {
+    if (e.target.id === 'importModal') {
+        document.getElementById('importForm').reset();
+    }
 });
 </script>
 @endsection
